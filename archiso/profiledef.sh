@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 
 iso_name="shedos"
-iso_label="SHEDOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
+iso_label="SHEDOS"
 iso_publisher="ShedOS <https://github.com/theshedman/shedos>"
 iso_application="ShedOS Live/Install ISO"
 iso_version="0.1.0"
