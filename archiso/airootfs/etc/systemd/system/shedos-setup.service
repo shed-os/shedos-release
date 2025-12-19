@@ -1,0 +1,11 @@
+[Unit]
+Description=shedOS Live Setup Service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shedos-setup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
