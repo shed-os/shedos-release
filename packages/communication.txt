@@ -1,0 +1,16 @@
+# ShedOS Communication Packages
+
+# Matrix
+element-desktop
+
+# Telegram
+telegram-desktop
+
+# Signal
+signal-desktop
+
+# IRC
+irssi
+weechat
+
+# Note: discord, slack, zoom are in AUR

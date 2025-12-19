@@ -1,0 +1,36 @@
+# ShedOS Privacy & Security Packages
+
+# VPN
+openvpn
+networkmanager-openvpn
+wireguard-tools
+openconnect
+networkmanager-openconnect
+
+# Password Manager
+keepassxc
+pass
+gopass
+
+# Firewall
+firewalld
+ufw
+iptables-nft
+
+# Encryption
+gnupg
+age
+
+# Tor
+tor
+torsocks
+nyx
+
+# Security Scanning
+lynis
+rkhunter
+clamav
+
+# Certificate Management
+certbot
+step-cli

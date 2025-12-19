@@ -1,0 +1,19 @@
+# ShedOS Power Management Packages
+
+# Battery Optimization
+tlp
+tlp-rdw
+
+# CPU Frequency
+cpupower
+
+# Power Monitoring
+powertop
+power-profiles-daemon
+
+# Thermal Management
+thermald
+
+# Suspend/Hibernate
+upower
+acpid

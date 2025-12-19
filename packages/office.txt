@@ -1,0 +1,32 @@
+# ShedOS Office & Productivity Packages
+
+# Office Suite
+libreoffice-fresh
+
+# PDF
+evince
+zathura
+zathura-pdf-mupdf
+zathura-djvu
+poppler
+pdfjs
+
+# E-book
+foliate
+calibre
+
+# Calendar
+gnome-calendar
+
+# Email
+thunderbird
+
+# Note Taking
+# obsidian is in AUR
+
+# Calculator
+gnome-calculator
+qalculate-gtk
+
+# Dictionary
+dictd

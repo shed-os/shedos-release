@@ -1,0 +1,35 @@
+# ShedOS Font Packages
+
+# Nerd Fonts
+ttf-jetbrains-mono-nerd
+ttf-firacode-nerd
+ttf-hack-nerd
+ttf-meslo-nerd
+ttf-cascadia-code-nerd
+
+# System Fonts
+ttf-dejavu
+ttf-liberation
+ttf-roboto
+ttf-opensans
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-extra
+
+# Microsoft Fonts (AUR alternative)
+ttf-ubuntu-font-family
+ttf-droid
+ttf-ibm-plex
+
+# Icon Fonts
+ttf-font-awesome
+otf-font-awesome
+
+# Terminal Fonts
+terminus-font
+adobe-source-code-pro-fonts
+
+# Document Fonts
+tex-gyre-fonts
+gnu-free-fonts

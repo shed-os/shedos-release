@@ -1,0 +1,35 @@
+# ShedOS AI/ML Packages
+
+# Python ML Stack
+python-numpy
+python-pandas
+python-matplotlib
+python-scipy
+python-scikit-learn
+python-seaborn
+python-pillow
+
+# Deep Learning
+python-pytorch
+python-pytorch-cuda
+python-torchvision
+python-torchaudio
+
+# Jupyter
+jupyterlab
+jupyter-notebook
+python-ipykernel
+python-ipywidgets
+
+# Data Processing
+python-h5py
+python-pyarrow
+python-polars
+
+# Visualization
+python-plotly
+python-bokeh
+
+# NLP
+python-nltk
+python-spacy

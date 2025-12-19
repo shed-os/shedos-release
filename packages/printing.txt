@@ -1,0 +1,27 @@
+# ShedOS Printing Packages
+
+# CUPS
+cups
+cups-pdf
+cups-filters
+
+# Print Management
+system-config-printer
+
+# Drivers
+hplip
+gutenprint
+foomatic-db
+foomatic-db-engine
+foomatic-db-ppds
+foomatic-db-nonfree
+
+# Scanner
+sane
+sane-airscan
+xsane
+simple-scan
+
+# Network Printing
+avahi
+nss-mdns

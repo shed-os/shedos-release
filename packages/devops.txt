@@ -1,0 +1,36 @@
+# ShedOS DevOps Tools Packages
+
+# Docker
+docker
+docker-compose
+docker-buildx
+
+# Podman
+podman
+podman-compose
+buildah
+skopeo
+
+# Kubernetes
+kubectl
+helm
+k9s
+kustomize
+kubectx
+
+# Infrastructure as Code
+terraform
+ansible
+ansible-lint
+
+# Container Runtime
+containerd
+runc
+crun
+
+# Service Mesh
+istioctl
+
+# Misc
+dive
+ctop

@@ -1,0 +1,84 @@
+# ShedOS Base System Packages
+
+# Core System
+base
+base-devel
+linux
+linux-headers
+linux-firmware
+
+# Bootloader
+limine
+efibootmgr
+
+# Filesystem
+btrfs-progs
+cryptsetup
+dosfstools
+e2fsprogs
+exfatprogs
+ntfs-3g
+xfsprogs
+
+# Network
+networkmanager
+networkmanager-openvpn
+wpa_supplicant
+iwd
+openssh
+curl
+wget
+rsync
+
+# System Utilities
+sudo
+which
+less
+man-db
+man-pages
+texinfo
+htop
+tree
+unzip
+zip
+p7zip
+unrar
+lsof
+strace
+procps-ng
+inetutils
+usbutils
+pciutils
+lshw
+smartmontools
+hdparm
+
+# Text Editors (basic)
+nano
+vim
+neovim
+
+# Shell
+zsh
+zsh-completions
+
+# Git
+git
+git-lfs
+
+# Microcode
+intel-ucode
+amd-ucode
+
+# Compression
+gzip
+bzip2
+xz
+zstd
+lz4
+
+# Misc
+reflector
+pacman-contrib
+arch-install-scripts
+mkinitcpio

@@ -1,0 +1,35 @@
+# ShedOS TUI Tools Packages
+
+# System Monitor
+bottom
+btop
+htop
+glances
+
+# Disk Usage
+ncdu
+dust
+duf
+
+# Process Viewer
+procs
+
+# Network
+bandwhich
+gping
+
+# Files
+ranger
+lf
+nnn
+vifm
+broot
+
+# Git
+lazygit
+tig
+
+# Docker
+lazydocker
+
+# Note: impala and bluetui are in AUR

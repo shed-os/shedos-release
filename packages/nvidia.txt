@@ -1,0 +1,22 @@
+# ShedOS NVIDIA Driver Packages
+
+# Main Drivers
+nvidia-dkms
+nvidia-utils
+nvidia-settings
+lib32-nvidia-utils
+
+# Wayland Support
+egl-wayland
+libva-nvidia-driver
+
+# CUDA (for development)
+cuda
+cuda-tools
+cudnn
+
+# Container Runtime
+nvidia-container-toolkit
+
+# Power Management
+nvidia-prime

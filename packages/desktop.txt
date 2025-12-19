@@ -1,0 +1,97 @@
+# ShedOS Desktop Environment Packages
+
+# Hyprland & Wayland
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xdg-utils
+xdg-user-dirs
+
+# Status Bar & Launcher
+waybar
+walker
+
+# Terminal
+kitty
+
+# File Manager
+nautilus
+gvfs
+gvfs-mtp
+gvfs-nfs
+gvfs-smb
+file-roller
+
+# Notifications
+mako
+libnotify
+
+# Screen Lock
+swaylock
+swayidle
+
+# Screenshots
+grim
+slurp
+swappy
+hyprpicker
+
+# Clipboard
+wl-clipboard
+cliphist
+
+# Wallpaper
+swww
+
+# Authentication
+polkit
+polkit-gnome
+gnome-keyring
+seahorse
+
+# Display Manager
+greetd
+greetd-tuigreet
+
+# GTK/Qt Theming
+gtk3
+gtk4
+qt5-wayland
+qt6-wayland
+qt5ct
+qt6ct
+kvantum
+nwg-look
+catppuccin-gtk-theme-mocha
+
+# Icons & Cursors
+papirus-icon-theme
+bibata-cursor-theme
+
+# Network Applet
+network-manager-applet
+blueman
+
+# Media Controls
+playerctl
+
+# Brightness
+brightnessctl
+
+# Screen Recording
+wf-recorder
+obs-studio
+
+# Color Temperature
+gammastep
+
+# Input Method
+fcitx5
+fcitx5-configtool
+fcitx5-gtk
+fcitx5-qt
+
+# Misc Desktop
+wtype
+xdotool
+wmctrl

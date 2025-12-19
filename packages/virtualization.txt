@@ -1,0 +1,37 @@
+# ShedOS Virtualization Packages
+
+# QEMU/KVM
+qemu-full
+qemu-img
+libvirt
+virt-manager
+virt-viewer
+
+# Network
+dnsmasq
+bridge-utils
+openbsd-netcat
+dmidecode
+
+# UEFI for VMs
+edk2-ovmf
+
+# Storage
+lvm2
+
+# VirtualBox
+virtualbox
+virtualbox-host-modules-arch
+virtualbox-guest-iso
+
+# Simple VM
+gnome-boxes
+
+# Vagrant
+vagrant
+
+# Wine
+wine
+wine-mono
+wine-gecko
+winetricks

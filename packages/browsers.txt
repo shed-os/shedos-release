@@ -1,0 +1,10 @@
+# ShedOS Browser Packages
+
+# Firefox
+firefox
+firefox-developer-edition
+
+# Chromium
+chromium
+
+# Note: google-chrome and brave are in AUR

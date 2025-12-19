@@ -1,0 +1,87 @@
+# ShedOS Development Tools Packages
+
+# Editor
+neovim
+neovim-qt
+
+# Shell Enhancement
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+starship
+
+# Version Control
+git
+git-lfs
+lazygit
+github-cli
+git-delta
+
+# Terminal Multiplexer
+tmux
+
+# Search Tools
+ripgrep
+fd
+fzf
+the_silver_searcher
+sd
+
+# Modern CLI
+bat
+eza
+zoxide
+dust
+duf
+procs
+bottom
+bandwhich
+hyperfine
+
+# JSON/YAML
+jq
+yq
+
+# HTTP Clients
+httpie
+curl
+wget
+
+# Process Management
+direnv
+watchexec
+
+# Documentation
+man-db
+tldr
+tealdeer
+
+# Text Processing
+sed
+awk
+gawk
+perl
+csvkit
+
+# Language Servers (system packages)
+lua-language-server
+bash-language-server
+python-lsp-server
+gopls
+rust-analyzer
+typescript-language-server
+
+# Formatters & Linters
+shellcheck
+shfmt
+stylua
+prettier
+eslint
+
+# Tree-sitter
+tree-sitter
+tree-sitter-cli
+
+# Neovim External Tools (from configs/nvim/EXTERNAL_TOOLS_INSTALL.md)
+silicon                    # Code screenshots for nvim-silicon plugin
+hadolint                   # Dockerfile linter

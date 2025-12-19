@@ -1,0 +1,49 @@
+# ShedOS System Utilities Packages
+
+# Disk Management
+gparted
+gnome-disk-utility
+parted
+
+# Disk Usage
+baobab
+ncdu
+
+# System Monitor
+gnome-system-monitor
+btop
+
+# Backup
+borg
+borgmatic
+restic
+snapper
+
+# Archive
+file-roller
+xarchiver
+atool
+
+# Flatpak
+flatpak
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+
+# USB
+ventoy
+etcher
+
+# System Info
+neofetch
+fastfetch
+
+# Hardware Info
+hwinfo
+dmidecode
+inxi
+
+# System Cleaner
+bleachbit
+
+# Font Manager
+font-manager

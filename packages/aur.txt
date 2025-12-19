@@ -1,0 +1,63 @@
+# ShedOS AUR Packages
+# These packages will be installed via yay after base installation
+
+# Package Manager
+yay-bin
+
+# Language Version Manager
+mise-bin
+
+# Shell
+oh-my-zsh-git
+
+# IDEs
+visual-studio-code-bin
+
+# Browsers
+google-chrome
+brave-bin
+
+# Communication
+discord
+slack-desktop
+zoom
+
+# Notes
+obsidian
+
+# Cloud CLI
+aws-cli-v2-bin
+google-cloud-cli
+pulumi-bin
+eksctl-bin
+doctl-bin
+
+# DevOps
+lazydocker
+minikube-bin
+
+# Utilities
+timeshift
+mission-center
+
+# TUI
+impala
+bluetui
+
+# API Testing
+postman-bin
+
+# Power
+auto-cpufreq
+
+# Music
+spotify
+
+# AI
+ollama-bin
+
+# Virtualization
+looking-glass
+
+# Fonts
+ttf-ms-fonts
