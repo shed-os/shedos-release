@@ -10,7 +10,7 @@ iso_version="0.1.0"
 install_dir="shedos"
 buildmodes=('iso')
 # Using syslinux for BIOS and GRUB for UEFI
-bootmodes=('bios.syslinux' 'uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
+bootmodes=('bios.syslinux' 'uefi.grub')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
