@@ -1,0 +1,20 @@
+/* Allow live user to run Calamares installer without password */
+polkit.addRule(function(action, subject) {
+    if (subject.isInGroup("wheel")) {
+        if (action.id == "org.kde.calamares" ||
+            action.id.indexOf("org.freedesktop.udisks2.") == 0 ||
+            action.id.indexOf("org.freedesktop.partitionmanager") == 0 ||
+            action.id.indexOf("com.github.calamares") == 0) {
+            return polkit.Result.YES;
+        }
+    }
+});
+
+/* Allow Calamares to perform disk operations */
+polkit.addRule(function(action, subject) {
+    if (subject.isInGroup("wheel")) {
+        if (action.id.indexOf("org.freedesktop.udisks2.") == 0) {
+            return polkit.Result.YES;
+        }
+    }
+});

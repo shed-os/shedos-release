@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Install ShedOS
+GenericName=System Installer
+Comment=Install ShedOS to your computer
+Exec=pkexec calamares
+Icon=calamares
+Terminal=false
+Categories=System;
+Keywords=install;installer;calamares;shedos;

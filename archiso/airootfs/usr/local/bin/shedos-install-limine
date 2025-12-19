@@ -1,0 +1,292 @@
+#!/bin/bash
+# ShedOS Limine Bootloader Installation Script
+# Installs and configures Limine bootloader for UEFI systems
+#
+# Usage: shedos-install-limine [TARGET_ROOT]
+#   TARGET_ROOT: Optional path to target system root (e.g., /tmp/calamares-root-xxxx)
+#                If not provided, assumes running inside the target chroot
+
+set -euo pipefail
+
+# Target root path (empty if running inside chroot, set if running from live env)
+TARGET_ROOT="${1:-}"
+
+# Log to both stdout and a file for debugging
+if [[ -n "$TARGET_ROOT" ]]; then
+    LOGFILE="$TARGET_ROOT/root/limine-install.log"
+else
+    LOGFILE="/root/limine-install.log"
+fi
+exec > >(tee -a "$LOGFILE") 2>&1
+
+log() {
+    echo "[LIMINE $(date '+%H:%M:%S')] $1"
+}
+
+error() {
+    echo "[LIMINE ERROR] $1" >&2
+}
+
+die() {
+    error "$1"
+    exit 1
+}
+
+log "=========================================="
+log "Starting Limine bootloader installation..."
+log "Running as user: $(whoami)"
+log "Current directory: $(pwd)"
+log "Target root: ${TARGET_ROOT:-/  (inside chroot)}"
+log "=========================================="
+
+# Debug: show current mounts
+log "Current mounts:"
+cat /proc/mounts | grep -E "(vfat|btrfs|efi)" || echo "No relevant mounts found"
+
+# ESP target path (relative to target root)
+ESP="${TARGET_ROOT}/boot/efi"
+
+# Find the ESP device
+log "Looking for EFI System Partition..."
+
+# Method 1: Check if already mounted
+if mountpoint -q "$ESP" 2>/dev/null; then
+    log "ESP already mounted at $ESP"
+    ESP_DEV=$(findmnt -no SOURCE "$ESP" 2>/dev/null || true)
+else
+    log "ESP not mounted at $ESP, searching for it..."
+
+    # Method 2: Look for vfat partition that might be ESP
+    ESP_DEV=""
+
+    # Check common device patterns
+    for dev in /dev/vda1 /dev/sda1 /dev/nvme0n1p1; do
+        if [[ -b "$dev" ]]; then
+            FSTYPE=$(blkid -s TYPE -o value "$dev" 2>/dev/null || true)
+            PARTTYPE=$(blkid -s PART_ENTRY_TYPE -o value "$dev" 2>/dev/null || true)
+            log "Checking $dev: fstype=$FSTYPE, parttype=$PARTTYPE"
+
+            # ESP GUID: C12A7328-F81F-11D2-BA4B-00A0C93EC93B
+            if [[ "$FSTYPE" == "vfat" ]] && [[ "$PARTTYPE" == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ]]; then
+                ESP_DEV="$dev"
+                log "Found ESP at $ESP_DEV"
+                break
+            elif [[ "$FSTYPE" == "vfat" ]]; then
+                # Fallback: assume first vfat is ESP
+                ESP_DEV="$dev"
+                log "Found vfat partition at $ESP_DEV (assuming ESP)"
+                break
+            fi
+        fi
+    done
+
+    # Method 3: Use lsblk to find ESP
+    if [[ -z "$ESP_DEV" ]]; then
+        log "Searching with lsblk..."
+        ESP_DEV=$(lsblk -rno NAME,FSTYPE,PARTTYPE 2>/dev/null | awk '$2=="vfat" && $3=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b" {print "/dev/"$1; exit}' || true)
+        if [[ -n "$ESP_DEV" ]]; then
+            log "Found ESP via lsblk: $ESP_DEV"
+        fi
+    fi
+
+    if [[ -z "$ESP_DEV" ]]; then
+        error "Could not find ESP device!"
+        log "Available block devices:"
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT 2>/dev/null || true
+        die "ESP not found"
+    fi
+
+    # Mount the ESP
+    log "Mounting ESP: $ESP_DEV -> $ESP"
+    mkdir -p "$ESP"
+    mount -t vfat "$ESP_DEV" "$ESP" || die "Failed to mount ESP"
+    log "ESP mounted successfully"
+fi
+
+log "ESP device: ${ESP_DEV:-unknown}"
+log "ESP mount: $ESP"
+
+# Verify ESP is accessible
+if [[ ! -d "$ESP" ]]; then
+    die "ESP directory $ESP does not exist"
+fi
+
+# Get root partition info from fstab
+FSTAB_PATH="${TARGET_ROOT}/etc/fstab"
+log "Reading root partition info from $FSTAB_PATH..."
+ROOT_UUID=""
+ROOT_SUBVOL="@"
+
+if [[ -f "$FSTAB_PATH" ]]; then
+    log "fstab contents:"
+    cat "$FSTAB_PATH"
+
+    ROOT_LINE=$(grep -E '^\s*[^#].*\s+/\s+' "$FSTAB_PATH" | head -1 || true)
+    if [[ -n "$ROOT_LINE" ]]; then
+        log "Root line: $ROOT_LINE"
+        ROOT_SPEC=$(echo "$ROOT_LINE" | awk '{print $1}')
+        if [[ "$ROOT_SPEC" == UUID=* ]]; then
+            ROOT_UUID="${ROOT_SPEC#UUID=}"
+            log "Root UUID from fstab: $ROOT_UUID"
+        fi
+
+        # Get subvolume from mount options
+        SUBVOL_OPT=$(echo "$ROOT_LINE" | grep -oP 'subvol=\K[^,\s]+' || true)
+        if [[ -n "$SUBVOL_OPT" ]]; then
+            ROOT_SUBVOL="$SUBVOL_OPT"
+        fi
+    fi
+fi
+
+# Fallback: try blkid for root
+if [[ -z "$ROOT_UUID" ]]; then
+    log "Trying blkid fallback..."
+    for dev in /dev/vda2 /dev/sda2 /dev/nvme0n1p2; do
+        if [[ -b "$dev" ]]; then
+            FSTYPE=$(blkid -s TYPE -o value "$dev" 2>/dev/null || true)
+            if [[ "$FSTYPE" == "btrfs" ]]; then
+                ROOT_UUID=$(blkid -s UUID -o value "$dev" 2>/dev/null || true)
+                if [[ -n "$ROOT_UUID" ]]; then
+                    log "Found root UUID via blkid: $ROOT_UUID"
+                    break
+                fi
+            fi
+        fi
+    done
+fi
+
+if [[ -z "$ROOT_UUID" ]]; then
+    die "Could not determine root partition UUID"
+fi
+
+log "Root UUID: $ROOT_UUID"
+log "Root subvolume: $ROOT_SUBVOL"
+
+# Verify Limine files exist
+LIMINE_SRC="/usr/share/limine"
+if [[ ! -f "$LIMINE_SRC/BOOTX64.EFI" ]]; then
+    error "Limine EFI file not found!"
+    log "Contents of $LIMINE_SRC:"
+    ls -la "$LIMINE_SRC" 2>/dev/null || echo "Directory does not exist"
+    log "Checking if limine package is installed:"
+    pacman -Q limine 2>/dev/null || echo "Package not found"
+    die "BOOTX64.EFI not found"
+fi
+log "Found Limine at $LIMINE_SRC"
+
+# Create ESP directories
+log "Creating ESP directory structure..."
+mkdir -p "${ESP}/EFI/BOOT"
+mkdir -p "${ESP}/EFI/limine"
+
+# Copy Limine bootloader
+log "Copying Limine EFI files..."
+cp -v "$LIMINE_SRC/BOOTX64.EFI" "${ESP}/EFI/BOOT/BOOTX64.EFI"
+cp -v "$LIMINE_SRC/BOOTX64.EFI" "${ESP}/EFI/limine/limine.efi"
+
+# Verify copy
+if [[ ! -f "${ESP}/EFI/BOOT/BOOTX64.EFI" ]]; then
+    die "Failed to copy BOOTX64.EFI"
+fi
+log "BOOTX64.EFI copied successfully ($(ls -l "${ESP}/EFI/BOOT/BOOTX64.EFI"))"
+
+# Copy kernel and initramfs
+BOOT_DIR="${TARGET_ROOT}/boot"
+log "Copying kernel and initramfs from $BOOT_DIR..."
+if [[ -f "$BOOT_DIR/vmlinuz-linux" ]]; then
+    cp -v "$BOOT_DIR/vmlinuz-linux" "${ESP}/"
+    log "Kernel copied: $(ls -l "${ESP}/vmlinuz-linux")"
+else
+    die "Kernel not found at $BOOT_DIR/vmlinuz-linux"
+fi
+
+if [[ -f "$BOOT_DIR/initramfs-linux.img" ]]; then
+    cp -v "$BOOT_DIR/initramfs-linux.img" "${ESP}/"
+    log "Initramfs copied"
+else
+    die "Initramfs not found"
+fi
+
+if [[ -f "$BOOT_DIR/initramfs-linux-fallback.img" ]]; then
+    cp -v "$BOOT_DIR/initramfs-linux-fallback.img" "${ESP}/"
+fi
+
+# Copy microcode
+MICROCODE_MODULE=""
+if [[ -f "$BOOT_DIR/intel-ucode.img" ]]; then
+    cp -v "$BOOT_DIR/intel-ucode.img" "${ESP}/"
+    MICROCODE_MODULE="    module_path: boot():/intel-ucode.img"
+    log "Intel microcode copied"
+elif [[ -f "$BOOT_DIR/amd-ucode.img" ]]; then
+    cp -v "$BOOT_DIR/amd-ucode.img" "${ESP}/"
+    MICROCODE_MODULE="    module_path: boot():/amd-ucode.img"
+    log "AMD microcode copied"
+fi
+
+# Create Limine configuration
+log "Creating limine.conf..."
+cat > "${ESP}/limine.conf" << EOF
+# ShedOS Limine Bootloader Configuration
+
+timeout: 5
+quiet: no
+serial: yes
+verbose: yes
+
+/ShedOS
+    protocol: linux
+    path: boot():/vmlinuz-linux
+    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs quiet loglevel=3
+${MICROCODE_MODULE}
+    module_path: boot():/initramfs-linux.img
+
+/ShedOS (fallback)
+    protocol: linux
+    path: boot():/vmlinuz-linux
+    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs
+${MICROCODE_MODULE}
+    module_path: boot():/initramfs-linux-fallback.img
+EOF
+
+log "limine.conf created:"
+cat "${ESP}/limine.conf"
+
+# Copy to EFI/limine as well
+cp "${ESP}/limine.conf" "${ESP}/EFI/limine/"
+
+# Create EFI boot entry (optional, BOOTX64.EFI fallback works anyway)
+if command -v efibootmgr &>/dev/null && [[ -n "${ESP_DEV:-}" ]]; then
+    log "Creating EFI boot entry..."
+
+    # Extract disk and partition
+    if [[ "$ESP_DEV" =~ nvme ]]; then
+        DISK=$(echo "$ESP_DEV" | sed 's/p[0-9]*$//')
+        PARTNUM=$(echo "$ESP_DEV" | grep -oE 'p[0-9]+$' | tr -d 'p')
+    else
+        DISK=$(echo "$ESP_DEV" | sed 's/[0-9]*$//')
+        PARTNUM=$(echo "$ESP_DEV" | grep -oE '[0-9]+$')
+    fi
+
+    if [[ -n "$DISK" && -n "$PARTNUM" ]]; then
+        # Remove existing ShedOS entries
+        for entry in $(efibootmgr 2>/dev/null | grep -i "ShedOS" | grep -oP 'Boot\K[0-9A-F]+' || true); do
+            efibootmgr -b "$entry" -B 2>/dev/null || true
+        done
+
+        efibootmgr --create --disk "$DISK" --part "$PARTNUM" \
+            --loader "\\EFI\\limine\\limine.efi" \
+            --label "ShedOS" --unicode 2>/dev/null || log "efibootmgr failed (non-fatal)"
+    fi
+fi
+
+# Final verification
+log "=========================================="
+log "ESP contents:"
+find "${ESP}" -type f -ls 2>/dev/null || ls -laR "${ESP}"
+log "=========================================="
+
+# Sync to ensure writes are flushed
+sync
+
+log "Limine bootloader installed successfully!"
+exit 0

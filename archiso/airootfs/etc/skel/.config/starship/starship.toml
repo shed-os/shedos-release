@@ -1,0 +1,191 @@
+# ShedOS Starship Prompt Configuration
+# Theme: Catppuccin Mocha
+
+# Prompt format
+format = """
+[](fg:#89b4fa)\
+$os\
+$username\
+[](fg:#89b4fa bg:#cba6f7)\
+$directory\
+[](fg:#cba6f7 bg:#f9e2af)\
+$git_branch\
+$git_status\
+[](fg:#f9e2af bg:#a6e3a1)\
+$c\
+$rust\
+$golang\
+$python\
+$nodejs\
+$java\
+$kotlin\
+$lua\
+$zig\
+[](fg:#a6e3a1 bg:#94e2d5)\
+$docker_context\
+$kubernetes\
+[](fg:#94e2d5 bg:#89b4fa)\
+$time\
+[ ](fg:#89b4fa)\
+$line_break\
+$character"""
+
+# Disable the blank line at the start of the prompt
+add_newline = true
+
+# Catppuccin Mocha palette
+palette = "catppuccin_mocha"
+
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
+
+# OS icon
+[os]
+disabled = false
+style = "bg:#89b4fa fg:#1e1e2e"
+format = "[$symbol ]($style)"
+
+[os.symbols]
+Arch = ""
+Linux = ""
+Macos = ""
+Windows = ""
+
+# Username
+[username]
+show_always = true
+style_user = "bg:#89b4fa fg:#1e1e2e"
+style_root = "bg:#89b4fa fg:#f38ba8"
+format = '[ $user ]($style)'
+
+# Directory
+[directory]
+style = "bg:#cba6f7 fg:#1e1e2e"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = "󰝚 "
+"Pictures" = " "
+"Projects" = "󰲋 "
+"~" = " "
+
+# Git
+[git_branch]
+symbol = ""
+style = "bg:#f9e2af fg:#1e1e2e"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bg:#f9e2af fg:#1e1e2e"
+format = '[$all_status$ahead_behind ]($style)'
+conflicted = "⚔️ "
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+stashed = "📦"
+modified = "!${count}"
+staged = "+${count}"
+renamed = "»${count}"
+deleted = "✘${count}"
+
+# Languages
+[c]
+symbol = " "
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[rust]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[golang]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[python]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version)(\($virtualenv\)) ]($style)'
+
+[nodejs]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[java]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[kotlin]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[lua]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+[zig]
+symbol = ""
+style = "bg:#a6e3a1 fg:#1e1e2e"
+format = '[ $symbol($version) ]($style)'
+
+# DevOps
+[docker_context]
+symbol = ""
+style = "bg:#94e2d5 fg:#1e1e2e"
+format = '[ $symbol$context ]($style)'
+only_with_files = true
+
+[kubernetes]
+symbol = "󱃾"
+style = "bg:#94e2d5 fg:#1e1e2e"
+format = '[ $symbol$context(\($namespace\)) ]($style)'
+disabled = false
+
+# Time
+[time]
+disabled = false
+time_format = "%R"
+style = "bg:#89b4fa fg:#1e1e2e"
+format = '[ 󰥔 $time ]($style)'
+
+# Prompt character
+[character]
+success_symbol = "[❯](bold fg:#a6e3a1)"
+error_symbol = "[❯](bold fg:#f38ba8)"
+vimcmd_symbol = "[❮](bold fg:#89b4fa)"

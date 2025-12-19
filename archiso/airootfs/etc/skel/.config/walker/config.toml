@@ -1,0 +1,152 @@
+# shedOS Walker Launcher Configuration
+# Theme: Catppuccin Mocha
+
+[main]
+# Application launcher mode
+as_window = false
+# Monitor to show on (empty for focused)
+monitor = ""
+# Show on all monitors
+all_monitors = false
+
+[ui]
+# Window dimensions
+width = 600
+height = 400
+# Anchor position
+anchor = "center"
+# Margins
+margin_top = 0
+margin_bottom = 0
+margin_left = 0
+margin_right = 0
+# Orientation
+orientation = "vertical"
+# Show icons
+icons = true
+# Icon size
+icon_size = 24
+# Max items to show
+max_items = 15
+
+[search]
+# Delay before searching (ms)
+delay = 0
+# Case sensitive
+case_sensitive = false
+# Fuzzy matching
+fuzzy = true
+
+[activation]
+# What to do after activation
+close = true
+# Terminal for terminal apps
+terminal = "kitty"
+
+[theme]
+# Use custom theme
+custom = true
+
+# Colors (Catppuccin Mocha)
+[theme.colors]
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+accent = "#89b4fa"
+accent_alt = "#cba6f7"
+border = "#313244"
+selection = "#313244"
+selection_text = "#cdd6f4"
+placeholder = "#6c7086"
+error = "#f38ba8"
+
+[theme.font]
+family = "JetBrainsMono Nerd Font"
+size = 12
+
+# Modules
+[modules]
+
+[modules.applications]
+enabled = true
+priority = 1
+# Show recent apps first
+recent_first = true
+# Number of recent apps to show
+recent_count = 5
+
+[modules.runner]
+enabled = true
+priority = 2
+# Shell to use for commands
+shell = "/usr/bin/zsh"
+
+[modules.files]
+enabled = true
+priority = 3
+# Starting directory
+start_dir = "~"
+# Max depth
+max_depth = 3
+
+[modules.websearch]
+enabled = true
+priority = 4
+# Search engines
+[[modules.websearch.engines]]
+name = "Google"
+url = "https://www.google.com/search?q=%s"
+prefix = "g"
+
+[[modules.websearch.engines]]
+name = "DuckDuckGo"
+url = "https://duckduckgo.com/?q=%s"
+prefix = "d"
+
+[[modules.websearch.engines]]
+name = "GitHub"
+url = "https://github.com/search?q=%s"
+prefix = "gh"
+
+[[modules.websearch.engines]]
+name = "Stack Overflow"
+url = "https://stackoverflow.com/search?q=%s"
+prefix = "so"
+
+[[modules.websearch.engines]]
+name = "Reddit"
+url = "https://www.reddit.com/search?q=%s"
+prefix = "r"
+
+[[modules.websearch.engines]]
+name = "Arch Wiki"
+url = "https://wiki.archlinux.org/index.php?search=%s"
+prefix = "aw"
+
+[[modules.websearch.engines]]
+name = "YouTube"
+url = "https://www.youtube.com/results?search_query=%s"
+prefix = "yt"
+
+[modules.calculator]
+enabled = true
+priority = 5
+
+[modules.clipboard]
+enabled = true
+priority = 6
+# Max history items
+max_items = 100
+
+[modules.windows]
+enabled = true
+priority = 7
+
+[modules.ssh]
+enabled = true
+priority = 8
+# SSH config path
+config_path = "~/.ssh/config"
+
+[modules.emoji]
+enabled = true
+priority = 9

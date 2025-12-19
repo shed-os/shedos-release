@@ -1,0 +1,217 @@
+# ═══════════════════════════════════════════════════════════
+#           API TESTING TEMPLATE - Backend Development
+# ═══════════════════════════════════════════════════════════
+#
+# Usage:
+#   1. Copy this file to your project root
+#   2. Press <leader>re to select environment (dev/staging/prod)
+#   3. Place cursor on any request and press <leader>rr to execute
+#   4. Press <leader>rv to toggle response view
+#   5. Press <leader>rc to copy request as cURL
+#
+# Variables:
+#   - Use {{variable}} syntax for environment variables
+#   - Define variables in http-envs/*.json files
+#
+# ═══════════════════════════════════════════════════════════
+
+# Environment variables (defined in http-envs/dev.json)
+@baseUrl = {{baseUrl}}
+@apiUrl = {{apiUrl}}
+@token = {{token}}
+
+# ═══════════════════════════════════════════════════════════
+# HEALTH CHECK
+# ═══════════════════════════════════════════════════════════
+
+### Health check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Readiness check
+GET {{baseUrl}}/ready
+Accept: application/json
+
+# ═══════════════════════════════════════════════════════════
+# AUTHENTICATION
+# ═══════════════════════════════════════════════════════════
+
+### Login
+POST {{apiUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### Get current user
+GET {{apiUrl}}/auth/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Refresh token
+POST {{apiUrl}}/auth/refresh
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+# ═══════════════════════════════════════════════════════════
+# USERS API (CRUD Operations)
+# ═══════════════════════════════════════════════════════════
+
+### Get all users
+GET {{apiUrl}}/users
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get user by ID
+GET {{apiUrl}}/users/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create new user
+POST {{apiUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "role": "user"
+}
+
+### Update user
+PUT {{apiUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "John Doe Updated",
+  "email": "john.updated@example.com",
+  "role": "admin"
+}
+
+### Partial update user
+PATCH {{apiUrl}}/users/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+
+### Delete user
+DELETE {{apiUrl}}/users/1
+Authorization: Bearer {{token}}
+
+# ═══════════════════════════════════════════════════════════
+# PAGINATION & FILTERING
+# ═══════════════════════════════════════════════════════════
+
+### Get users with pagination
+GET {{apiUrl}}/users?page=1&size=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get users with filtering
+GET {{apiUrl}}/users?role=admin&status=active
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get users with sorting
+GET {{apiUrl}}/users?sort=name,asc
+Authorization: Bearer {{token}}
+Accept: application/json
+
+# ═══════════════════════════════════════════════════════════
+# FILE UPLOAD
+# ═══════════════════════════════════════════════════════════
+
+### Upload file
+POST {{apiUrl}}/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="example.txt"
+Content-Type: text/plain
+
+< ./example.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+# ═══════════════════════════════════════════════════════════
+# SPRING BOOT ACTUATOR (if using Spring Boot)
+# ═══════════════════════════════════════════════════════════
+
+### Actuator health
+GET {{baseUrl}}/actuator/health
+Accept: application/json
+
+### Actuator metrics
+GET {{baseUrl}}/actuator/metrics
+Accept: application/json
+
+### Actuator info
+GET {{baseUrl}}/actuator/info
+Accept: application/json
+
+### Actuator environment
+GET {{baseUrl}}/actuator/env
+Accept: application/json
+
+# ═══════════════════════════════════════════════════════════
+# ERROR HANDLING TESTS
+# ═══════════════════════════════════════════════════════════
+
+### Test 400 Bad Request
+POST {{apiUrl}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "invalid": "data"
+}
+
+### Test 401 Unauthorized
+GET {{apiUrl}}/users
+Accept: application/json
+
+### Test 404 Not Found
+GET {{apiUrl}}/users/999999
+Authorization: Bearer {{token}}
+Accept: application/json
+
+# ═══════════════════════════════════════════════════════════
+# CUSTOM HEADERS
+# ═══════════════════════════════════════════════════════════
+
+### Request with custom headers
+GET {{apiUrl}}/users
+Authorization: Bearer {{token}}
+Accept: application/json
+X-Request-ID: {{$guid}}
+X-Client-Version: 1.0.0
+X-Custom-Header: custom-value
+
+# ═══════════════════════════════════════════════════════════
+# NOTES
+# ═══════════════════════════════════════════════════════════
+#
+# Keybindings:
+#   <leader>rr - Run current request
+#   <leader>ra - Run all requests
+#   <leader>rn - Next request
+#   <leader>rp - Previous request
+#   <leader>rv - Toggle view (body/headers/both)
+#   <leader>ri - Inspect request details
+#   <leader>rc - Copy as cURL command
+#   <leader>re - Select environment
+#   <leader>rt - Open scratchpad
+#
+# Dynamic variables (Kulala built-in):
+#   {{$guid}}          - Generate a GUID
+#   {{$randomInt}}     - Random integer
+#   {{$timestamp}}     - Current timestamp
+#   {{$datetime}}      - Current datetime
+#
+# ═══════════════════════════════════════════════════════════

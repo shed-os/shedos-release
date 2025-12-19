@@ -1,0 +1,20 @@
+/* shedOS Rofi Configuration
+ * Theme: Catppuccin Mocha
+ */
+
+configuration {
+    modi: "drun,run,window,ssh";
+    show-icons: true;
+    terminal: "kitty";
+    drun-display-format: "{name}";
+    location: 0;
+    disable-history: false;
+    hide-scrollbar: true;
+    display-drun: "   Apps";
+    display-run: "   Run";
+    display-window: " 﩯  Window";
+    display-ssh: "   SSH";
+    sidebar-mode: true;
+}
+
+@theme "catppuccin-mocha"

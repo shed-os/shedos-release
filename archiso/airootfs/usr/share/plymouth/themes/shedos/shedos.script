@@ -1,0 +1,42 @@
+# ShedOS Plymouth Boot Splash Theme
+# Simple text-based splash screen
+
+Window.SetBackgroundTopColor(0.11, 0.12, 0.13);    # #1c1e21 - Dark background
+Window.SetBackgroundBottomColor(0.11, 0.12, 0.13);
+
+# ShedOS Logo (ASCII art)
+logo.image = Image.Text("ShedOS", 1, 1, 1, 1, "Sans Bold 48");
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX((Window.GetWidth() - logo.image.GetWidth()) / 2);
+logo.sprite.SetY(Window.GetHeight() / 2 - 100);
+
+# Tagline
+tagline.image = Image.Text("Developer-focused Arch Linux", 0.6, 0.6, 0.6, 1, "Sans 16");
+tagline.sprite = Sprite(tagline.image);
+tagline.sprite.SetX((Window.GetWidth() - tagline.image.GetWidth()) / 2);
+tagline.sprite.SetY(Window.GetHeight() / 2 - 30);
+
+# Progress spinner
+fun refresh_callback() {
+    # Rotating spinner
+    spinner_image = Image.Text(Plymouth.GetMode() == "boot" ? "Booting..." : "Shutting down...", 0.8, 0.8, 0.8, 1, "Sans 14");
+    spinner_sprite.SetImage(spinner_image);
+    spinner_sprite.SetX((Window.GetWidth() - spinner_image.GetWidth()) / 2);
+    spinner_sprite.SetY(Window.GetHeight() / 2 + 50);
+}
+
+spinner_sprite = Sprite();
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# Message display
+message_sprite = Sprite();
+message_sprite.SetPosition(10, 10, 10000);
+
+fun message_callback(text) {
+    my_image = Image.Text(text, 1, 1, 1, 1, "Sans 12");
+    message_sprite.SetImage(my_image);
+    message_sprite.SetX((Window.GetWidth() - my_image.GetWidth()) / 2);
+    message_sprite.SetY(Window.GetHeight() - 50);
+}
+
+Plymouth.SetMessageFunction(message_callback);

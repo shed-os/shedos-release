@@ -1,0 +1,326 @@
+# ShedOS Live Environment Packages
+# ALL packages included for OFFLINE installation
+
+# Base system
+base
+base-devel
+linux
+linux-headers
+linux-firmware
+mkinitcpio
+mkinitcpio-archiso
+
+# Boot
+limine
+efibootmgr
+grub
+edk2-shell
+
+# Microcode
+intel-ucode
+amd-ucode
+
+# Filesystem tools
+btrfs-progs
+squashfs-tools
+dosfstools
+e2fsprogs
+exfatprogs
+f2fs-tools
+ntfs-3g
+xfsprogs
+cryptsetup
+
+# Network
+networkmanager
+iwd
+wpa_supplicant
+dhclient
+dhcpcd
+openssh
+wget
+curl
+
+# Archiso requirements
+arch-install-scripts
+memtest86+
+memtest86+-efi
+mtools
+nbd
+nvme-cli
+pv
+reflector
+rsync
+smartmontools
+syslinux
+testdisk
+
+# Hardware detection
+dmidecode
+lshw
+pciutils
+usbutils
+
+# Shell
+zsh
+zsh-completions
+bash-completion
+
+# Utilities
+git
+htop
+less
+lsof
+man-db
+man-pages
+nano
+neovim
+sudo
+tmux
+tree
+unzip
+vim
+which
+zip
+gzip
+tar
+
+# Python for installer
+python
+python-pip
+python-psutil
+python-rich
+python-pydantic
+
+# Display for installer TUI
+dialog
+yad
+
+# Calamares installer (calamares & kpmcore from shedos-repo)
+calamares
+yaml-cpp
+libpwquality
+icu
+# KDE Framework dependencies for Calamares
+kcrash
+kconfig
+kcoreaddons
+kdbusaddons
+ki18n
+kwidgetsaddons
+kservice
+kpackage
+kparts
+solid
+libplasma
+kirigami
+polkit-qt6
+# Qt6 dependencies for Calamares
+qt6-base
+qt6-declarative
+qt6-svg
+qt6-multimedia-ffmpeg
+
+# Fonts
+terminus-font
+ttf-dejavu
+ttf-liberation
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+ttf-jetbrains-mono-nerd
+ttf-firacode-nerd
+ttf-cascadia-code-nerd
+ttf-victor-mono-nerd
+
+# NVIDIA packages
+nvidia-dkms
+nvidia-utils
+nvidia-settings
+egl-wayland
+glu
+
+# Hyprland and Wayland desktop
+hyprland
+xdg-desktop-portal-hyprland
+waybar
+walker
+wofi
+mako
+hyprlock
+hypridle
+swww
+wf-recorder
+grim
+slurp
+swappy
+hyprpicker
+wl-clipboard
+cliphist
+
+# Terminals
+kitty
+foot
+
+# File managers
+nautilus
+thunar
+
+# Desktop utilities
+brightnessctl
+playerctl
+polkit-gnome
+network-manager-applet
+bluez
+bluez-utils
+blueman
+xorg-xset
+
+# Qt/GTK
+qt5-wayland
+qt6-wayland
+gtk3
+gtk4
+
+# Audio
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+pamixer
+pavucontrol
+
+# Display manager
+greetd
+greetd-tuigreet
+
+# Browsers
+firefox
+chromium
+
+# Branding
+fastfetch
+plymouth
+
+# System utilities
+parted
+gptfdisk
+lvm2
+mdadm
+snapper
+
+# Development - Languages
+nodejs
+npm
+go
+rustup
+
+# Development - Build tools
+cmake
+make
+gcc
+clang
+meson
+ninja
+
+# Development - Version control
+git-lfs
+lazygit
+
+# AUR helper
+yay
+
+# Development - Language servers
+lua-language-server
+pyright
+typescript-language-server
+gopls
+rust-analyzer
+
+# Development - Debug tools
+gdb
+lldb
+strace
+ltrace
+valgrind
+
+# DevOps - Containers
+docker
+docker-compose
+podman
+buildah
+
+# DevOps - Kubernetes
+kubectl
+helm
+k9s
+
+# DevOps - Infrastructure
+terraform
+ansible
+aws-cli-v2
+
+# Databases
+postgresql
+valkey
+
+# System programming
+zig
+
+# TUI tools
+fzf
+ripgrep
+fd
+bat
+eza
+zoxide
+starship
+jq
+
+# Additional development tools
+silicon
+hadolint-bin
+github-cli
+
+# Virtualization
+virt-manager
+qemu-full
+libvirt
+dnsmasq
+iptables-nft
+dmidecode
+
+# Multimedia & Creative
+obs-studio
+vlc
+mpv
+gimp
+inkscape
+kdenlive
+audacity
+
+# Office & Productivity
+libreoffice-fresh
+thunderbird
+obsidian-bin
+
+# Communication
+discord
+telegram-desktop
+slack-desktop
+
+# Development - IDEs
+visual-studio-code-bin
+
+# Browsers
+google-chrome
+
+# Additional utilities
+btop
+dust
+procs
+tokei
+hyperfine
+tealdeer
+bottom

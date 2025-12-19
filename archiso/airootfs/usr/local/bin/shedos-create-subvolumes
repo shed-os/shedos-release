@@ -1,0 +1,99 @@
+#!/bin/bash
+# ShedOS BTRFS Subvolume Creation Script
+# Creates 13 subvolumes for optimal system layout
+#
+# This script is called by Calamares shellprocess module
+# after partition creation but before mounting
+
+set -e
+
+LOG="/tmp/shedos-subvol.log"
+exec > >(tee -a "$LOG") 2>&1
+
+echo "=== ShedOS BTRFS Subvolume Creation ==="
+echo "Date: $(date)"
+
+# Wait for partitions to settle
+sleep 2
+sync
+
+# Find the BTRFS partition
+echo "Searching for BTRFS partition..."
+
+# Method 1: Check recently created partitions
+ROOT_DEVICE=""
+for dev in /dev/vda* /dev/sda* /dev/nvme*; do
+    if [[ -b "$dev" ]]; then
+        FSTYPE=$(blkid -o value -s TYPE "$dev" 2>/dev/null || echo "")
+        if [[ "$FSTYPE" == "btrfs" ]]; then
+            ROOT_DEVICE="$dev"
+            echo "Found BTRFS partition: $ROOT_DEVICE"
+            break
+        fi
+    fi
+done
+
+if [[ -z "$ROOT_DEVICE" ]]; then
+    echo "No BTRFS partition found. User might have selected ext4."
+    echo "Skipping subvolume creation."
+    exit 0
+fi
+
+TEMP_MOUNT="/tmp/shedos-btrfs-setup"
+
+echo "Creating temporary mount point: $TEMP_MOUNT"
+mkdir -p "$TEMP_MOUNT"
+
+echo "Mounting $ROOT_DEVICE to $TEMP_MOUNT"
+mount -t btrfs -o defaults "$ROOT_DEVICE" "$TEMP_MOUNT"
+
+# Verify mount
+if ! mountpoint -q "$TEMP_MOUNT"; then
+    echo "ERROR: Failed to mount BTRFS partition"
+    exit 1
+fi
+
+echo "Mount successful. Creating subvolumes..."
+
+# Define subvolumes (13 total)
+SUBVOLUMES=(
+    "@"
+    "@home"
+    "@var"
+    "@snapshots"
+    "@log"
+    "@cache"
+    "@tmp"
+    "@pkg"
+    "@srv"
+    "@opt"
+    "@libvirt"
+    "@docker"
+    "@machines"
+)
+
+# Create subvolumes
+for subvol in "${SUBVOLUMES[@]}"; do
+    SUBVOL_PATH="$TEMP_MOUNT/$subvol"
+    if btrfs subvolume show "$SUBVOL_PATH" &>/dev/null; then
+        echo "Subvolume already exists: $subvol"
+    else
+        echo "Creating subvolume: $subvol"
+        btrfs subvolume create "$SUBVOL_PATH"
+    fi
+done
+
+# List created subvolumes
+echo ""
+echo "Subvolumes created:"
+btrfs subvolume list "$TEMP_MOUNT"
+
+# Unmount
+echo ""
+echo "Unmounting $TEMP_MOUNT"
+umount "$TEMP_MOUNT"
+rmdir "$TEMP_MOUNT"
+
+echo ""
+echo "=== ShedOS BTRFS subvolumes created successfully ==="
+exit 0

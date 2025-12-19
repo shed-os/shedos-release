@@ -1,0 +1,78 @@
+# ShedOS mise Configuration
+# Runtime Version Manager
+
+[settings]
+# Use legacy version files (.nvmrc, .python-version, etc.)
+legacy_version_file = true
+# Always keep latest patch versions
+always_keep_download = false
+# Plugin auto-install
+plugin_autoupdate_last_check_duration = "7d"
+# Trust all config files
+trusted_config_paths = ["~"]
+
+# ─────────────────────────────────────────────────────────────
+# Tool Versions
+# ─────────────────────────────────────────────────────────────
+
+[tools]
+# Node.js - LTS version
+node = "lts"
+
+# Python
+python = "3.12"
+
+# Go
+go = "latest"
+
+# Ruby
+ruby = "latest"
+
+# PHP
+php = "latest"
+
+# Java (OpenJDK)
+java = "openjdk-21"
+
+# Kotlin
+kotlin = "latest"
+
+# .NET
+dotnet = "latest"
+
+# Elixir
+elixir = "latest"
+
+# Bun (fast JS runtime)
+bun = "latest"
+
+# Deno
+deno = "latest"
+
+# ─────────────────────────────────────────────────────────────
+# Environment Variables
+# ─────────────────────────────────────────────────────────────
+
+[env]
+# Add common development paths
+PATH = ["~/.local/bin", "$PATH"]
+
+# Go configuration
+GOPATH = "~/go"
+
+# Rust (managed by rustup, not mise)
+# RUSTUP_HOME = "~/.rustup"
+# CARGO_HOME = "~/.cargo"
+
+# ─────────────────────────────────────────────────────────────
+# Aliases
+# ─────────────────────────────────────────────────────────────
+
+[alias.node]
+lts = "20"
+
+[alias.python]
+default = "3.12"
+
+[alias.java]
+lts = "21"

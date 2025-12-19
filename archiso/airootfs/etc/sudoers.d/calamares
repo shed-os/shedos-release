@@ -1,0 +1,3 @@
+# Allow live user to run Calamares installer without password
+shedos ALL=(ALL) NOPASSWD: /usr/bin/calamares
+%wheel ALL=(ALL) NOPASSWD: /usr/bin/calamares

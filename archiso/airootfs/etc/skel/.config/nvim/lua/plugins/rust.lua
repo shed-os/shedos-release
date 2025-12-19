@@ -1,0 +1,1 @@
+/home/theshedman/.config/nvim/lua/plugins/lang/rust.lua

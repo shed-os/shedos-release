@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ShedOS Welcome
+Comment=First-boot developer setup wizard
+Exec=/usr/local/bin/shedos-welcome
+Icon=preferences-desktop-personal
+Terminal=false
+Categories=System;Settings;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=2

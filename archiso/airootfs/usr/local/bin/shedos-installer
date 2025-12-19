@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ShedOS Installer Launcher
+
+set -e
+
+INSTALLER_DIR="/opt/shedos-installer"
+
+# Check if running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "The ShedOS installer requires root privileges."
+    echo "Running with sudo..."
+    exec sudo "$0" "$@"
+fi
+
+# Check if installer exists
+if [ ! -d "$INSTALLER_DIR" ]; then
+    echo "Error: ShedOS installer not found at $INSTALLER_DIR"
+    exit 1
+fi
+
+# Run the Python installer
+cd "$INSTALLER_DIR"
+exec python -m shedos_installer "$@"
