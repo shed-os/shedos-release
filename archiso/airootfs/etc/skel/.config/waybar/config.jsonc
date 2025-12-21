@@ -5,12 +5,10 @@
     "spacing": 0,
     "height": 26,
     "modules-left": [
-        "custom/shedos",
         "hyprland/workspaces"
     ],
     "modules-center": [
         "clock",
-        "custom/update",
         "custom/screenrecording-indicator"
     ],
     "modules-right": [
@@ -19,13 +17,14 @@
         "network",
         "pulseaudio",
         "cpu",
-        "battery"
+        "battery",
+        "custom/power"
     ],
     "hyprland/workspaces": {
         "on-click": "activate",
         "format": "{icon}",
         "format-icons": {
-            "default": "",
+            "default": "",
             "1": "1",
             "2": "2",
             "3": "3",
@@ -46,20 +45,20 @@
             "5": []
         }
     },
-    "custom/shedos": {
-        "format": "<span font='shedos'>S</span>",
-        "on-click": "walker",
-        "on-click-right": "xdg-terminal-exec",
-        "tooltip-format": "ShedOS Menu\n\nSuper + Alt + Space"
-    },
-    "custom/update": {
-        "format": "",
-        "exec": "shedos-update-available",
-        "on-click": "shedos-update",
-        "tooltip-format": "ShedOS update available",
-        "signal": 7,
-        "interval": 21600
-    },
+    // "custom/shedos": {
+    //     "format": "<span font='shedos'>S</span>",
+    //     "on-click": "walker",
+    //     "on-click-right": "xdg-terminal-exec",
+    //     "tooltip-format": "ShedOS Menu\n\nSuper + Alt + Space"
+    // },
+    // "custom/update": {
+    //     "format": "",
+    //     "exec": "shedos-update-available",
+    //     "on-click": "shedos-update",
+    //     "tooltip-format": "ShedOS update available",
+    //     "signal": 7,
+    //     "interval": 21600
+    // },
     "cpu": {
         "interval": 5,
         "format": "󰍛",
@@ -68,7 +67,20 @@
     "clock": {
         "format": "{:L%A %I:%M %p}",
         "format-alt": "{:L%d %B W%V %Y}",
-        "tooltip": false
+        "tooltip-format": "<tt><small>{calendar}</small></tt>",
+        "calendar": {
+            "mode": "year",
+            "mode-mon-col": 3,
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "format": {
+                "months": "<span color='#cba6f7'><b>{}</b></span>",
+                "days": "<span color='#cdd6f4'><b>{}</b></span>",
+                "weeks": "<span color='#74c7ec'><b>W{}</b></span>",
+                "weekdays": "<span color='#f9e2af'><b>{}</b></span>",
+                "today": "<span color='#f38ba8'><b><u>{}</u></b></span>"
+            }
+        }
     },
     "network": {
         "format-icons": [
@@ -87,13 +99,13 @@
         "tooltip-format-disconnected": "Disconnected",
         "interval": 3,
         "spacing": 1,
-        "on-click": "nm-connection-editor"
+        "on-click": "impala"
     },
     "battery": {
         "format": "{capacity}% {icon}",
         "format-discharging": "{icon}",
         "format-charging": "{icon}",
-        "format-plugged": "",
+        "format-plugged": "",
         "format-icons": {
             "charging": [
                 "󰢜",
@@ -131,12 +143,12 @@
         }
     },
     "bluetooth": {
-        "format": "",
+        "format": "",
         "format-disabled": "󰂲",
         "format-connected": "󰂱",
         "format-no-controller": "",
         "tooltip-format": "Devices connected: {num_connections}",
-        "on-click": "blueman-manager"
+        "on-click": "bluetui"
     },
     "pulseaudio": {
         "format": "{icon}",
@@ -144,12 +156,12 @@
         "on-click-right": "pamixer -t",
         "tooltip-format": "Playing at {volume}%",
         "scroll-step": 5,
-        "format-muted": "",
+        "format-muted": "",
         "format-icons": {
             "default": [
-                "",
-                "",
-                ""
+                "",
+                "",
+                ""
             ]
         }
     },
@@ -165,17 +177,29 @@
         ]
     },
     "custom/expand-icon": {
-        "format": "",
+        "format": "",
         "tooltip": false
     },
-    "custom/screenrecording-indicator": {
-        "on-click": "shedos-screenrecord",
-        "exec": "shedos-screenrecord-indicator",
-        "signal": 8,
-        "return-type": "json"
-    },
+    // "custom/screenrecording-indicator": {
+    //     "on-click": "shedos-screenrecord",
+    //     "exec": "shedos-screenrecord-indicator",
+    //     "signal": 8,
+    //     "return-type": "json"
+    // },
     "tray": {
         "icon-size": 12,
         "spacing": 17
+    },
+    "custom/power": {
+        "format": "⏻ ",
+        "tooltip": false,
+        "menu": "on-click",
+        "menu-file": "~/.config/waybar/power_menu.xml",
+        "menu-actions": {
+            "shutdown": "shutdown",
+            "reboot": "reboot",
+            "suspend": "systemctl suspend",
+            "hibernate": "systemctl hibernate",
+        }
     }
 }

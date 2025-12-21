@@ -325,3 +325,12 @@ tokei
 hyperfine
 tealdeer
 bottom
+
+# TUI Tools
+bluetui
+impala
+lazygit
+lazydocker
+
+# Audio control
+pavucontrol

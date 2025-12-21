@@ -25,6 +25,7 @@ systemctl enable NetworkManager
 systemctl enable sshd
 systemctl enable greetd
 systemctl enable bluetooth
+systemctl enable iwd
 
 # Set root to have no password (allows login with empty password)
 # Using chpasswd to set empty password properly

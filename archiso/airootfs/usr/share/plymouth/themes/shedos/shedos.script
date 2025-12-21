@@ -4,8 +4,8 @@
 Window.SetBackgroundTopColor(0.11, 0.12, 0.13);    # #1c1e21 - Dark background
 Window.SetBackgroundBottomColor(0.11, 0.12, 0.13);
 
-# ShedOS Logo (ASCII art)
-logo.image = Image.Text("ShedOS", 1, 1, 1, 1, "Sans Bold 48");
+# ShedOS Logo (Image)
+logo.image = Image("shedos-logo.png");
 logo.sprite = Sprite(logo.image);
 logo.sprite.SetX((Window.GetWidth() - logo.image.GetWidth()) / 2);
 logo.sprite.SetY(Window.GetHeight() / 2 - 100);

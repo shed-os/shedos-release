@@ -1,152 +1,90 @@
 # shedOS Walker Launcher Configuration
-# Theme: Catppuccin Mocha
+# Based on walker default config
 
-[main]
-# Application launcher mode
-as_window = false
-# Monitor to show on (empty for focused)
-monitor = ""
-# Show on all monitors
-all_monitors = false
+theme = "default"
+force_keyboard_focus = false
+close_when_open = true
+click_to_close = true
+single_click_activation = true
+selection_wrap = false
+global_argument_delimiter = "#"
+exact_search_prefix = "'"
+disable_mouse = false
+debug = false
+page_jump_items = 10
+hide_quick_activation = false
+hide_action_hints = false
+hide_action_hints_dmenu = true
+hide_return_action = false
+resume_last_query = false
+actions_as_menu = false
 
-[ui]
-# Window dimensions
-width = 600
-height = 400
-# Anchor position
-anchor = "center"
-# Margins
-margin_top = 0
-margin_bottom = 0
-margin_left = 0
-margin_right = 0
-# Orientation
-orientation = "vertical"
-# Show icons
-icons = true
-# Icon size
-icon_size = 24
-# Max items to show
-max_items = 15
+[shell]
+anchor_top = true
+anchor_bottom = true
+anchor_left = true
+anchor_right = true
 
-[search]
-# Delay before searching (ms)
-delay = 0
-# Case sensitive
-case_sensitive = false
-# Fuzzy matching
-fuzzy = true
+[placeholders]
+"default" = { input = "Search", list = "No Results" }
 
-[activation]
-# What to do after activation
-close = true
-# Terminal for terminal apps
-terminal = "kitty"
+[keybinds]
+close = ["Escape"]
+next = ["Down"]
+previous = ["Up"]
+left = ["Left"]
+right = ["Right"]
+down = ["Down"]
+up = ["Up"]
+toggle_exact = ["ctrl e"]
+resume_last_query = ["ctrl r"]
+quick_activate = ["F1", "F2", "F3", "F4"]
+page_down = ["Page_Down"]
+page_up = ["Page_Up"]
+show_actions = ["alt j"]
 
-[theme]
-# Use custom theme
-custom = true
+[providers]
+default = [
+  "desktopapplications",
+  "calc",
+  "websearch",
+]
+empty = ["desktopapplications"]
+ignore_preview = []
+max_results = 50
 
-# Colors (Catppuccin Mocha)
-[theme.colors]
-background = "#1e1e2e"
-foreground = "#cdd6f4"
-accent = "#89b4fa"
-accent_alt = "#cba6f7"
-border = "#313244"
-selection = "#313244"
-selection_text = "#cdd6f4"
-placeholder = "#6c7086"
-error = "#f38ba8"
+[[providers.prefixes]]
+prefix = ";"
+provider = "providerlist"
 
-[theme.font]
-family = "JetBrainsMono Nerd Font"
-size = 12
+[[providers.prefixes]]
+prefix = ">"
+provider = "runner"
 
-# Modules
-[modules]
+[[providers.prefixes]]
+prefix = "/"
+provider = "files"
 
-[modules.applications]
-enabled = true
-priority = 1
-# Show recent apps first
-recent_first = true
-# Number of recent apps to show
-recent_count = 5
+[[providers.prefixes]]
+prefix = "."
+provider = "symbols"
 
-[modules.runner]
-enabled = true
-priority = 2
-# Shell to use for commands
-shell = "/usr/bin/zsh"
+[[providers.prefixes]]
+prefix = "!"
+provider = "todo"
 
-[modules.files]
-enabled = true
-priority = 3
-# Starting directory
-start_dir = "~"
-# Max depth
-max_depth = 3
+[[providers.prefixes]]
+prefix = "="
+provider = "calc"
 
-[modules.websearch]
-enabled = true
-priority = 4
-# Search engines
-[[modules.websearch.engines]]
-name = "Google"
-url = "https://www.google.com/search?q=%s"
-prefix = "g"
+[[providers.prefixes]]
+prefix = "@"
+provider = "websearch"
 
-[[modules.websearch.engines]]
-name = "DuckDuckGo"
-url = "https://duckduckgo.com/?q=%s"
-prefix = "d"
+[[providers.prefixes]]
+prefix = ":"
+provider = "clipboard"
 
-[[modules.websearch.engines]]
-name = "GitHub"
-url = "https://github.com/search?q=%s"
-prefix = "gh"
-
-[[modules.websearch.engines]]
-name = "Stack Overflow"
-url = "https://stackoverflow.com/search?q=%s"
-prefix = "so"
-
-[[modules.websearch.engines]]
-name = "Reddit"
-url = "https://www.reddit.com/search?q=%s"
-prefix = "r"
-
-[[modules.websearch.engines]]
-name = "Arch Wiki"
-url = "https://wiki.archlinux.org/index.php?search=%s"
-prefix = "aw"
-
-[[modules.websearch.engines]]
-name = "YouTube"
-url = "https://www.youtube.com/results?search_query=%s"
-prefix = "yt"
-
-[modules.calculator]
-enabled = true
-priority = 5
-
-[modules.clipboard]
-enabled = true
-priority = 6
-# Max history items
-max_items = 100
-
-[modules.windows]
-enabled = true
-priority = 7
-
-[modules.ssh]
-enabled = true
-priority = 8
-# SSH config path
-config_path = "~/.ssh/config"
-
-[modules.emoji]
-enabled = true
-priority = 9
+[[providers.prefixes]]
+prefix = "$"
+provider = "windows"
