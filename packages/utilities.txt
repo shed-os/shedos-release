@@ -36,6 +36,7 @@ etcher
 # System Info
 neofetch
 fastfetch
+jp2a
 
 # Hardware Info
 hwinfo
