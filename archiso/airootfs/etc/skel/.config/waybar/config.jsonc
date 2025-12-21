@@ -1,186 +1,181 @@
 {
+    "reload_style_on_change": true,
     "layer": "top",
     "position": "top",
-    "height": 34,
-    "spacing": 4,
-    "margin-top": 5,
-    "margin-left": 10,
-    "margin-right": 10,
-
+    "spacing": 0,
+    "height": 26,
     "modules-left": [
-        "custom/logo",
-        "hyprland/workspaces",
-        "hyprland/window"
+        "custom/shedos",
+        "hyprland/workspaces"
     ],
     "modules-center": [
-        "clock"
+        "clock",
+        "custom/update",
+        "custom/screenrecording-indicator"
     ],
     "modules-right": [
-        "mpris",
+        "group/tray-expander",
         "bluetooth",
-        "keyboard-state",
-        "tray",
-        "pulseaudio",
         "network",
+        "pulseaudio",
         "cpu",
-        "memory",
-        "battery",
-        "custom/power"
+        "battery"
     ],
-
-    "custom/logo": {
-        "format": " ",
-        "tooltip": false,
-        "on-click": "walker"
-    },
-
     "hyprland/workspaces": {
+        "on-click": "activate",
         "format": "{icon}",
         "format-icons": {
-            "1": "一",
-            "2": "二",
-            "3": "三",
-            "4": "四",
-            "5": "五",
-            "6": "六",
-            "7": "七",
-            "8": "八",
-            "9": "九",
-            "10": "十",
-            "active": "",
-            "default": ""
+            "default": "",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "8",
+            "9": "9",
+            "10": "0",
+            "active": "󱓻"
         },
         "persistent-workspaces": {
-            "*": 5
-        },
-        "on-click": "activate"
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        }
     },
-
-    "hyprland/window": {
-        "format": "{}",
-        "max-length": 40,
-        "separate-outputs": true
+    "custom/shedos": {
+        "format": "<span font='shedos'>S</span>",
+        "on-click": "walker",
+        "on-click-right": "xdg-terminal-exec",
+        "tooltip-format": "ShedOS Menu\n\nSuper + Alt + Space"
     },
-
+    "custom/update": {
+        "format": "",
+        "exec": "shedos-update-available",
+        "on-click": "shedos-update",
+        "tooltip-format": "ShedOS update available",
+        "signal": 7,
+        "interval": 21600
+    },
+    "cpu": {
+        "interval": 5,
+        "format": "󰍛",
+        "on-click": "btop"
+    },
     "clock": {
-        "format": "  {:%H:%M}",
-        "format-alt": "  {:%A, %B %d, %Y}",
-        "tooltip-format": "<tt><small>{calendar}</small></tt>",
-        "calendar": {
-            "mode": "year",
-            "mode-mon-col": 3,
-            "weeks-pos": "right",
-            "on-scroll": 1,
-            "format": {
-                "months": "<span color='#cba6f7'><b>{}</b></span>",
-                "days": "<span color='#cdd6f4'><b>{}</b></span>",
-                "weeks": "<span color='#74c7ec'><b>W{}</b></span>",
-                "weekdays": "<span color='#f9e2af'><b>{}</b></span>",
-                "today": "<span color='#f38ba8'><b><u>{}</u></b></span>"
-            }
-        }
+        "format": "{:L%A %I:%M %p}",
+        "format-alt": "{:L%d %B W%V %Y}",
+        "tooltip": false
     },
-
-    "mpris": {
-        "format": "{player_icon} {dynamic}",
-        "format-paused": "{status_icon} <i>{dynamic}</i>",
-        "player-icons": {
-            "default": "▶",
-            "mpd": "🎵",
-            "spotify": ""
-        },
-        "status-icons": {
-            "paused": "⏸"
-        },
-        "dynamic-order": ["title", "artist"],
-        "dynamic-len": 40,
-        "on-click": "playerctl play-pause",
-        "on-click-right": "playerctl next"
-    },
-
-    "bluetooth": {
-        "format": " {status}",
-        "format-connected": " {device_alias}",
-        "format-connected-battery": " {device_alias} {device_battery_percentage}%",
-        "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
-        "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
-        "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-        "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
-        "on-click": "blueman-manager"
-    },
-
-    "keyboard-state": {
-        "numlock": false,
-        "capslock": true,
-        "format": {
-            "numlock": "NUM {icon}",
-            "capslock": "CAPS {icon}"
-        },
-        "format-icons": {
-            "locked": "",
-            "unlocked": ""
-        }
-    },
-
-    "tray": {
-        "icon-size": 16,
-        "spacing": 10
-    },
-
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-bluetooth": " {volume}%",
-        "format-muted": " ",
-        "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": "",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
-        },
-        "on-click": "pavucontrol",
-        "on-click-right": "pamixer -t"
-    },
-
     "network": {
-        "format-wifi": "  {signalStrength}%",
-        "format-ethernet": "  {ipaddr}",
-        "format-disconnected": " ",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}",
+        "format-icons": [
+            "󰤯",
+            "󰤟",
+            "󰤢",
+            "󰤥",
+            "󰤨"
+        ],
+        "format": "{icon}",
+        "format-wifi": "{icon}",
+        "format-ethernet": "󰀂",
+        "format-disconnected": "󰤮",
+        "tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+        "tooltip-format-ethernet": "⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+        "tooltip-format-disconnected": "Disconnected",
+        "interval": 3,
+        "spacing": 1,
         "on-click": "nm-connection-editor"
     },
-
-    "cpu": {
-        "format": "  {usage}%",
-        "interval": 2,
-        "on-click": "kitty -e btm"
-    },
-
-    "memory": {
-        "format": "  {}%",
-        "interval": 2,
-        "on-click": "kitty -e btm"
-    },
-
     "battery": {
-        "states": {
-            "good": 95,
-            "warning": 30,
-            "critical": 15
+        "format": "{capacity}% {icon}",
+        "format-discharging": "{icon}",
+        "format-charging": "{icon}",
+        "format-plugged": "",
+        "format-icons": {
+            "charging": [
+                "󰢜",
+                "󰂆",
+                "󰂇",
+                "󰂈",
+                "󰢝",
+                "󰂉",
+                "󰢞",
+                "󰂊",
+                "󰂋",
+                "󰂅"
+            ],
+            "default": [
+                "󰁺",
+                "󰁻",
+                "󰁼",
+                "󰁽",
+                "󰁾",
+                "󰁿",
+                "󰂀",
+                "󰂁",
+                "󰂂",
+                "󰁹"
+            ]
         },
-        "format": "{icon} {capacity}%",
-        "format-charging": " {capacity}%",
-        "format-plugged": " {capacity}%",
-        "format-icons": ["", "", "", "", ""],
-        "tooltip-format": "{timeTo}"
+        "format-full": "󰂅",
+        "tooltip-format-discharging": "{power:>1.0f}W↓ {capacity}%",
+        "tooltip-format-charging": "{power:>1.0f}W↑ {capacity}%",
+        "interval": 5,
+        "on-click": "wlogout",
+        "states": {
+            "warning": 20,
+            "critical": 10
+        }
     },
-
-    "custom/power": {
-        "format": "⏻",
-        "tooltip": false,
-        "on-click": "wlogout"
+    "bluetooth": {
+        "format": "",
+        "format-disabled": "󰂲",
+        "format-connected": "󰂱",
+        "format-no-controller": "",
+        "tooltip-format": "Devices connected: {num_connections}",
+        "on-click": "blueman-manager"
+    },
+    "pulseaudio": {
+        "format": "{icon}",
+        "on-click": "pavucontrol",
+        "on-click-right": "pamixer -t",
+        "tooltip-format": "Playing at {volume}%",
+        "scroll-step": 5,
+        "format-muted": "",
+        "format-icons": {
+            "default": [
+                "",
+                "",
+                ""
+            ]
+        }
+    },
+    "group/tray-expander": {
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 600,
+            "children-class": "tray-group-item"
+        },
+        "modules": [
+            "custom/expand-icon",
+            "tray"
+        ]
+    },
+    "custom/expand-icon": {
+        "format": "",
+        "tooltip": false
+    },
+    "custom/screenrecording-indicator": {
+        "on-click": "shedos-screenrecord",
+        "exec": "shedos-screenrecord-indicator",
+        "signal": 8,
+        "return-type": "json"
+    },
+    "tray": {
+        "icon-size": 12,
+        "spacing": 17
     }
 }

@@ -134,7 +134,7 @@ ttf-cascadia-code-nerd
 ttf-victor-mono-nerd
 
 # NVIDIA packages
-nvidia-dkms
+nvidia-open-dkms
 nvidia-utils
 nvidia-settings
 egl-wayland
@@ -145,6 +145,7 @@ hyprland
 xdg-desktop-portal-hyprland
 waybar
 walker
+elephant
 wofi
 mako
 hyprlock

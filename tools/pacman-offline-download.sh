@@ -66,11 +66,11 @@ if [[ "$URL" == *.pkg.tar.zst ]] || [[ "$URL" == *.pkg.tar.zst.sig ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-    # Check in all cache directories (including AUR repo)
+    # Check in all cache directories (shedos-repo first for AUR packages!)
     CACHE_DIRS=(
-        "/var/cache/pacman/pkg"
-        "$PROJECT_ROOT/build/pkg-cache"
         "$PROJECT_ROOT/archiso/shedos-repo"
+        "$PROJECT_ROOT/build/pkg-cache"
+        "/var/cache/pacman/pkg"
     )
 
     for CACHE_DIR in "${CACHE_DIRS[@]}"; do

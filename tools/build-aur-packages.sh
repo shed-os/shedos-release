@@ -30,7 +30,7 @@ if [ "$EUID" -eq 0 ]; then
 fi
 
 # List of AUR packages to build
-declare -a AUR_PACKAGES=("walker" "calamares" "yay" "visual-studio-code-bin" "google-chrome" "slack-desktop" "obsidian-bin" "hadolint-bin")
+declare -a AUR_PACKAGES=("elephant" "walker" "calamares" "yay" "visual-studio-code-bin" "google-chrome" "slack-desktop" "obsidian-bin" "hadolint-bin")
 
 # Function to get version from package file
 get_package_version() {

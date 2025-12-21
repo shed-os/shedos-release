@@ -11,7 +11,7 @@ AUR_REPO="$PROJECT_ROOT/archiso/shedos-repo"
 
 # AUR packages (should be in shedos-repo)
 AUR_PACKAGES=(
-    "walker" "calamares" "yay" "visual-studio-code-bin"
+    "elephant" "walker" "calamares" "yay" "visual-studio-code-bin"
     "google-chrome" "slack-desktop" "obsidian-bin" "hadolint-bin"
 )
 

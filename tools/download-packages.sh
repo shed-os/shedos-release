@@ -34,6 +34,7 @@ echo "=================================="
 
 # List of AUR packages to exclude (must match build-aur-packages.sh)
 AUR_PACKAGES=(
+    "elephant"
     "walker"
     "calamares"
     "yay"
