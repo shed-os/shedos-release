@@ -1,7 +1,7 @@
 # ShedOS NVIDIA Driver Packages
 
 # Main Drivers
-nvidia-dkms
+nvidia-open-dkms
 nvidia-utils
 nvidia-settings
 lib32-nvidia-utils
