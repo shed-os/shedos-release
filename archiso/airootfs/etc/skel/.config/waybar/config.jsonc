@@ -62,7 +62,7 @@
     "cpu": {
         "interval": 5,
         "format": "󰍛",
-        "on-click": "btop"
+        "on-click": "kitty -e btop"
     },
     "clock": {
         "format": "{:L%A %I:%M %p}",
@@ -99,7 +99,7 @@
         "tooltip-format-disconnected": "Disconnected",
         "interval": 3,
         "spacing": 1,
-        "on-click": "impala"
+        "on-click": "kitty -e impala"
     },
     "battery": {
         "format": "{capacity}% {icon}",
@@ -148,7 +148,7 @@
         "format-connected": "󰂱",
         "format-no-controller": "",
         "tooltip-format": "Devices connected: {num_connections}",
-        "on-click": "bluetui"
+        "on-click": "kitty -e bluetui"
     },
     "pulseaudio": {
         "format": "{icon}",
@@ -200,6 +200,7 @@
             "reboot": "reboot",
             "suspend": "systemctl suspend",
             "hibernate": "systemctl hibernate",
+            "logout": "hyprlock"
         }
     }
 }
