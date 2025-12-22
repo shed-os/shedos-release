@@ -10,11 +10,7 @@ logo.sprite = Sprite(logo.image);
 logo.sprite.SetX((Window.GetWidth() - logo.image.GetWidth()) / 2);
 logo.sprite.SetY(Window.GetHeight() / 2 - 100);
 
-# Tagline
-tagline.image = Image.Text("Developer-focused Arch Linux", 0.6, 0.6, 0.6, 1, "Sans 16");
-tagline.sprite = Sprite(tagline.image);
-tagline.sprite.SetX((Window.GetWidth() - tagline.image.GetWidth()) / 2);
-tagline.sprite.SetY(Window.GetHeight() / 2 - 30);
+# No tagline - just the logo
 
 # Progress spinner
 fun refresh_callback() {
