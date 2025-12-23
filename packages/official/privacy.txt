@@ -7,15 +7,8 @@ wireguard-tools
 openconnect
 networkmanager-openconnect
 
-# Password Manager
-keepassxc
-pass
-gopass
-
 # Firewall
-firewalld
 ufw
-iptables-nft
 
 # Encryption
 gnupg

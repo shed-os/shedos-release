@@ -3,15 +3,9 @@
 # Note: Many of these are AUR packages
 # This file contains only official repo packages
 
-# Azure
-azure-cli
-
 # General Cloud Tools
 rclone
 s3cmd
 
 # HashiCorp Tools
 terraform
-packer
-vault
-consul

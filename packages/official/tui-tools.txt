@@ -1,10 +1,7 @@
 # ShedOS TUI Tools Packages
 
 # System Monitor
-bottom
 btop
-htop
-glances
 
 # Disk Usage
 ncdu

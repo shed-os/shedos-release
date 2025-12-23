@@ -10,7 +10,6 @@ nmap
 masscan
 
 # Network Utilities
-gnu-netcat
 socat
 iftop
 nethogs
@@ -25,10 +24,7 @@ bind
 ldns
 
 # DNS Tools
-dig
-nslookup
 dog
-doggo
 
 # HTTP Tools
 aria2

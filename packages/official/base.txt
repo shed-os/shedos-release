@@ -41,7 +41,6 @@ htop
 tree
 unzip
 zip
-p7zip
 unrar
 lsof
 strace
@@ -82,3 +81,31 @@ reflector
 pacman-contrib
 arch-install-scripts
 mkinitcpio
+bash-completion
+dialog
+pv
+tar
+
+# Boot Splash
+plymouth
+
+# Networking (additional)
+dhclient
+dhcpcd
+
+# ArchISO support
+mkinitcpio-archiso
+memtest86+
+memtest86+-efi
+edk2-shell
+syslinux
+
+# Disk Tools
+gptfdisk
+mdadm
+mtools
+nbd
+nvme-cli
+f2fs-tools
+squashfs-tools
+testdisk

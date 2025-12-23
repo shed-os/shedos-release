@@ -2,7 +2,6 @@
 
 # Editor
 neovim
-neovim-qt
 
 # Shell Enhancement
 zsh
@@ -58,7 +57,7 @@ tealdeer
 
 # Text Processing
 sed
-awk
+gawk
 gawk
 perl
 csvkit
@@ -82,6 +81,27 @@ eslint
 tree-sitter
 tree-sitter-cli
 
-# Neovim External Tools (from configs/nvim/EXTERNAL_TOOLS_INSTALL.md)
-silicon                    # Code screenshots for nvim-silicon plugin
-hadolint                   # Dockerfile linter
+# Neovim External Tools
+silicon
+
+# Node.js
+nodejs
+npm
+
+# Go
+go
+
+# Python
+python
+python-pip
+python-psutil
+python-pydantic
+python-rich
+pyright
+
+# Code Stats
+tokei
+
+# Ruby
+ruby
+rubygems

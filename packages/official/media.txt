@@ -17,12 +17,6 @@ shotcut
 # Audio Editing
 audacity
 
-# 3D Modeling
-blender
-
-# Digital Painting
-krita
-
 # Image Processing
 imagemagick
 graphicsmagick

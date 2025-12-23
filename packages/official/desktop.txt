@@ -26,9 +26,6 @@ file-roller
 mako
 libnotify
 
-# Screen Lock
-swaylock
-swayidle
 
 # Screenshots
 grim
@@ -62,11 +59,9 @@ qt5ct
 qt6ct
 kvantum
 nwg-look
-catppuccin-gtk-theme-mocha
 
 # Icons & Cursors
 papirus-icon-theme
-bibata-cursor-theme
 
 # Network Applet
 network-manager-applet
@@ -95,3 +90,9 @@ fcitx5-qt
 wtype
 xdotool
 wmctrl
+xorg-xset
+
+# Hyprland Extras
+hypridle
+hyprlock
+

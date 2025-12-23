@@ -29,12 +29,7 @@ flatpak
 xdg-desktop-portal
 xdg-desktop-portal-gtk
 
-# USB
-ventoy
-etcher
-
 # System Info
-neofetch
 fastfetch
 jp2a
 

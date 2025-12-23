@@ -6,7 +6,6 @@ postgresql-libs
 pgcli
 
 # Redis
-redis
 
 # CLI Tools
-usql
+

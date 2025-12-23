@@ -19,7 +19,6 @@ foomatic-db-nonfree
 # Scanner
 sane
 sane-airscan
-xsane
 simple-scan
 
 # Network Printing

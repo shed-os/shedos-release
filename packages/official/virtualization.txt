@@ -24,14 +24,4 @@ virtualbox
 virtualbox-host-modules-arch
 virtualbox-guest-iso
 
-# Simple VM
-gnome-boxes
-
 # Vagrant
-vagrant
-
-# Wine
-wine
-wine-mono
-wine-gecko
-winetricks

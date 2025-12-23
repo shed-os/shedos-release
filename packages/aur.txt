@@ -2,7 +2,7 @@
 # These packages will be installed via yay after base installation
 
 # Package Manager
-yay-bin
+yay
 
 # Language Version Manager
 mise-bin
@@ -15,22 +15,12 @@ visual-studio-code-bin
 
 # Browsers
 google-chrome
-brave-bin
 
 # Communication
-discord
 slack-desktop
-zoom
 
 # Notes
-obsidian
-
-# Cloud CLI
-aws-cli-v2-bin
-google-cloud-cli
-pulumi-bin
-eksctl-bin
-doctl-bin
+obsidian-bin
 
 # DevOps
 lazydocker
@@ -49,12 +39,6 @@ postman-bin
 
 # Power
 auto-cpufreq
-
-# Music
-spotify
-
-# AI
-ollama-bin
 
 # Virtualization
 looking-glass
@@ -76,3 +60,21 @@ elephant-symbols
 elephant-todo
 elephant-unicode
 elephant-websearch
+
+# Walker (application launcher)
+walker
+
+# Calamares installer
+calamares
+
+# Hadolint (Dockerfile linter)
+hadolint-bin
+
+# Theming (AUR)
+catppuccin-gtk-theme-mocha
+
+# Database Tools (AUR)
+usql
+
+# Development (AUR)
+vagrant

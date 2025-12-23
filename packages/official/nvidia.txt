@@ -12,7 +12,6 @@ libva-nvidia-driver
 
 # CUDA (for development)
 cuda
-cuda-tools
 cudnn
 
 # Container Runtime

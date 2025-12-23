@@ -2,7 +2,6 @@
 
 # Firefox
 firefox
-firefox-developer-edition
 
 # Chromium
 chromium

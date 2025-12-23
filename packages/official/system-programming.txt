@@ -23,7 +23,6 @@ lldb
 valgrind
 strace
 ltrace
-rr
 
 # Assembly
 nasm
@@ -48,7 +47,6 @@ readline
 
 # Static Analysis
 cppcheck
-clang-tools-extra
 
 # Build Optimization
 ccache
