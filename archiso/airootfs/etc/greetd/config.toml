@@ -1,7 +1,0 @@
-[terminal]
-vt = 1
-
-[default_session]
-# Auto-login to Hyprland as shedos user on live ISO
-command = "Hyprland"
-user = "shedos"

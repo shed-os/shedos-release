@@ -27,7 +27,14 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 # Enable services
 systemctl enable NetworkManager
 systemctl enable sshd
-systemctl enable greetd
+systemctl enable sddm
+
+# Configure SDDM Theme
+mkdir -p /etc/sddm.conf.d
+cat > /etc/sddm.conf.d/theme.conf <<EOF
+[Theme]
+Current=catppuccin-mocha
+EOF
 systemctl enable bluetooth
 systemctl enable iwd
 
