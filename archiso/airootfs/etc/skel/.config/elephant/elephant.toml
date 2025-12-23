@@ -1,0 +1,7 @@
+# Elephant configuration for ShedOS
+# Elephant is the data provider for Walker launcher
+
+# Disable auto-detection of launch prefix to fix Wayland environment
+# variable inheritance issues (WAYLAND_DISPLAY, DISPLAY) when using
+# systemd-run --user to launch applications
+auto_detect_launch_prefix = false

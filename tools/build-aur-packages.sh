@@ -27,10 +27,24 @@ if [ "$EUID" -eq 0 ]; then
     useradd -m -G wheel builduser 2>/dev/null || true
     echo "builduser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builduser-aur
     chmod 440 /etc/sudoers.d/builduser-aur
+    
+    # Setup rustup for build user (needed for Rust AUR packages like impala)
+    if command -v rustup &> /dev/null; then
+        echo "Setting up Rust toolchain for build user..."
+        sudo -u builduser rustup default stable 2>/dev/null || true
+    fi
 fi
 
-# List of AUR packages to build
-declare -a AUR_PACKAGES=("elephant" "elephant-bluetooth" "elephant-calc" "elephant-clipboard" "elephant-desktopapplications" "elephant-files" "elephant-menus" "elephant-providerlist" "elephant-runner" "elephant-symbols" "elephant-todo" "elephant-unicode" "elephant-websearch" "walker" "calamares" "yay" "visual-studio-code-bin" "google-chrome" "slack-desktop" "obsidian-bin" "hadolint-bin")
+# Read AUR packages from packages/aur.txt (single source of truth)
+AUR_FILE="$PROJECT_ROOT/packages/aur.txt"
+if [ ! -f "$AUR_FILE" ]; then
+    echo "ERROR: AUR package list not found: $AUR_FILE"
+    exit 1
+fi
+
+# Read packages, filtering out comments and empty lines
+mapfile -t AUR_PACKAGES < <(grep -v '^#' "$AUR_FILE" | grep -v '^$' | tr -d ' ')
+echo "Found ${#AUR_PACKAGES[@]} AUR packages to build"
 
 # Function to get version from package file
 get_package_version() {
@@ -94,6 +108,17 @@ EOF
 
     # Get version from PKGBUILD
     AUR_VERSION=$(get_pkgbuild_version "$AUR_BUILD_DIR/$PACKAGE")
+
+    # Special handling for -git packages: they always appear to have version changes
+    # because the PKGBUILD version differs from the built version (pkgver() runs during build)
+    # If we already have a built package, skip unless it's truly outdated
+    if [[ "$PACKAGE" == *-git ]]; then
+        if [ -n "$CURRENT_VERSION" ]; then
+            echo "✓ $PACKAGE $CURRENT_VERSION is up to date (skipping)"
+            SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+            continue
+        fi
+    fi
 
     # Compare versions
     if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$AUR_VERSION" ]; then

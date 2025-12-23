@@ -9,11 +9,13 @@ PACKAGES_FILE="$PROJECT_ROOT/archiso/packages.x86_64"
 OFFICIAL_CACHE="/var/cache/pacman/pkg"
 AUR_REPO="$PROJECT_ROOT/archiso/shedos-repo"
 
-# AUR packages (should be in shedos-repo)
-AUR_PACKAGES=(
-    "elephant" "walker" "calamares" "yay" "visual-studio-code-bin"
-    "google-chrome" "slack-desktop" "obsidian-bin" "hadolint-bin"
-)
+# Read AUR packages from packages/aur.txt (single source of truth)
+AUR_FILE="$PROJECT_ROOT/packages/aur.txt"
+if [ -f "$AUR_FILE" ]; then
+    mapfile -t AUR_PACKAGES < <(grep -v '^#' "$AUR_FILE" | grep -v '^$' | tr -d ' ')
+else
+    AUR_PACKAGES=()
+fi
 
 echo "========================================"
 echo "Verifying package cache completeness..."

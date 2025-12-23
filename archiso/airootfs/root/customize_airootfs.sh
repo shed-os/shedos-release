@@ -10,6 +10,10 @@ echo "=========================================="
 echo "Installing Python packages..."
 pip install --break-system-packages pythondialog textual rich || echo "WARNING: pip install failed"
 
+# Install NPM packages globally
+echo "Installing global NPM packages..."
+npm install -g @angular/language-server typescript-svelte-plugin @vue/language-server || echo "WARNING: npm install failed"
+
 # NOTE: No package caching needed - installer uses rsync to copy live filesystem
 
 # Set default locale
@@ -149,5 +153,14 @@ if [ -d /etc/skel/.config ]; then
 else
     echo "WARNING: /etc/skel/.config directory not found"
 fi
+
+# Ensure shedos scripts are executable
+chmod +x /usr/local/bin/shedos-* 2>/dev/null || true
+
+# Update desktop database to ensure application launchers work
+update-desktop-database /usr/share/applications || true
+
+# Resolve DNS issue for go build proxy
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf 2>/dev/null || true
 
 echo "Customization complete!"

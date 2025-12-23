@@ -32,18 +32,16 @@ echo ""
 echo "Step 2/2: Downloading official repository packages..."
 echo "=================================="
 
-# List of AUR packages to exclude (must match build-aur-packages.sh)
-AUR_PACKAGES=(
-    "elephant"
-    "walker"
-    "calamares"
-    "yay"
-    "visual-studio-code-bin"
-    "google-chrome"
-    "slack-desktop"
-    "obsidian-bin"
-    "hadolint-bin"
-)
+# Read AUR packages from packages/aur.txt (single source of truth)
+AUR_FILE="$PROJECT_ROOT/packages/aur.txt"
+if [ ! -f "$AUR_FILE" ]; then
+    echo "ERROR: AUR package list not found: $AUR_FILE"
+    exit 1
+fi
+
+# Read packages, filtering out comments and empty lines
+mapfile -t AUR_PACKAGES < <(grep -v '^#' "$AUR_FILE" | grep -v '^$' | tr -d ' ')
+echo "Found ${#AUR_PACKAGES[@]} AUR packages to exclude from download"
 
 # Create temporary directory for package list
 TEMP_DIR=$(mktemp -d)
@@ -52,7 +50,8 @@ trap "rm -rf $TEMP_DIR" EXIT
 # Extract package names (remove comments, blank lines, and versions)
 grep -v '^#' "$PACKAGES_FILE" | grep -v '^$' | awk '{print $1}' > "$TEMP_DIR/all_packages.txt"
 
-# Filter out AUR packages
+# Filter out AUR packages - they cannot be downloaded via pacman -Sw
+# This prevents "error: target not found" messages
 cp "$TEMP_DIR/all_packages.txt" "$TEMP_DIR/pkglist.txt"
 for pkg in "${AUR_PACKAGES[@]}"; do
     sed -i "/^${pkg}$/d" "$TEMP_DIR/pkglist.txt"
@@ -60,114 +59,55 @@ done
 
 TOTAL_PACKAGES=$(wc -l < "$TEMP_DIR/all_packages.txt")
 OFFICIAL_PACKAGES=$(wc -l < "$TEMP_DIR/pkglist.txt")
-AUR_COUNT=$((TOTAL_PACKAGES - OFFICIAL_PACKAGES))
+AUR_COUNT=${#AUR_PACKAGES[@]}
 
 echo "Total packages: $TOTAL_PACKAGES"
 echo "Official packages to download: $OFFICIAL_PACKAGES"
-echo "AUR packages (already built): $AUR_COUNT"
+echo "AUR packages (excluded from download): $AUR_COUNT"
 echo ""
 
-# Download packages using pacman
+# Download packages using pacman -Sw (download only, don't install)
+# pacman automatically skips packages that are already cached at the correct version
 echo "Downloading packages to $CACHE_DIR..."
-echo "This may take a while depending on your connection..."
+echo "Pacman will automatically skip already-cached packages."
 echo ""
 
-# Use pacman to download packages
-# -Syw = sync databases and download only (don't install)
-# --asdeps = mark packages as dependencies (doesn't affect download)
-# --cachedir = where to store downloaded packages
-# --needed = skip packages that are already in cache
-# Note: We use the system's default pacman.conf (not ISO's) since we're only
-# downloading official repo packages. AUR packages are already in shedos-repo.
-# We DON'T use -d flag so dependencies are downloaded too!
+# Use pacman -Sw which:
+# 1. Only downloads packages not already in cache (or wrong version)
+# 2. Handles dependencies automatically
+# 3. Uses the synced database for correct URLs
+echo "Starting package download..."
 
-echo "Starting package download (this may take several minutes)..."
+# Create a download-specific pacman.conf based on archiso/pacman.conf
+# We exclude shedos-repo since those are local AUR packages (not downloadable)
+# but keep everything else identical for consistent dependency resolution
+DOWNLOAD_PACMAN_CONF="$TEMP_DIR/pacman-download.conf"
+cat > "$DOWNLOAD_PACMAN_CONF" << 'EOF'
+[options]
+HoldPkg     = pacman glibc
+Architecture = x86_64
+Color
+CheckSpace
+ParallelDownloads = 5
+SigLevel    = Never
+LocalFileSigLevel = Optional
 
-# Create fake root so pacman thinks no packages are installed
-FAKE_ROOT=$(mktemp -d)
-mkdir -p "$FAKE_ROOT/var/lib/pacman/local"  # Empty - nothing installed
-mkdir -p "$FAKE_ROOT/var/lib/pacman/sync"    # Need for repo databases
+[core]
+Include = /etc/pacman.d/mirrorlist
 
-# Copy sync databases so pacman knows what packages are available
-echo "Setting up fake root environment..."
-cp /var/lib/pacman/sync/*.db "$FAKE_ROOT/var/lib/pacman/sync/"
+[extra]
+Include = /etc/pacman.d/mirrorlist
 
-# Get list of ALL package URLs using fake root
-# Use empty cache dir too, so pacman outputs http:// URLs instead of file:// URLs
-echo "Resolving all package URLs (including dependencies)..."
-FAKE_CACHE=$(mktemp -d)
-pacman -Sp \
-    --root "$FAKE_ROOT" \
-    --cachedir "$FAKE_CACHE" \
-    --print-format '%n %l' \
-    $(cat "$TEMP_DIR/pkglist.txt") > "$TEMP_DIR/package_urls.txt" 2>&1
-rm -rf "$FAKE_CACHE"
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+EOF
 
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to resolve package URLs!"
-    cat "$TEMP_DIR/package_urls.txt"
-    rm -rf "$FAKE_ROOT"
-    exit 1
-fi
+echo "Using download pacman.conf (matches archiso, excludes local shedos-repo)..."
 
-# Clean up fake root (don't need it anymore)
-rm -rf "$FAKE_ROOT"
-
-# Download each package
-TOTAL=$(grep -c '\.pkg\.tar\.zst' "$TEMP_DIR/package_urls.txt" || echo 0)
-DOWNLOADED=0
-SKIPPED=0
-
-echo "Found $TOTAL packages to download (including all dependencies)..."
-echo ""
-
-while read -r name url; do
-    # Skip empty lines
-    [ -z "$name" ] && continue
-    [ -z "$url" ] && continue
-
-    # Skip non-package URLs
-    [[ ! "$url" =~ \.pkg\.tar\.zst$ ]] && continue
-
-    filename=$(basename "$url")
-
-    # Check if already in cache
-    if [ -f "$CACHE_DIR/$filename" ]; then
-        SKIPPED=$((SKIPPED + 1))
-        continue
-    fi
-
-    # Download the package
-    echo "Downloading: $name ($filename)..."
-    if curl -f -L -o "$CACHE_DIR/$filename" "$url" 2>&1 | grep -v "^  % Total"; then
-        DOWNLOADED=$((DOWNLOADED + 1))
-    else
-        echo "ERROR: Failed to download $name from $url"
-        exit 1
-    fi
-done < "$TEMP_DIR/package_urls.txt"
-
-# Double-check that critical packages were downloaded
-echo ""
-echo "Verifying critical packages..."
-MISSING_CRITICAL=0
-for pkg in lsof glu; do
-    if ! ls "$CACHE_DIR/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
-        echo "ERROR: Critical package missing: $pkg"
-        MISSING_CRITICAL=$((MISSING_CRITICAL + 1))
-    fi
-done
-
-if [ $MISSING_CRITICAL -gt 0 ]; then
-    echo "ERROR: $MISSING_CRITICAL critical packages are missing!"
-    echo "Dumping first 20 lines of package_urls.txt for debugging:"
-    head -20 "$TEMP_DIR/package_urls.txt"
-    exit 1
-fi
-
-echo ""
-echo "Downloaded: $DOWNLOADED packages"
-echo "Already cached: $SKIPPED packages"
+# Download all packages AND their dependencies
+# This ensures the exact same packages are downloaded as will be installed
+echo "Downloading packages and all dependencies..."
+pacman -Syw --noconfirm --config "$DOWNLOAD_PACMAN_CONF" $(cat "$TEMP_DIR/pkglist.txt" | tr '\n' ' ')
 
 echo ""
 echo "=================================="

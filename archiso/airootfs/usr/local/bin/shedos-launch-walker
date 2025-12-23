@@ -1,0 +1,33 @@
+#!/bin/bash
+# ShedOS Walker Launcher
+# Ensures elephant is running before launching walker
+# Uses uwsm-app for proper Wayland environment (like Omarchy)
+
+# Check if uwsm-app is available
+if command -v uwsm-app &> /dev/null; then
+    # Ensure elephant is running
+    if ! pgrep -x elephant > /dev/null; then
+        setsid uwsm-app -- elephant &
+        sleep 1
+    fi
+
+    # Ensure walker service is running
+    if ! pgrep -f "walker --gapplication-service" > /dev/null; then
+        setsid uwsm-app -- walker --gapplication-service &
+        sleep 1
+    fi
+else
+    # Fallback if uwsm not available
+    if ! pgrep -x elephant > /dev/null; then
+        elephant &
+        sleep 1
+    fi
+
+    if ! pgrep -f "walker --gapplication-service" > /dev/null; then
+        walker --gapplication-service &
+        sleep 1
+    fi
+fi
+
+# Launch walker
+exec walker "$@"

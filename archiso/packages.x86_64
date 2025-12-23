@@ -1,337 +1,569 @@
-# ShedOS Live Environment Packages
-# ALL packages included for OFFLINE installation
+# ShedOS Package List
+# AUTO-GENERATED - DO NOT EDIT MANUALLY
+# Edit files in packages/official/ and packages/aur.txt instead
+# Then run: make generate-packages
 
-# Base system
+# Official Repository Packages
+# =============================
+
+# --- api-testing ---
+curl
+httpie
+xh
+
+# --- audio ---
+alsa-firmware
+alsa-plugins
+alsa-utils
+bluez
+bluez-utils
+helvum
+pamixer
+pavucontrol
+pipewire
+pipewire-alsa
+pipewire-audio
+pipewire-jack
+pipewire-pulse
+wireplumber
+
+# --- base ---
+amd-ucode
+arch-install-scripts
 base
 base-devel
-linux
-linux-headers
-linux-firmware
-mkinitcpio
-mkinitcpio-archiso
-
-# Boot
-limine
-efibootmgr
-grub
-edk2-shell
-
-# Microcode
-intel-ucode
-amd-ucode
-
-# Filesystem tools
+bash-completion
 btrfs-progs
-squashfs-tools
-dosfstools
-e2fsprogs
-exfatprogs
-f2fs-tools
-ntfs-3g
-xfsprogs
+bzip2
 cryptsetup
-
-# Network
-networkmanager
-iwd
-wpa_supplicant
+curl
 dhclient
 dhcpcd
-openssh
-wget
-curl
-
-# Archiso requirements
-arch-install-scripts
+dialog
+dosfstools
+e2fsprogs
+edk2-shell
+efibootmgr
+exfatprogs
+f2fs-tools
+git
+git-lfs
+gptfdisk
+gzip
+hdparm
+htop
+inetutils
+intel-ucode
+iwd
+less
+limine
+linux
+linux-firmware
+linux-headers
+lshw
+lsof
+lz4
+man-db
+man-pages
+mdadm
 memtest86+
 memtest86+-efi
+mkinitcpio
+mkinitcpio-archiso
 mtools
+nano
 nbd
+neovim
+networkmanager
+networkmanager-openvpn
+ntfs-3g
 nvme-cli
+openssh
+pacman-contrib
+pciutils
+plymouth
+procps-ng
 pv
 reflector
 rsync
 smartmontools
+squashfs-tools
+strace
+sudo
 syslinux
+tar
 testdisk
-
-# Hardware detection
-dmidecode
-lshw
-pciutils
+texinfo
+tree
+unrar
+unzip
 usbutils
-
-# Shell
+vim
+wget
+which
+wpa_supplicant
+xfsprogs
+xz
+zip
 zsh
 zsh-completions
-bash-completion
+zstd
 
-# Utilities
-git
-htop
-less
-lsof
-man-db
-man-pages
-nano
-neovim
-sudo
-tmux
-tree
-unzip
-vim
-which
-zip
-gzip
-tar
+# --- browsers ---
+chromium
+firefox
 
-# Python for installer
-python
-python-pip
-python-psutil
-python-rich
-python-pydantic
+# --- cloud-cli ---
+rclone
+s3cmd
+terraform
 
-# Display for installer TUI
-dialog
-yad
+# --- databases ---
+pgcli
+postgresql
+postgresql-libs
 
-# Calamares installer (calamares & kpmcore from shedos-repo)
-calamares
-yaml-cpp
-libpwquality
-icu
-# KDE Framework dependencies for Calamares
-kcrash
-kconfig
-kcoreaddons
-kdbusaddons
-ki18n
-kwidgetsaddons
-kservice
-kpackage
-kparts
-solid
-libplasma
-kirigami
-polkit-qt6
-# Qt6 dependencies for Calamares
-qt6-base
-qt6-declarative
-qt6-svg
-qt6-multimedia-ffmpeg
-
-# Fonts
-terminus-font
-ttf-dejavu
-ttf-liberation
-noto-fonts
-noto-fonts-emoji
-noto-fonts-cjk
-ttf-jetbrains-mono-nerd
-ttf-firacode-nerd
-ttf-cascadia-code-nerd
-ttf-victor-mono-nerd
-
-# NVIDIA packages
-nvidia-open-dkms
-nvidia-utils
-nvidia-settings
-egl-wayland
-glu
-
-# Hyprland and Wayland desktop
-hyprland
-xdg-desktop-portal-hyprland
-waybar
-walker
-elephant
-wofi
-mako
-hyprlock
-hypridle
-swww
-wf-recorder
-grim
-slurp
-swappy
-hyprpicker
-wl-clipboard
-cliphist
-
-# Terminals
-kitty
-foot
-
-# File managers
-nautilus
-thunar
-
-# Desktop utilities
-brightnessctl
-playerctl
-polkit-gnome
-network-manager-applet
-bluez
-bluez-utils
+# --- desktop ---
 blueman
-xorg-xset
-
-# Qt/GTK
-qt5-wayland
-qt6-wayland
-gtk3
-gtk4
-
-# Audio
-pipewire
-pipewire-alsa
-pipewire-pulse
-pipewire-jack
-wireplumber
-pamixer
-pavucontrol
-
-# Display manager
+brightnessctl
+cliphist
+fcitx5
+fcitx5-configtool
+fcitx5-gtk
+fcitx5-qt
+file-roller
+gammastep
+gnome-keyring
 greetd
 greetd-tuigreet
+grim
+gtk3
+gtk4
+gvfs
+gvfs-mtp
+gvfs-nfs
+gvfs-smb
+hypridle
+hyprland
+hyprlock
+hyprpicker
+kitty
+kvantum
+libnotify
+mako
+nautilus
+network-manager-applet
+nwg-look
+obs-studio
+papirus-icon-theme
+playerctl
+polkit
+polkit-gnome
+qt5ct
+qt5-wayland
+qt6ct
+qt6-wayland
+seahorse
+slurp
+swappy
+swww
+walker
+waybar
+wf-recorder
+wl-clipboard
+wmctrl
+wtype
+xdg-desktop-portal-gtk
+xdg-desktop-portal-hyprland
+xdg-user-dirs
+xdg-utils
+xdotool
+xorg-xset
 
-# Browsers
-firefox
-chromium
-
-# Branding
-fastfetch
-jp2a
-plymouth
-
-# System utilities
-parted
-gptfdisk
-lvm2
-mdadm
-snapper
-
-# Development - Languages
+# --- development ---
+bandwhich
+bash-language-server
+bat
+bottom
+csvkit
+curl
+direnv
+duf
+dust
+eslint
+eza
+fd
+fzf
+gawk
+git
+git-delta
+github-cli
+git-lfs
+go
+gopls
+httpie
+hyperfine
+jq
+lazygit
+lua-language-server
+man-db
+neovim
 nodejs
 npm
-go
-rustup
-
-# Development - Build tools
-cmake
-make
-gcc
-clang
-meson
-ninja
-
-# Development - Version control
-git-lfs
-lazygit
-
-# AUR helper
-yay
-
-# Development - Language servers
-lua-language-server
+perl
+prettier
+procs
 pyright
-typescript-language-server
-gopls
-rust-analyzer
-
-# Development - Debug tools
-gdb
-lldb
-strace
-ltrace
-valgrind
-
-# DevOps - Containers
-docker
-docker-compose
-podman
-buildah
-
-# DevOps - Kubernetes
-kubectl
-helm
-k9s
-
-# DevOps - Infrastructure
-terraform
-ansible
-aws-cli-v2
-
-# Databases
-postgresql
-valkey
-
-# System programming
-zig
-
-# TUI tools
-fzf
+python
+python-lsp-server
+python-pip
+python-psutil
+python-pydantic
+python-rich
 ripgrep
-fd
-bat
-eza
-zoxide
-starship
-jq
-
-# Additional development tools
+ruby
+rubygems
+rust-analyzer
+sd
+sed
+shellcheck
+shfmt
 silicon
-hadolint-bin
-github-cli
+starship
+stylua
+tealdeer
+the_silver_searcher
+tldr
+tmux
+tokei
+tree-sitter
+tree-sitter-cli
+typescript-language-server
+watchexec
+wget
+yq
+zoxide
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
 
-# Virtualization
-virt-manager
-qemu-full
-libvirt
-dnsmasq
-iptables-nft
-dmidecode
+# --- devops ---
+docker
+docker-buildx
+docker-compose
+helm
+kubectl
 
-# Multimedia & Creative
-obs-studio
-vlc
-mpv
+# --- fonts ---
+adobe-source-code-pro-fonts
+gnu-free-fonts
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-extra
+otf-font-awesome
+terminus-font
+tex-gyre-fonts
+ttf-cascadia-code-nerd
+ttf-dejavu
+ttf-droid
+ttf-firacode-nerd
+ttf-hack-nerd
+ttf-ibm-plex
+ttf-jetbrains-mono-nerd
+ttf-liberation
+ttf-meslo-nerd
+ttf-nerd-fonts-symbols
+ttf-opensans
+ttf-roboto
+ttf-ubuntu-font-family
+ttf-victor-mono-nerd
+
+# --- installer ---
+glu
+grub
+icu
+kconfig
+kcoreaddons
+kcrash
+kdbusaddons
+ki18n
+kirigami
+kpackage
+kparts
+kservice
+kwidgetsaddons
+libplasma
+libpwquality
+polkit-qt6
+qt6-base
+qt6-declarative
+qt6-multimedia-ffmpeg
+qt6-svg
+solid
+yaml-cpp
+
+# --- media ---
+audacity
+darktable
+ffmpeg
+flameshot
+fontforge
+gcolor3
 gimp
+gimp-help-en
+graphicsmagick
+handbrake
+handbrake-cli
+imagemagick
 inkscape
 kdenlive
-audacity
+obs-studio
+rawtherapee
+shotcut
 
-# Office & Productivity
+# --- music ---
+cmus
+mpc
+mpd
+mpv
+ncmpcpp
+rhythmbox
+vlc
+
+# --- network-tools ---
+aircrack-ng
+aria2
+autossh
+axel
+bind
+bmon
+dog
+iftop
+iw
+ldns
+lftp
+masscan
+mosh
+mtr
+ncftp
+nethogs
+nload
+nmap
+proxychains-ng
+socat
+sshfs
+tcpdump
+traceroute
+tsocks
+wavemon
+whois
+wireshark-cli
+wireshark-qt
+
+# --- nvidia ---
+cuda
+cudnn
+egl-wayland
+lib32-nvidia-utils
+libva-nvidia-driver
+nvidia-container-toolkit
+nvidia-open-dkms
+nvidia-prime
+nvidia-settings
+nvidia-utils
+
+# --- office ---
+calibre
+dictd
+evince
+foliate
+gnome-calculator
+gnome-calendar
 libreoffice-fresh
+pdfjs
+poppler
 thunderbird
-obsidian-bin
+zathura
+zathura-djvu
+zathura-pdf-mupdf
 
-# Communication
-discord
-telegram-desktop
-slack-desktop
+# --- power-mgmt ---
+acpid
+cpupower
+power-profiles-daemon
+powertop
+thermald
+tlp
+tlp-rdw
+upower
 
-# Development - IDEs
-visual-studio-code-bin
+# --- printing ---
+avahi
+cups
+cups-filters
+cups-pdf
+foomatic-db
+foomatic-db-engine
+foomatic-db-nonfree
+foomatic-db-ppds
+gutenprint
+hplip
+nss-mdns
+sane
+sane-airscan
+simple-scan
+system-config-printer
 
-# Browsers
-google-chrome
+# --- privacy ---
+age
+certbot
+clamav
+gnupg
+lynis
+networkmanager-openconnect
+networkmanager-openvpn
+nyx
+openconnect
+openvpn
+rkhunter
+step-cli
+tor
+torsocks
+ufw
+wireguard-tools
 
-# Additional utilities
+# --- system-programming ---
+autoconf
+automake
+ccache
+clang
+cmake
+cppcheck
+distcc
+doxygen
+gcc
+gdb
+glibc
+libc++
+libffi
+libtool
+linux-headers
+lld
+lldb
+llvm
+ltrace
+make
+meson
+musl
+nasm
+ninja
+openssl
+pkgconf
+readline
+rustup
+sccache
+strace
+valgrind
+yasm
+zig
+zlib
+
+# --- tui-tools ---
+bandwhich
+broot
 btop
+duf
 dust
-procs
-tokei
-hyperfine
-tealdeer
-bottom
-
-# TUI Tools
-bluetui
-impala
-lazygit
+gping
 lazydocker
+lazygit
+lf
+ncdu
+nnn
+procs
+ranger
+tig
+vifm
 
-# Audio control
-pavucontrol
+# --- utilities ---
+atool
+baobab
+bleachbit
+borg
+borgmatic
+btop
+dmidecode
+fastfetch
+file-roller
+flatpak
+font-manager
+gnome-disk-utility
+gnome-system-monitor
+gparted
+hwinfo
+inxi
+jp2a
+ncdu
+parted
+restic
+snapper
+xarchiver
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+
+# --- virtualization ---
+bridge-utils
+dmidecode
+dnsmasq
+edk2-ovmf
+libvirt
+lvm2
+openbsd-netcat
+qemu-full
+qemu-img
+virt-manager
+virtualbox
+virtualbox-guest-iso
+virtualbox-host-modules-arch
+virt-viewer
+
+
+# AUR Packages
+# ============
+auto-cpufreq
+bluetui
+calamares
+catppuccin-gtk-theme-mocha
+elephant
+elephant-bluetooth
+elephant-calc
+elephant-clipboard
+elephant-desktopapplications
+elephant-files
+elephant-menus
+elephant-providerlist
+elephant-runner
+elephant-symbols
+elephant-todo
+elephant-unicode
+elephant-websearch
+google-chrome
+hadolint-bin
+impala
+lazydocker
+looking-glass
+minikube-bin
+mise-bin
+mission-center
+obsidian-bin
+oh-my-zsh-git
+postman-bin
+slack-desktop
+timeshift
+ttf-ms-fonts
+usql
+vagrant
+visual-studio-code-bin
+walker
+yay
