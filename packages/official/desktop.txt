@@ -47,8 +47,8 @@ gnome-keyring
 seahorse
 
 # Display Manager
-greetd
-greetd-tuigreet
+# Display Manager
+sddm
 
 # GTK/Qt Theming
 gtk3
