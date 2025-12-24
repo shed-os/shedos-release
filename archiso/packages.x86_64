@@ -6,11 +6,6 @@
 # Official Repository Packages
 # =============================
 
-# --- api-testing ---
-curl
-httpie
-xh
-
 # --- audio ---
 alsa-firmware
 alsa-plugins
@@ -110,7 +105,6 @@ zsh-completions
 zstd
 
 # --- browsers ---
-chromium
 firefox
 
 # --- cloud-cli ---
@@ -132,10 +126,7 @@ fcitx5-configtool
 fcitx5-gtk
 fcitx5-qt
 file-roller
-gammastep
 gnome-keyring
-greetd
-greetd-tuigreet
 grim
 gtk3
 gtk4
@@ -147,6 +138,7 @@ hypridle
 hyprland
 hyprlock
 hyprpicker
+hyprsunset
 kitty
 kvantum
 libnotify
@@ -154,7 +146,6 @@ mako
 nautilus
 network-manager-applet
 nwg-look
-obs-studio
 papirus-icon-theme
 playerctl
 polkit
@@ -163,11 +154,11 @@ qt5ct
 qt5-wayland
 qt6ct
 qt6-wayland
+sddm
 seahorse
 slurp
 swappy
 swww
-walker
 waybar
 wf-recorder
 wl-clipboard
@@ -181,38 +172,28 @@ xdotool
 xorg-xset
 
 # --- development ---
-bandwhich
+ast-grep
 bash-language-server
 bat
 bottom
 csvkit
-curl
 direnv
-duf
-dust
 eslint
 eza
 fd
 fzf
 gawk
-git
-git-delta
-github-cli
-git-lfs
 go
 gopls
-httpie
+grep
 hyperfine
 jq
 lazygit
 lua-language-server
-man-db
-neovim
 nodejs
 npm
 perl
 prettier
-procs
 pyright
 python
 python-lsp-server
@@ -233,26 +214,20 @@ starship
 stylua
 tealdeer
 the_silver_searcher
-tldr
 tmux
 tokei
 tree-sitter
 tree-sitter-cli
 typescript-language-server
 watchexec
-wget
 yq
 zoxide
-zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
 
 # --- devops ---
 docker
-docker-buildx
 docker-compose
-helm
-kubectl
 
 # --- fonts ---
 adobe-source-code-pro-fonts
@@ -313,40 +288,27 @@ gcolor3
 gimp
 gimp-help-en
 graphicsmagick
-handbrake
-handbrake-cli
 imagemagick
 inkscape
 kdenlive
 obs-studio
 rawtherapee
-shotcut
 
 # --- music ---
-cmus
-mpc
-mpd
-mpv
-ncmpcpp
 rhythmbox
 vlc
 
 # --- network-tools ---
 aircrack-ng
-aria2
-autossh
-axel
 bind
 bmon
 dog
 iftop
+iputils
 iw
 ldns
-lftp
 masscan
-mosh
 mtr
-ncftp
 nethogs
 nload
 nmap
@@ -362,8 +324,6 @@ wireshark-cli
 wireshark-qt
 
 # --- nvidia ---
-cuda
-cudnn
 egl-wayland
 lib32-nvidia-utils
 libva-nvidia-driver
@@ -375,9 +335,7 @@ nvidia-utils
 
 # --- office ---
 calibre
-dictd
 evince
-foliate
 gnome-calculator
 gnome-calendar
 libreoffice-fresh
@@ -417,25 +375,12 @@ system-config-printer
 
 # --- privacy ---
 age
-certbot
-clamav
 gnupg
-lynis
-networkmanager-openconnect
-networkmanager-openvpn
-nyx
-openconnect
 openvpn
-rkhunter
-step-cli
 tor
-torsocks
 ufw
-wireguard-tools
 
 # --- system-programming ---
-autoconf
-automake
 ccache
 clang
 cmake
@@ -447,23 +392,17 @@ gdb
 glibc
 libc++
 libffi
-libtool
-linux-headers
 lld
 lldb
 llvm
 ltrace
 make
-meson
 musl
 nasm
-ninja
 openssl
-pkgconf
 readline
 rustup
 sccache
-strace
 valgrind
 yasm
 zig
@@ -471,31 +410,19 @@ zlib
 
 # --- tui-tools ---
 bandwhich
-broot
 btop
 duf
 dust
 gping
-lazydocker
-lazygit
-lf
 ncdu
-nnn
 procs
-ranger
-tig
-vifm
 
 # --- utilities ---
 atool
 baobab
 bleachbit
-borg
-borgmatic
-btop
 dmidecode
 fastfetch
-file-roller
 flatpak
 font-manager
 gnome-disk-utility
@@ -504,17 +431,14 @@ gparted
 hwinfo
 inxi
 jp2a
-ncdu
+libcdio
 parted
-restic
 snapper
 xarchiver
 xdg-desktop-portal
-xdg-desktop-portal-gtk
 
 # --- virtualization ---
 bridge-utils
-dmidecode
 dnsmasq
 edk2-ovmf
 libvirt
@@ -535,13 +459,16 @@ auto-cpufreq
 bluetui
 calamares
 catppuccin-gtk-theme-mocha
+catppuccin-sddm-theme-mocha
 elephant
+elephant-archlinuxpkgs
 elephant-bluetooth
 elephant-calc
 elephant-clipboard
 elephant-desktopapplications
 elephant-files
 elephant-menus
+elephant-nirisessions
 elephant-providerlist
 elephant-runner
 elephant-symbols
@@ -552,7 +479,6 @@ google-chrome
 hadolint-bin
 impala
 lazydocker
-looking-glass
 minikube-bin
 mise-bin
 mission-center
@@ -563,7 +489,6 @@ slack-desktop
 timeshift
 ttf-ms-fonts
 usql
-vagrant
 visual-studio-code-bin
 walker
 yay

@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=ShedOS
-Description=ShedOS Boot Splash Theme
+Description=ShedOS boot splash theme
 ModuleName=script
 
 [script]

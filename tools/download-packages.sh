@@ -89,6 +89,8 @@ Architecture = x86_64
 Color
 CheckSpace
 ParallelDownloads = 5
+DownloadUser = root
+DisableSandbox
 SigLevel    = Never
 LocalFileSigLevel = Optional
 
@@ -104,14 +106,54 @@ EOF
 
 echo "Using download pacman.conf (matches archiso, excludes local shedos-repo)..."
 
+# Create temporary database path to avoid host package conflicts
+TEMP_DBPATH="$TEMP_DIR/db"
+mkdir -p "$TEMP_DBPATH"
+
 # Download all packages AND their dependencies
 # This ensures the exact same packages are downloaded as will be installed
-echo "Downloading packages and all dependencies..."
-pacman -Syw --noconfirm --config "$DOWNLOAD_PACMAN_CONF" $(cat "$TEMP_DIR/pkglist.txt" | tr '\n' ' ')
+# 1. Download official packages
+echo "Downloading official packages..."
+# Use --dbpath to isolate from host system
+pacman -Syw --noconfirm --dbpath "$TEMP_DBPATH" --config "$DOWNLOAD_PACMAN_CONF" $(cat "$TEMP_DIR/pkglist.txt" | tr '\n' ' ')
+
+# 2. Automatically resolve and download dependencies for built AUR packages
+echo "Resolving dependencies for built AUR packages..."
+AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
+if [ -d "$AUR_REPO_DIR" ]; then
+    # Create a list of all dependencies required by our built AUR packages
+    # We use pacman -Qpi to query the built package files directly for detailed info
+    echo "Extracting dependencies from local packages..."
+    find "$AUR_REPO_DIR" -name "*.pkg.tar.zst" -exec pacman -Qpi {} + | \
+        grep "^Depends On" | \
+        cut -d':' -f2 | \
+        tr ' ' '\n' | \
+        sed 's/^[ \t]*//' | \
+        grep -v "None" | \
+        sort -u | \
+        grep -v "^$" > "$TEMP_DIR/aur_deps.txt" || true
+    
+    DEPS_COUNT=$(wc -l < "$TEMP_DIR/aur_deps.txt")
+    echo "Found $DEPS_COUNT unique dependencies for AUR packages."
+    
+    if [ "$DEPS_COUNT" -gt 0 ]; then
+        # Download these dependencies
+        # pacman -Sw will automatically skip what's already downloaded or installed and up-to-date
+        echo "Downloading AUR dependencies..."
+        # Use --dbpath to isolate from host system
+        pacman -Syw --noconfirm --dbpath "$TEMP_DBPATH" --config "$DOWNLOAD_PACMAN_CONF" $(cat "$TEMP_DIR/aur_deps.txt" | tr '\n' ' ')
+    else
+        echo "No additional dependencies found for AUR packages."
+    fi
+else
+    echo "WARNING: AUR repo dir not found, skipping dependency resolution."
+fi
 
 echo ""
 echo "=================================="
-echo "All packages downloaded successfully"
+
+
+echo "All packages downloaded/built successfully."
 echo "=================================="
 
 # Step 3: Freeze package database state for deterministic builds
@@ -122,9 +164,10 @@ echo "=================================="
 DB_CACHE_DIR="$PROJECT_ROOT/db-cache"
 mkdir -p "$DB_CACHE_DIR"
 
-# Copy current sync databases to cache
+# Copy current sync databases to cache from TEMP_DBPATH
 # These represent the exact package versions we just downloaded
-cp /var/lib/pacman/sync/*.db "$DB_CACHE_DIR/" 2>/dev/null || true
+# Note: dbpath structure is usually dbpath/sync/*.db
+cp "$TEMP_DBPATH/sync/"*.db "$DB_CACHE_DIR/" 2>/dev/null || true
 
 echo "Databases cached in: $DB_CACHE_DIR"
 echo ""

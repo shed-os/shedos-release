@@ -102,6 +102,7 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 
+
 # Man pages
 export MANPAGER="nvim +Man!"
 export MANWIDTH=999

@@ -2,7 +2,6 @@
 # Runtime Version Manager
 
 [settings]
-idiomatic_version_file_enable_tools = ["ruby"]
 experimental = true
 
 [settings.ruby]
@@ -10,7 +9,7 @@ experimental = true
 [tools]
 go = "latest"
 gradle = "9.1.0"
-java = "openjdk-24"
+java = "openjdk-25"
 julia = "latest"
 kotlin = "latest"
 lua = "5.1"
