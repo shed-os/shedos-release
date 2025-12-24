@@ -1,8 +1,8 @@
 # ShedOS Plymouth Boot Theme Script
 
 # Screen and window setup
-Window.SetBackgroundTopColor(0.95, 0.95, 0.95);
-Window.SetBackgroundBottomColor(0.95, 0.95, 0.95);
+Window.SetBackgroundTopColor(0.118, 0.118, 0.180);
+Window.SetBackgroundBottomColor(0.118, 0.118, 0.180);
 
 screen_width = Window.GetWidth();
 screen_height = Window.GetHeight();
