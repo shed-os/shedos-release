@@ -7,27 +7,21 @@ parted
 
 # Disk Usage
 baobab
-ncdu
 
 # System Monitor
 gnome-system-monitor
-btop
 
 # Backup
-borg
-borgmatic
-restic
 snapper
 
 # Archive
-file-roller
 xarchiver
 atool
+libcdio
 
 # Flatpak
 flatpak
 xdg-desktop-portal
-xdg-desktop-portal-gtk
 
 # System Info
 fastfetch

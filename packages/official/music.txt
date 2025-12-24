@@ -1,18 +1,7 @@
 # ShedOS Music & Media Player Packages
 
-# CLI Players
-cmus
-mpd
-ncmpcpp
-mpc
-
 # Media Players
-mpv
 vlc
 
 # Music Library
 rhythmbox
-
-# Audio Tools
-
-# Note: spotify is in AUR

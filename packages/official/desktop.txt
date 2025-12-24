@@ -2,6 +2,9 @@
 
 # Hyprland & Wayland
 hyprland
+hypridle
+hyprlock
+hyprsunset
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-utils
@@ -9,7 +12,6 @@ xdg-user-dirs
 
 # Status Bar & Launcher
 waybar
-walker
 
 # Terminal
 kitty
@@ -47,7 +49,6 @@ gnome-keyring
 seahorse
 
 # Display Manager
-# Display Manager
 sddm
 
 # GTK/Qt Theming
@@ -75,10 +76,9 @@ brightnessctl
 
 # Screen Recording
 wf-recorder
-obs-studio
 
 # Color Temperature
-gammastep
+
 
 # Input Method
 fcitx5
@@ -91,8 +91,3 @@ wtype
 xdotool
 wmctrl
 xorg-xset
-
-# Hyprland Extras
-hypridle
-hyprlock
-

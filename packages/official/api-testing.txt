@@ -1,8 +1,0 @@
-# ShedOS API Testing Packages
-
-# CLI HTTP Client
-curl
-httpie
-xh
-
-# Note: postman-bin is in AUR

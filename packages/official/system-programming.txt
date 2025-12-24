@@ -9,19 +9,12 @@ libc++
 
 # Build Systems
 cmake
-meson
-ninja
 make
-autoconf
-automake
-libtool
-pkgconf
 
 # Debugging
 gdb
 lldb
 valgrind
-strace
 ltrace
 
 # Assembly
@@ -35,7 +28,6 @@ rustup
 zig
 
 # System Libraries
-linux-headers
 glibc
 musl
 

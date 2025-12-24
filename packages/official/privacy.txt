@@ -2,10 +2,6 @@
 
 # VPN
 openvpn
-networkmanager-openvpn
-wireguard-tools
-openconnect
-networkmanager-openconnect
 
 # Firewall
 ufw
@@ -16,14 +12,3 @@ age
 
 # Tor
 tor
-torsocks
-nyx
-
-# Security Scanning
-lynis
-rkhunter
-clamav
-
-# Certificate Management
-certbot
-step-cli

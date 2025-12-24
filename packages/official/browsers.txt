@@ -2,8 +2,3 @@
 
 # Firefox
 firefox
-
-# Chromium
-chromium
-
-# Note: google-chrome and brave are in AUR

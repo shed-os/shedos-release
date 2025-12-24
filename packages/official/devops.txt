@@ -3,9 +3,4 @@
 # Docker
 docker
 docker-compose
-docker-buildx
-
-# Kubernetes
-kubectl
-helm
 

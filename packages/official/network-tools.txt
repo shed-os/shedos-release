@@ -25,10 +25,7 @@ ldns
 
 # DNS Tools
 dog
-
-# HTTP Tools
-aria2
-axel
+iputils
 
 # Proxy
 proxychains-ng
@@ -40,10 +37,4 @@ wavemon
 iw
 
 # SSH
-mosh
 sshfs
-autossh
-
-# File Transfer
-lftp
-ncftp
