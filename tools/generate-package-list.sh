@@ -60,5 +60,11 @@ echo "  Official packages: $OFFICIAL_COUNT"
 echo "  AUR packages: $AUR_COUNT"
 echo "  Total unique: $TOTAL_COUNT"
 echo ""
+# Restore ownership if running as root
+if [ -n "$SUDO_USER" ]; then
+    chown "$SUDO_USER:$(id -gn "$SUDO_USER")" "$OUTPUT_FILE"
+    echo "Restored ownership to user: $SUDO_USER"
+fi
+
 echo "Output: $OUTPUT_FILE"
 echo "=========================================="

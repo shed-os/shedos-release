@@ -37,7 +37,7 @@ window#waybar {
     background: transparent;
 }
 
-window#waybar > box {
+window#waybar>box {
     background: alpha(@base, 0.85);
     border: 2px solid @surface0;
     border-radius: 15px;
@@ -97,11 +97,11 @@ window#waybar > box {
     padding: 0 10px;
 }
 
-#tray > .passive {
+#tray>.passive {
     -gtk-icon-effect: dim;
 }
 
-#tray > .needs-attention {
+#tray>.needs-attention {
     -gtk-icon-effect: highlight;
     background-color: @red;
 }
@@ -205,7 +205,7 @@ window#waybar > box {
     min-width: 50px;
 }
 
-#keyboard-state > label {
+#keyboard-state>label {
     padding: 0 5px;
 }
 
@@ -218,4 +218,65 @@ tooltip {
 tooltip label {
     color: @text;
     padding: 5px;
+}
+
+/* Catppuccin Mocha - Power Menu Styling */
+
+/* Menu container */
+menu {
+    background-color: @base;
+    border: 1px solid @surface1;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Menu items */
+menuitem {
+    color: @text;
+    background-color: transparent;
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin: 2px 0;
+    min-width: 120px;
+    transition: all 200ms ease;
+}
+
+/* Menu item hover state */
+menuitem:hover {
+    background-color: @surface0;
+    color: @blue;
+}
+
+/* Separator line */
+separator {
+    background-color: @surface1;
+    margin: 4px 8px;
+    min-height: 1px;
+}
+
+/* Specific item colors on hover (optional) */
+#shutdown:hover {
+    background-color: @surface0;
+    color: @red;
+}
+
+#reboot:hover {
+    background-color: @surface0;
+    color: @peach;
+}
+
+#suspend:hover {
+    background-color: @surface0;
+    color: @green;
+}
+
+#hibernate:hover {
+    background-color: @surface0;
+    color: @green;
+}
+
+#logout:hover {
+    background-color: @surface0;
+    color: @yellow;
 }

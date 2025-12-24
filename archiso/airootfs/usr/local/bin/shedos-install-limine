@@ -236,14 +236,14 @@ verbose: yes
 /ShedOS
     protocol: linux
     path: boot():/vmlinuz-linux
-    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs quiet splash loglevel=3
+    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 plymouth.ignore-serial-consoles plymouth.nolog
 ${MICROCODE_MODULE}
     module_path: boot():/initramfs-linux.img
 
 /ShedOS (fallback)
     protocol: linux
     path: boot():/vmlinuz-linux
-    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs
+    cmdline: root=UUID=${ROOT_UUID} rw rootflags=subvol=${ROOT_SUBVOL} rootfstype=btrfs quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 plymouth.ignore-serial-consoles plymouth.nolog
 ${MICROCODE_MODULE}
     module_path: boot():/initramfs-linux-fallback.img
 EOF

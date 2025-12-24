@@ -10,9 +10,13 @@ echo "=========================================="
 echo "Installing Python packages..."
 pip install --break-system-packages pythondialog textual rich || echo "WARNING: pip install failed"
 
-# Install NPM packages globally
-echo "Installing global NPM packages..."
-npm install -g @angular/language-server typescript-svelte-plugin @vue/language-server || echo "WARNING: npm install failed"
+
+
+# Install 'bat' Catppuccin theme
+echo "Installing 'bat' Catppuccin theme..."
+mkdir -p /usr/share/bat/themes
+curl -L -o "/usr/share/bat/themes/Catppuccin Mocha.tmTheme" "https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin%20Mocha.tmTheme" || echo "WARNING: Failed to download bat theme"
+bat cache --build || echo "WARNING: Failed to rebuild bat cache"
 
 # NOTE: No package caching needed - installer uses rsync to copy live filesystem
 
@@ -33,8 +37,26 @@ systemctl enable sddm
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/theme.conf <<EOF
 [Theme]
-Current=catppuccin-mocha
+Current=catppuccin-mocha-mauve
 EOF
+[Theme]
+Current=catppuccin-mocha-mauve
+EOF
+
+# Configure SDDM Autologin (Live ISO)
+cat > /etc/sddm.conf.d/live-session-autologin.conf <<EOF
+[Autologin]
+User=shedos
+Session=hyprland
+Relogin=false
+EOF
+chmod 644 /etc/sddm.conf.d/live-session-autologin.conf
+
+# Ensure Zsh is in /etc/shells (Critical for login)
+if ! grep -q "/usr/bin/zsh" /etc/shells; then
+    echo "/usr/bin/zsh" >> /etc/shells
+fi
+
 systemctl enable bluetooth
 systemctl enable iwd
 
@@ -164,10 +186,18 @@ fi
 # Ensure shedos scripts are executable
 chmod +x /usr/local/bin/shedos-* 2>/dev/null || true
 
+
 # Update desktop database to ensure application launchers work
 update-desktop-database /usr/share/applications || true
 
 # Resolve DNS issue for go build proxy
 ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf 2>/dev/null || true
+
+# Create additional directories in the user's home directory - projects and work
+# Add to skel so they appear for installed users
+mkdir -p /etc/skel/{projects,work}
+# Add to live user immediately
+mkdir -p /home/shedos/{projects,work}
+chown -R shedos:shedos /home/shedos/{projects,work}
 
 echo "Customization complete!"
