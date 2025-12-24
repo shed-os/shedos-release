@@ -143,6 +143,8 @@ kitty
 kvantum
 libnotify
 mako
+mesa
+mesa-utils
 nautilus
 network-manager-applet
 nwg-look
@@ -159,6 +161,7 @@ seahorse
 slurp
 swappy
 swww
+vulkan-swrast
 waybar
 wf-recorder
 wl-clipboard
@@ -169,6 +172,7 @@ xdg-desktop-portal-hyprland
 xdg-user-dirs
 xdg-utils
 xdotool
+xorg-xhost
 xorg-xset
 
 # --- development ---
@@ -445,10 +449,13 @@ libvirt
 lvm2
 openbsd-netcat
 qemu-full
+qemu-guest-agent
 qemu-img
+spice-vdagent
 virt-manager
 virtualbox
 virtualbox-guest-iso
+virtualbox-guest-utils
 virtualbox-host-modules-arch
 virt-viewer
 

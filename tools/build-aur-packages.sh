@@ -143,12 +143,12 @@ EOF
         sudo -u builduser bash <<EOF
 set -e
 cd "$AUR_BUILD_DIR/$PACKAGE"
-makepkg -sf --noconfirm
+makepkg -sf --noconfirm --skippgpcheck
 EOF
     else
         # Run as current user
         cd "$AUR_BUILD_DIR/$PACKAGE"
-        makepkg -sf --noconfirm
+        makepkg -sf --noconfirm --skippgpcheck
     fi
 
     # Copy built package to repo

@@ -125,8 +125,8 @@ run_qemu_uefi() {
             -drive file="$disk_path",format=qcow2,if=virtio \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -device virtio-net-pci,netdev=net0 \
-            -device virtio-vga \
-            -display gtk \
+            -device virtio-vga-gl \
+            -display gtk,gl=on \
             -serial stdio \
             -usb \
             -device usb-tablet \
@@ -146,8 +146,8 @@ run_qemu_uefi() {
             -boot menu=on \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -device virtio-net-pci,netdev=net0 \
-            -device virtio-vga \
-            -display gtk \
+            -device virtio-vga-gl \
+            -display gtk,gl=on \
             -serial stdio \
             -usb \
             -device usb-tablet \

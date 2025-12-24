@@ -32,6 +32,8 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 systemctl enable NetworkManager
 systemctl enable sshd
 systemctl enable sddm
+systemctl enable vboxservice.service || true
+systemctl enable qemu-guest-agent.service || true
 
 # Configure SDDM Theme
 mkdir -p /etc/sddm.conf.d
