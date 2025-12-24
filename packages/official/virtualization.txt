@@ -22,3 +22,8 @@ lvm2
 virtualbox
 virtualbox-host-modules-arch
 virtualbox-guest-iso
+virtualbox-guest-utils
+
+# VM Guest Agents
+qemu-guest-agent
+spice-vdagent

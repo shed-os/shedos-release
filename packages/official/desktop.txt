@@ -27,7 +27,9 @@ file-roller
 # Notifications
 mako
 libnotify
-
+mesa
+mesa-utils
+vulkan-swrast
 
 # Screenshots
 grim
@@ -90,4 +92,5 @@ fcitx5-qt
 wtype
 xdotool
 wmctrl
+xorg-xhost
 xorg-xset
