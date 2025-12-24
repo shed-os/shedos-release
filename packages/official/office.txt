@@ -12,7 +12,6 @@ poppler
 pdfjs
 
 # E-book
-foliate
 calibre
 
 # Calendar
@@ -21,11 +20,5 @@ gnome-calendar
 # Email
 thunderbird
 
-# Note Taking
-# obsidian is in AUR
-
 # Calculator
 gnome-calculator
-
-# Dictionary
-dictd

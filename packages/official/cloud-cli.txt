@@ -1,8 +1,5 @@
 # ShedOS Cloud CLI Tools Packages
 
-# Note: Many of these are AUR packages
-# This file contains only official repo packages
-
 # General Cloud Tools
 rclone
 s3cmd

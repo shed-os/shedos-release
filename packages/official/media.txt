@@ -12,7 +12,6 @@ inkscape
 
 # Video Editing
 kdenlive
-shotcut
 
 # Audio Editing
 audacity
@@ -23,8 +22,6 @@ graphicsmagick
 
 # Video Processing
 ffmpeg
-handbrake
-handbrake-cli
 
 # Raw Photo
 darktable

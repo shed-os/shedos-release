@@ -4,8 +4,3 @@
 postgresql
 postgresql-libs
 pgcli
-
-# Redis
-
-# CLI Tools
-

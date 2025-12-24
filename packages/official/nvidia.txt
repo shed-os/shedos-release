@@ -10,10 +10,6 @@ lib32-nvidia-utils
 egl-wayland
 libva-nvidia-driver
 
-# CUDA (for development)
-cuda
-cudnn
-
 # Container Runtime
 nvidia-container-toolkit
 

@@ -7,7 +7,6 @@ ttf-hack-nerd
 ttf-meslo-nerd
 ttf-cascadia-code-nerd
 ttf-victor-mono-nerd
-
 # System Fonts
 ttf-dejavu
 ttf-liberation
@@ -17,21 +16,16 @@ noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
-
 # Microsoft Fonts (AUR alternative)
 ttf-ubuntu-font-family
 ttf-droid
 ttf-ibm-plex
-
 # Icon Fonts
 otf-font-awesome
-otf-font-awesome
 ttf-nerd-fonts-symbols
-
 # Terminal Fonts
 terminus-font
 adobe-source-code-pro-fonts
-
 # Document Fonts
 tex-gyre-fonts
 gnu-free-fonts

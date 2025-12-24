@@ -15,18 +15,3 @@ procs
 bandwhich
 gping
 
-# Files
-ranger
-lf
-nnn
-vifm
-broot
-
-# Git
-lazygit
-tig
-
-# Docker
-lazydocker
-
-# Note: impala and bluetui are in AUR

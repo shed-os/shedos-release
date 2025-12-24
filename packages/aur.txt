@@ -40,9 +40,6 @@ postman-bin
 # Power
 auto-cpufreq
 
-# Virtualization
-looking-glass
-
 # Fonts
 ttf-ms-fonts
 
@@ -60,6 +57,8 @@ elephant-symbols
 elephant-todo
 elephant-unicode
 elephant-websearch
+elephant-archlinuxpkgs
+elephant-nirisessions
 
 # Walker (application launcher)
 walker
@@ -72,10 +71,7 @@ hadolint-bin
 
 # Theming (AUR)
 catppuccin-gtk-theme-mocha
-catppuccin-sddm-theme-mocha-git
+catppuccin-sddm-theme-mocha
 
 # Database Tools (AUR)
 usql
-
-# Development (AUR)
-vagrant
