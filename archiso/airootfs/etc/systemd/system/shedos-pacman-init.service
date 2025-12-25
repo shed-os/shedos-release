@@ -1,0 +1,13 @@
+[Unit]
+Description=Initialize Pacman Database
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pacman/sync/core.db
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pacman -Sy --noconfirm
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

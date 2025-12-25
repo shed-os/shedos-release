@@ -32,6 +32,7 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 systemctl enable NetworkManager
 systemctl enable sshd
 systemctl enable sddm
+systemctl enable shedos-pacman-init.service || true
 systemctl enable vboxservice.service || true
 systemctl enable qemu-guest-agent.service || true
 
@@ -198,11 +199,11 @@ update-desktop-database /usr/share/applications || true
 # Resolve DNS issue for go build proxy
 ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf 2>/dev/null || true
 
-# Create additional directories in the user's home directory - projects and work
+# Create additional directories in the user's home directory - projects, work, and .ssh
 # Add to skel so they appear for installed users
-mkdir -p /etc/skel/{projects,work}
+mkdir -p /etc/skel/{projects,work,.ssh}
 # Add to live user immediately
-mkdir -p /home/shedos/{projects,work}
-chown -R shedos:shedos /home/shedos/{projects,work}
+mkdir -p /home/shedos/{projects,work,.ssh}
+chown -R shedos:shedos /home/shedos/{projects,work,.ssh}
 
 echo "Customization complete!"
