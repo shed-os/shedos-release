@@ -62,6 +62,9 @@ fi
 systemctl enable bluetooth
 systemctl enable iwd
 
+# Enable PipeWire and WirePlumber globally for all users
+systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service
+
 # Set root to have no password (allows login with empty password)
 # Using chpasswd to set empty password properly
 echo 'root:' | chpasswd -e
