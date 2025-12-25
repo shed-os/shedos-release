@@ -21,7 +21,6 @@ file_permissions=(
   ["/etc/sudoers.d/wheel"]="0:0:440"
   ["/opt/shedos-installer/"]="0:0:755"
   ["/usr/local/bin/shedos-installer"]="0:0:755"
-  ["/usr/local/bin/shedos-install-limine"]="0:0:755"
   ["/usr/local/bin/shedos-welcome"]="0:0:755"
   ["/home/shedos/"]="1000:1000:755"
 )
