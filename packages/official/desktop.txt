@@ -94,3 +94,4 @@ xdotool
 wmctrl
 xorg-xhost
 xorg-xset
+yad
