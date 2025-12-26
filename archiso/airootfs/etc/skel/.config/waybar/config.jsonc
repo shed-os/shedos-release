@@ -62,7 +62,7 @@
     "cpu": {
         "interval": 5,
         "format": "󰍛",
-        "on-click": "kitty --class btop -e btop"
+        "on-click": "kitty --class btop -e btop --force-utf"
     },
     "clock": {
         "format": "{:%A %I:%M %p}",
