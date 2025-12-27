@@ -1,4 +1,5 @@
 # ShedOS Plymouth Boot Theme Script
+# Professional image-based implementation (like Ubuntu/Fedora)
 
 # Screen and window setup
 Window.SetBackgroundTopColor(0.118, 0.118, 0.180);
@@ -7,72 +8,163 @@ Window.SetBackgroundBottomColor(0.118, 0.118, 0.180);
 screen_width = Window.GetWidth();
 screen_height = Window.GetHeight();
 
-# Load the actual ShedOS logo
+# Load the ShedOS logo
 logo.image = Image("logo.png");
 logo.sprite = Sprite(logo.image);
 logo.x = screen_width / 2 - logo.image.GetWidth() / 2;
 logo.y = screen_height / 2 - logo.image.GetHeight() / 2 - 80;
 logo.sprite.SetPosition(logo.x, logo.y, 10);
 
-# Create spinning dots progress indicator
-progress.dots = [];
-progress.angle = 0;
-progress.radius = 40;
-progress.center_x = screen_width / 2;
-progress.center_y = screen_height / 2 + 120;
+# ========================================
+# Image-based spinner (guaranteed to render)
+# ========================================
+# Load the dot images
+dot_blue_image = Image("dot.png");
+dot_white_image = Image("dot_white.png");
 
-# Create 8 dots
+# Create 8 spinner dots (Blue overlay + White base)
+spinner.dots = [];
+spinner.white_dots = [];
+spinner.angle = 0;
+spinner.radius = 35;
+spinner.center_x = screen_width / 2;
+spinner.center_y = screen_height / 2 + 100;
+
 for (i = 0; i < 8; i++) {
-    progress.dots[i].sprite = Sprite();
-    progress.dots[i].image = Image.Text("●", 0, 0.5, 1, 1, "Sans 16");
-    progress.dots[i].sprite.SetImage(progress.dots[i].image);
+    # Base white dots (always visible or fading in opposite phase)
+    spinner.white_dots[i].sprite = Sprite(dot_white_image);
+    spinner.white_dots[i].sprite.SetOpacity(0);
+    
+    # Blue overlay dots (animated)
+    spinner.dots[i].sprite = Sprite(dot_blue_image);
+    spinner.dots[i].sprite.SetOpacity(0);
 }
 
-# Animation function
 fun refresh_callback() {
-    progress.angle += 0.1;
+    spinner.angle += 0.06;
     
     for (i = 0; i < 8; i++) {
-        angle = progress.angle + (i * 3.14159 * 2 / 8);
-        x = progress.center_x + Math.Cos(angle) * progress.radius - 8;
-        y = progress.center_y + Math.Sin(angle) * progress.radius - 8;
+        angle = spinner.angle + (i * 3.14159 * 2 / 8);
         
-        # Fade effect
-        opacity = (Math.Cos(angle - progress.angle) + 1) / 2;
-        progress.dots[i].sprite.SetPosition(x, y, 20);
-        progress.dots[i].sprite.SetOpacity(opacity);
+        # Calculate positions
+        x = spinner.center_x + Math.Cos(angle) * spinner.radius - dot_blue_image.GetWidth() / 2;
+        y = spinner.center_y + Math.Sin(angle) * spinner.radius - dot_blue_image.GetHeight() / 2;
+        
+        # Calculate wave opacity (0.0 to 1.0)
+        wave = (Math.Sin(spinner.angle - i * 0.8) + 1) / 2;
+        
+        # Blue opacity follows the wave (0.0 to 1.0)
+        blue_opacity = 0.2 + 0.8 * wave;
+        
+        # White opacity is inverse-ish, but let's just keep white as a base
+        # "Vanishes to white" -> When blue fades, white should be visible
+        # If we keep white constant at say 0.4, blue will cover it when opaque
+        white_opacity = 0.5;
+        
+        # White base layer (Layer 19)
+        spinner.white_dots[i].sprite.SetPosition(x, y, 19);
+        spinner.white_dots[i].sprite.SetOpacity(white_opacity);
+        
+        # Blue top layer (Layer 20)
+        spinner.dots[i].sprite.SetPosition(x, y, 20);
+        spinner.dots[i].sprite.SetOpacity(blue_opacity);
     }
 }
 
-Plymouth.SetRefreshRate(30);
+Plymouth.SetRefreshRate(24);
 Plymouth.SetRefreshFunction(refresh_callback);
+
+# ========================================
+# Password Entry UI (image-based box)
+# ========================================
+
+# Load the entry box image
+entry.image = Image("entry.png");
+entry.sprite = Sprite(entry.image);
+entry.x = screen_width / 2 - entry.image.GetWidth() / 2;
+entry.y = screen_height / 2 + 180;
+entry.sprite.SetPosition(entry.x, entry.y, 50);
+entry.sprite.SetOpacity(0);
+
+# Label sprite
+label.sprite = Sprite();
+label.sprite.SetOpacity(0);
+
+# Load white bullet image for password feedback
+bullet_image = Image("bullet.png");
+
+# Bullet sprites for password feedback (white dots)
+MAX_BULLETS = 32;
+bullets = [];
+for (i = 0; i < MAX_BULLETS; i++) {
+    bullets[i].sprite = Sprite(bullet_image);
+    bullets[i].sprite.SetOpacity(0);
+}
 
 # Message display
 message_sprite = Sprite();
-message_sprite.SetPosition(screen_width / 2 - 150, screen_height - 60, 100);
 
 fun message_callback(text) {
-    my_image = Image.Text(text, 0, 0.5, 1, 1, "Sans 12");
+    my_image = Image.Text(text, 0.8, 0.8, 0.85, 1);
     message_sprite.SetImage(my_image);
+    message_sprite.SetX(screen_width / 2 - my_image.GetWidth() / 2);
+    message_sprite.SetY(screen_height - 60);
 }
 
 Plymouth.SetMessageFunction(message_callback);
 
-# Display callback
 fun display_normal_callback() {
-    logo.sprite.SetOpacity(1);
+    entry.sprite.SetOpacity(0);
+    label.sprite.SetOpacity(0);
+    for (i = 0; i < MAX_BULLETS; i++) {
+        bullets[i].sprite.SetOpacity(0);
+    }
 }
 
-fun display_password_callback(prompt, bullets) {
-    # Show password prompt if needed
+fun display_password_callback(prompt, num_bullets) {
+    # Show the entry box
+    entry.sprite.SetOpacity(1);
+    
+    # Show label - always show helpful LUKS message
+    label_text = "Enter LUKS password to unlock disk";
+    label_image = Image.Text(label_text, 0.9, 0.9, 0.95, 1);
+    label.sprite.SetImage(label_image);
+    label.sprite.SetX(screen_width / 2 - label_image.GetWidth() / 2);
+    label.sprite.SetY(entry.y - 30);
+    label.sprite.SetOpacity(1);
+    
+    # Render password bullets using the white bullet image
+    bullet_spacing = 18;
+    total_width = num_bullets * bullet_spacing;
+    start_x = screen_width / 2 - total_width / 2;
+    bullet_y = entry.y + entry.image.GetHeight() / 2 - bullet_image.GetHeight() / 2;
+    
+    for (i = 0; i < MAX_BULLETS; i++) {
+        if (i < num_bullets) {
+            bullets[i].sprite.SetX(start_x + i * bullet_spacing);
+            bullets[i].sprite.SetY(bullet_y);
+            bullets[i].sprite.SetOpacity(1);
+        } else {
+            bullets[i].sprite.SetOpacity(0);
+        }
+    }
 }
 
 Plymouth.SetDisplayNormalFunction(display_normal_callback);
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
-# Quit handler
 fun quit_callback() {
     logo.sprite.SetOpacity(0);
+    entry.sprite.SetOpacity(0);
+    label.sprite.SetOpacity(0);
+    message_sprite.SetOpacity(0);
+    for (i = 0; i < 8; i++) {
+        spinner.dots[i].sprite.SetOpacity(0);
+        spinner.white_dots[i].sprite.SetOpacity(0);
+    }
+    for (i = 0; i < MAX_BULLETS; i++) {
+        bullets[i].sprite.SetOpacity(0);
+    }
 }
 
 Plymouth.SetQuitFunction(quit_callback);

@@ -27,8 +27,7 @@ fi
 
 RESULT=$(yad --form \
     --title="Welcome to ShedOS" \
-    --width=550 \
-    --height=500 \
+    --width=400 \
     --center \
     --window-icon=preferences-system \
     --image=preferences-desktop-personal \
@@ -50,20 +49,12 @@ EXIT_CODE=$?
 if [[ $EXIT_CODE -ne 0 ]]; then
     # Mark as complete even if skipped
     touch "$MARKER_FILE"
-
-    # Show skip message
-    yad --info \
-        --title="Setup Skipped" \
-        --text="You can configure git later by running:\n\n<tt>git config --global user.name \"Your Name\"\ngit config --global user.email \"your@email.com\"</tt>" \
-        --width=400 \
-        --center \
-        --button="OK:0" \
-        2>/dev/null
     exit 0
 fi
 
 # Parse the result (fields separated by |)
-IFS='|' read -r NAME EMAIL GITHUB _ <<< "$RESULT"
+# Note: LBL fields are output as empty strings, so we must consume them
+IFS='|' read -r _ _ _ NAME EMAIL GITHUB _ <<< "$RESULT"
 
 # Validate email
 if [[ -z "$EMAIL" || ! "$EMAIL" =~ "@" ]]; then
@@ -113,6 +104,8 @@ yad --info \
     --text="<b>Your development environment is ready\!</b>\n\nGit has been configured with:\n\n<tt>Name:  $NAME\nEmail: $EMAIL</tt>\n\nHappy coding! 🚀" \
     --width=400 \
     --center \
+    --window-icon=preferences-system \
+    --image=emblem-default \
     --button="Get Started:0" \
     2>/dev/null
 

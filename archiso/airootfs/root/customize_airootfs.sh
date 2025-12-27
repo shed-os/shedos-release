@@ -151,6 +151,8 @@ if [ ! -d /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
     git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting || echo "WARNING: zsh-syntax-highlighting installation for root failed"
 fi
 
+
+
 echo "Oh My Zsh and Powerlevel10k installed"
 
 # Deploy zsh configurations from /etc/skel
