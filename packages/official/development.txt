@@ -72,6 +72,6 @@ tokei
 ruby
 rubygems
 # JVM
-jre-openjdk
 kotlin
+maven
 gradle
