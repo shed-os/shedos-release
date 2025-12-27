@@ -71,3 +71,7 @@ tokei
 # Ruby
 ruby
 rubygems
+# JVM
+jre-openjdk
+kotlin
+gradle
