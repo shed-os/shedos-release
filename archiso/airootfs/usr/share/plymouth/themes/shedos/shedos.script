@@ -58,8 +58,8 @@ fun refresh_callback() {
         
         # White opacity is inverse-ish, but let's just keep white as a base
         # "Vanishes to white" -> When blue fades, white should be visible
-        # If we keep white constant at say 0.4, blue will cover it when opaque
-        white_opacity = 0.5;
+        # User requested pure white, so we keep opacity at 1.0
+        white_opacity = 1.0;
         
         # White base layer (Layer 19)
         spinner.white_dots[i].sprite.SetPosition(x, y, 19);
