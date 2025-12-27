@@ -190,9 +190,11 @@ fzf
 gawk
 go
 gopls
+gradle
 grep
 hyperfine
 jq
+kotlin
 lazygit
 lua-language-server
 nodejs

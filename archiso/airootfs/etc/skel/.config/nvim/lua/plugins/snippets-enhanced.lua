@@ -45,6 +45,14 @@ return {
         update_events = "TextChanged,TextChangedI",
       })
 
+      -- Filetype Extensions
+      -- Allow specific filetypes to use snippets from other "snippet filetypes"
+      luasnip.filetype_extend("java", { "spring-boot", "junit-mockito" })
+      luasnip.filetype_extend("typescript", { "express-nestjs" })
+      luasnip.filetype_extend("typescriptreact", { "express-nestjs" })
+      luasnip.filetype_extend("javascript", { "express-nestjs" }) -- Experimental
+
+
       -- ═══════════════════════════════════════════════════════════
       -- KEYBINDINGS
       -- ═══════════════════════════════════════════════════════════

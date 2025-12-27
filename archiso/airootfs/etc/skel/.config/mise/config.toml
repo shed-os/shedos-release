@@ -5,15 +5,3 @@
 experimental = true
 
 [settings.ruby]
-
-[tools]
-go = "latest"
-gradle = "9.1.0"
-java = "openjdk-25"
-julia = "latest"
-kotlin = "latest"
-lua = "5.1"
-maven = "latest"
-node = "24"
-rust = "latest"
-zig = "latest"

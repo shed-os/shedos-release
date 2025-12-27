@@ -1,0 +1,52 @@
+[sqlfluff]
+; SQLFluff configuration for Neovim
+; Relaxed linting focused on actual issues
+
+; Dialect (can be overridden per-project)
+dialect = ansi
+
+; Indentation
+indent_unit = space
+tab_space_size = 4
+
+; Line length
+max_line_length = 120
+
+; Exclude paths
+exclude_rules = None
+
+; Rules configuration (using modern rule names)
+[sqlfluff:rules]
+; Capitalization rules (relaxed)
+capitalisation_policy = consistent
+extended_capitalisation_policy = consistent
+
+; Layout rules (modern names)
+[sqlfluff:rules:layout.indent]
+indent_unit = space
+
+[sqlfluff:rules:layout.long_lines]
+max_line_length = 120
+
+; Capitalization rules (modern names)
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = upper
+
+; Relaxed rules (modern names)
+[sqlfluff:rules:layout.select_targets]
+; Allow SELECT *
+wildcard_policy = single
+
+[sqlfluff:rules:aliasing.forbid]
+; Allow table aliases
+force_enable = False
+
+[sqlfluff:rules:ambiguous.column_count]
+; Allow both = and != for comparisons
+select_clause_trailing_comma = forbid

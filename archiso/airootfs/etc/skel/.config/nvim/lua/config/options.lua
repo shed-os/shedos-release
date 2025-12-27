@@ -135,35 +135,7 @@ for type, icon in pairs(signs) do
   vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
 end
 
--- Disable some built-in plugins we don't need
-local disabled_built_ins = {
-  "2html_plugin",
-  "getscript",
-  "getscriptPlugin",
-  "gzip",
-  "logipat",
-  "matchit",
-  "tar",
-  "tarPlugin",
-  "rrhelper",
-  "spellfile_plugin",
-  "vimball",
-  "vimballPlugin",
-  "zip",
-  "zipPlugin",
-  "tutor",
-  "rplugin",
-  "syntax",
-  "synmenu",
-  "optwin",
-  "compiler",
-  "bugreport",
-  "ftplugin",
-}
 
-for _, plugin in pairs(disabled_built_ins) do
-  vim.g["loaded_" .. plugin] = 1
-end
 
 -- Fix markdown indentation settings
 vim.g.markdown_recommended_style = 0
@@ -172,3 +144,15 @@ vim.g.markdown_recommended_style = 0
 vim.g.java_format_on_save = true
 vim.g.java_auto_organize_imports = true
 vim.g.lombok_support = 1
+
+-- FORCE DISABLE INLAY HINTS
+-- This autocommand ensures inlay hints are turned OFF whenever an LSP attaches.
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("UserLspConfigDisableInlay", {}),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client.server_capabilities.inlayHintProvider then
+      vim.lsp.inlay_hint.enable(false, { bufnr = args.buf })
+    end
+  end,
+})

@@ -22,7 +22,7 @@
 return {
   -- nvim-colorizer - Inline color preview
   {
-    "norcalli/nvim-colorizer.lua",
+    "NvChad/nvim-colorizer.lua",
     event = "BufReadPre",
     config = function()
       require("colorizer").setup({
