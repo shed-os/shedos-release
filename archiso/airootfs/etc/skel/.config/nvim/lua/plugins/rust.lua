@@ -7,16 +7,7 @@ return {
     end,
   },
 
-  {
-    "mason-org/mason.nvim",
-    opts = function(_, opts)
-      vim.list_extend(opts.ensure_installed or {}, {
-        "rust-analyzer",
-        "codelldb",
-        "taplo",
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
 
   -- nvim-dap (Debug Adapter Protocol)
   {

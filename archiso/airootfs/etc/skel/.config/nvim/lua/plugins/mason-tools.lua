@@ -1,10 +1,24 @@
 return {
+  -- Core Mason Plugin (ensure it loads)
+  { "mason-org/mason.nvim" },
+
+  -- Dedicated Tool Installer (The "Right Way" for bulk installs)
   {
-    "mason-org/mason.nvim",
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        -- LSPs
+    "WhoIsSethDaniel/mason-tool-installer.nvim",
+    dependencies = { "mason-org/mason.nvim" },
+    opts = {
+      -- Automatically update tools on startup
+      auto_update = true,
+      
+      -- Run installation immediately on startup
+      run_on_start = true,
+      
+      -- Start installation verification after 3s (avoids UI freeze)
+      start_delay = 3000, 
+
+      -- The definitive list of tools to install
+      ensure_installed = {
+         -- LSPs
         "angular-language-server",
         "ansible-language-server",
         "asm-lsp",
@@ -39,8 +53,9 @@ return {
         "neocmakelsp",
         "nextls",
         "nginx-language-server",
+        "postgres-language-server",
         "pyright",
-        "ruff-lsp",
+        "ruff",
         "rust-analyzer",
         "sqls",
         "svelte-language-server",
@@ -102,15 +117,19 @@ return {
         "debugpy",
         "delve",
         "java-debug-adapter",
-        "java-test", -- Java test runner
+        "java-test",
         "js-debug-adapter",
         "kotlin-debug-adapter",
         
         -- Tools
-        "gh", -- GitHub CLI
+        "gh",
         "gotests",
-        "postgrestools",
-      })
+      },
+    },
+    config = function(_, opts)
+      require("mason-tool-installer").setup(opts)
+      -- Optional: Trigger a check immediately (though run_on_start does this)
+      -- vim.cmd("MasonToolsInstall") 
     end,
   },
 }

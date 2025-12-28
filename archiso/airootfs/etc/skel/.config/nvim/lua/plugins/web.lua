@@ -22,22 +22,7 @@ return {
   },
 
   -- Add tools to Mason
-  {
-    "mason-org/mason.nvim",
-    optional = true,
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        "html-lsp", -- HTML LSP
-        "css-lsp", -- CSS LSP
-        "tailwindcss-language-server", -- TailwindCSS LSP
-        "emmet-ls", -- Emmet LSP
-        "prettier", -- Formatter
-        "prettierd",
-        "stylelint", -- CSS linter
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
 
   -- Configure formatters
   {

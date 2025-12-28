@@ -19,20 +19,7 @@ return {
   },
 
   -- Add tools to Mason
-  {
-    "mason-org/mason.nvim",
-    optional = true,
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        "typescript-language-server", -- TS/JS LSP
-        "eslint-lsp", -- ESLint LSP for linting (replaces eslint_d)
-        "prettier", -- Formatter
-        "prettierd", -- Faster prettier
-        "js-debug-adapter", -- Debug adapter
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
 
   -- nvim-dap (Debug Adapter Protocol)
   {
@@ -120,6 +107,10 @@ return {
         
         -- TypeScript (tsserver / ts_ls)
         ts_ls = {
+          -- Disable the automatic Vue integration which crashes on startup if not installed
+          init = function(client)
+             -- Do nothing, preventing LazyVim's default which tries to load vue-language-server path
+          end,
           keys = {
               { "<leader>th", function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled()) end, desc = "Toggle Inlay Hints" }
           },

@@ -362,11 +362,18 @@ return {
         },
       })
 
-      -- Load extensions
-      telescope.load_extension("fzf")
-      telescope.load_extension("ui-select")
-      telescope.load_extension("file_browser")
-      telescope.load_extension("project")
+      -- Load extensions safely
+      local function safe_load(ext)
+        local status, err = pcall(telescope.load_extension, ext)
+        if not status then
+          vim.notify("Telescope extension '" .. ext .. "' failed to load: " .. tostring(err), vim.log.levels.WARN)
+        end
+      end
+
+      safe_load("fzf")
+      safe_load("ui-select")
+      safe_load("file_browser")
+      safe_load("project")
 
       -- Load frecency with error handling (can fail if database is corrupted)
       local ok, err = pcall(function()

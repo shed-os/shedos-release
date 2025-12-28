@@ -18,18 +18,7 @@ return {
   },
 
   -- Add tools to Mason
-  {
-    "mason-org/mason.nvim",
-    optional = true,
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        "bash-language-server", -- Bash LSP
-        "shfmt", -- Formatter
-        "shellcheck", -- Linter
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
 
   -- Configure formatters
   {

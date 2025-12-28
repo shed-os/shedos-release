@@ -14,21 +14,7 @@ return {
   },
 
   -- Add tools to Mason
-  {
-    "mason-org/mason.nvim",
-    optional = true,
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        "pyright", -- Python LSP
-        "ruff-lsp", -- Fast Python linter/formatter
-        "black", -- Formatter
-        "isort", -- Import sorter
-        "flake8", -- Linter
-        "debugpy", -- Debug adapter
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
 
   -- nvim-dap (Debug Adapter Protocol)
   {

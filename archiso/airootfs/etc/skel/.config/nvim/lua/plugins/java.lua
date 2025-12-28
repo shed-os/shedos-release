@@ -12,18 +12,7 @@ return {
     end,
   },
 
-  {
-    "mason-org/mason.nvim",
-    opts = function(_, opts)
-      vim.list_extend(opts.ensure_installed or {}, {
-        "jdtls", -- Java LSP
-        "java-debug-adapter", -- DAP for Java
-        "java-test", -- Java test runner
-        "google-java-format", -- Formatter
-        "checkstyle", -- Linter
-      })
-    end,
-  },
+  -- Mason tools are managed centrally in lua/plugins/mason-tools.lua
   -- nvim-dap (Debug Adapter Protocol)
   {
     "mfussenegger/nvim-dap",

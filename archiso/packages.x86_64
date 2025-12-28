@@ -139,6 +139,7 @@ hyprland
 hyprlock
 hyprpicker
 hyprsunset
+kdeconnect
 kitty
 kvantum
 libnotify
@@ -197,6 +198,7 @@ jq
 kotlin
 lazygit
 lua-language-server
+maven
 nodejs
 npm
 perl
