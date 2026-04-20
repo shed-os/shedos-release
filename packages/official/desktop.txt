@@ -42,7 +42,7 @@ wl-clipboard
 cliphist
 
 # Wallpaper
-swww
+awww
 
 # Authentication
 polkit

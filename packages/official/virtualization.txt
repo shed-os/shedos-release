@@ -9,7 +9,8 @@ virt-viewer
 
 # Network
 dnsmasq
-bridge-utils
+# bridge-utils was removed from Arch repos in 2023; bridge tooling is now
+# provided by iproute2 (already a base package) and libvirt uses it directly.
 openbsd-netcat
 
 # UEFI for VMs

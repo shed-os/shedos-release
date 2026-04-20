@@ -9,6 +9,7 @@ mise-bin
 
 # Shell
 oh-my-zsh-git
+zsh-theme-powerlevel10k-git
 
 # IDEs
 visual-studio-code-bin
@@ -75,3 +76,6 @@ catppuccin-sddm-theme-mocha
 
 # Database Tools (AUR)
 usql
+
+# Hyprland shutdown utility
+hyprshutdown
