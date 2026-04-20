@@ -42,6 +42,17 @@ while IFS= read -r line; do
     done
     [ "$is_aur" = true ] && continue
 
+    # ShedOS-native packages live in archiso/shedos-repo/, not /var/cache/pacman.
+    # They're produced by scripts/build-shedos-packages.sh — check there instead.
+    if [[ "$pkg" == shedos-* ]]; then
+        CHECKED=$((CHECKED + 1))
+        if ! ls "$AUR_REPO/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
+            echo "❌ MISSING (shedos-repo): $pkg"
+            MISSING=$((MISSING + 1))
+        fi
+        continue
+    fi
+
     CHECKED=$((CHECKED + 1))
 
     # Check if package exists in cache (any version)

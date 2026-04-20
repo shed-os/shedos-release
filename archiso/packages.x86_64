@@ -118,6 +118,7 @@ postgresql
 postgresql-libs
 
 # --- desktop ---
+awww
 blueman
 brightnessctl
 cliphist
@@ -161,7 +162,6 @@ sddm
 seahorse
 slurp
 swappy
-swww
 vulkan-swrast
 waybar
 wf-recorder
@@ -447,7 +447,6 @@ xarchiver
 xdg-desktop-portal
 
 # --- virtualization ---
-bridge-utils
 dnsmasq
 edk2-ovmf
 libvirt
@@ -489,6 +488,7 @@ elephant-unicode
 elephant-websearch
 google-chrome
 hadolint-bin
+hyprshutdown
 impala
 lazydocker
 minikube-bin
@@ -504,3 +504,9 @@ usql
 visual-studio-code-bin
 walker
 yay
+zsh-theme-powerlevel10k-git
+
+# ShedOS Native Packages
+# ======================
+shedos-keyring
+shedos-meta

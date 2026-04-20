@@ -1,7 +1,0 @@
-# ShedOS mise Configuration
-# Runtime Version Manager
-
-[settings]
-experimental = true
-
-[settings.ruby]

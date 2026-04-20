@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=ShedOS
-Description=ShedOS boot splash theme
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/shedos
-ScriptFile=/usr/share/plymouth/themes/shedos/shedos.script

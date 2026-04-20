@@ -3,7 +3,7 @@
 # Creates a local repository with pre-built packages
 # Only rebuilds packages if version changed or doesn't exist
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -23,11 +23,20 @@ chmod 777 "$AUR_BUILD_DIR"
 if [ "$EUID" -eq 0 ]; then
     echo "Running as root, creating build user..."
 
+    # Cleanup runs on ANY exit path (success, error, signal) so we never
+    # leave a stale builduser + sudoers file behind between runs.
+    _cleanup_builduser() {
+        echo "Cleaning up build user..."
+        userdel -r builduser 2>/dev/null || true
+        rm -f /etc/sudoers.d/builduser-aur
+    }
+    trap _cleanup_builduser EXIT
+
     # Create temporary build user
     useradd -m -G wheel builduser 2>/dev/null || true
     echo "builduser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builduser-aur
     chmod 440 /etc/sudoers.d/builduser-aur
-    
+
     # Setup rustup for build user (needed for Rust AUR packages like impala)
     if command -v rustup &> /dev/null; then
         echo "Setting up Rust toolchain for build user..."
@@ -61,11 +70,14 @@ get_pkgbuild_version() {
     local pkgbuild_dir=$1
     cd "$pkgbuild_dir"
 
-    # Source PKGBUILD to get pkgver and pkgrel
+    # PKGBUILDs reference makepkg-injected vars ($CARCH, $srcdir, etc.) that
+    # aren't set when we source directly — relax nounset for this one call.
+    set +u
+    # shellcheck source=/dev/null
     source PKGBUILD
+    set -u
 
-    # Handle epoch if present
-    if [ -n "$epoch" ]; then
+    if [ -n "${epoch:-}" ]; then
         echo "${epoch}:${pkgver}-${pkgrel}"
     else
         echo "${pkgver}-${pkgrel}"
@@ -169,25 +181,13 @@ echo "=========================================="
 PACKAGE_COUNT=$(find "$REPO_DIR" -name "*.pkg.tar.zst" | wc -l)
 if [ "$PACKAGE_COUNT" -eq 0 ]; then
     echo "ERROR: No package files found in repository"
-
-    # Cleanup on error
-    if [ "$EUID" -eq 0 ]; then
-        userdel -r builduser 2>/dev/null || true
-        rm -f /etc/sudoers.d/builduser-aur
-    fi
-
     exit 1
 fi
 
 echo ""
 echo "Total packages in repository: $PACKAGE_COUNT"
 
-# Cleanup build user if created
-if [ "$EUID" -eq 0 ]; then
-    echo "Cleaning up build user..."
-    userdel -r builduser 2>/dev/null || true
-    rm -f /etc/sudoers.d/builduser-aur
-fi
+# builduser cleanup is handled by EXIT trap installed at script start.
 
 # Recreate repository database
 echo "Updating local repository database..."

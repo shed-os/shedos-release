@@ -1,7 +1,6 @@
 [Unit]
 Description=Initialize Pacman Database
 After=network-online.target
-Wants=network-online.target
 ConditionPathExists=!/var/lib/pacman/sync/core.db
 
 [Service]

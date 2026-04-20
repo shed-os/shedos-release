@@ -2,20 +2,15 @@
 # shedOS airootfs customization script
 # This runs inside the chroot during ISO build
 
+set -euo pipefail
+
 echo "=========================================="
 echo "shedOS customize_airootfs.sh STARTING"
 echo "=========================================="
 
-# Install Python packages via pip (not in Arch repos)
-echo "Installing Python packages..."
-pip install --break-system-packages pythondialog textual rich || echo "WARNING: pip install failed"
-
-
-
-# Install 'bat' Catppuccin theme
-echo "Installing 'bat' Catppuccin theme..."
-mkdir -p /usr/share/bat/themes
-curl -L -o "/usr/share/bat/themes/Catppuccin Mocha.tmTheme" "https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin%20Mocha.tmTheme" || echo "WARNING: Failed to download bat theme"
+# Rebuild bat cache. The Catppuccin Mocha theme file is shipped directly in
+# the airootfs at /usr/share/bat/themes/ (committed asset, no network needed).
+echo "Rebuilding bat cache..."
 bat cache --build || echo "WARNING: Failed to rebuild bat cache"
 
 # NOTE: No package caching needed - installer uses rsync to copy live filesystem
@@ -30,7 +25,6 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 
 # Enable services
 systemctl enable NetworkManager
-systemctl enable sshd
 systemctl enable sddm
 systemctl enable shedos-pacman-init.service || true
 systemctl enable vboxservice.service || true
@@ -42,11 +36,13 @@ cat > /etc/sddm.conf.d/theme.conf <<EOF
 [Theme]
 Current=catppuccin-mocha-mauve
 EOF
-[Theme]
-Current=catppuccin-mocha-mauve
-EOF
 
 # Configure SDDM Autologin (Live ISO)
+# NOTE: Session= is the filename STEM of a .desktop in /usr/share/wayland-sessions/.
+# For Hyprland that is `hyprland` (from hyprland.desktop). Do NOT change to
+# `start-hyprland` — that's the wrapper binary the .desktop file invokes via
+# Exec=, not the session name. Using the wrong value makes SDDM fail silently
+# and fall back to the login form.
 cat > /etc/sddm.conf.d/live-session-autologin.conf <<EOF
 [Autologin]
 User=shedos
@@ -107,53 +103,45 @@ cp -n /etc/skel/.zshrc /home/shedos/.zshrc 2>/dev/null || true
 cp -n /etc/skel/.zprofile /home/shedos/.zprofile 2>/dev/null || true
 chown shedos:shedos /home/shedos/.zshrc /home/shedos/.zprofile 2>/dev/null || true
 
-# Install Oh My Zsh and Powerlevel10k
-echo "Installing Oh My Zsh and Powerlevel10k..."
+# Install Oh My Zsh and Powerlevel10k from system packages (offline-safe).
+# The chroot has no network during mkarchiso, so we never `git clone` at build
+# time. Sources:
+#   - /usr/share/oh-my-zsh           from oh-my-zsh-git (AUR)
+#   - /usr/share/zsh-theme-powerlevel10k  from zsh-theme-powerlevel10k-git (AUR)
+#   - /usr/share/zsh/plugins/zsh-autosuggestions   from official repos
+#   - /usr/share/zsh/plugins/zsh-syntax-highlighting  from official repos
+# zsh-autosuggestions + zsh-syntax-highlighting are loaded manually from their
+# system paths in ~/.zshrc (not as OMZ custom plugins), so we don't symlink
+# them here.
+echo "Setting up Oh My Zsh and Powerlevel10k..."
 
-# Install Oh My Zsh for shedos user
-sudo -u shedos bash <<'EOF'
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" || echo "WARNING: Oh My Zsh installation failed"
+if [ ! -d /usr/share/oh-my-zsh ]; then
+    echo "FATAL: /usr/share/oh-my-zsh missing — is oh-my-zsh-git installed?" >&2
+    exit 1
+fi
+if [ ! -d /usr/share/zsh-theme-powerlevel10k ]; then
+    echo "FATAL: /usr/share/zsh-theme-powerlevel10k missing — is zsh-theme-powerlevel10k-git installed?" >&2
+    exit 1
 fi
 
-# Install Powerlevel10k theme
-if [ ! -d "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" ]; then
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" || echo "WARNING: Powerlevel10k installation failed"
-fi
+install_omz_for() {
+    local user="$1"
+    local home="$2"
+    local group="${3:-$user}"
 
-# Install zsh-autosuggestions plugin
-if [ ! -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" || echo "WARNING: zsh-autosuggestions installation failed"
-fi
+    rm -rf "$home/.oh-my-zsh"
+    # Give the user a writable OMZ tree so custom/ can hold symlinks.
+    cp -r /usr/share/oh-my-zsh "$home/.oh-my-zsh"
+    mkdir -p "$home/.oh-my-zsh/custom/themes"
+    ln -sfn /usr/share/zsh-theme-powerlevel10k \
+        "$home/.oh-my-zsh/custom/themes/powerlevel10k"
+    chown -R "$user:$group" "$home/.oh-my-zsh"
+}
 
-# Install zsh-syntax-highlighting plugin
-if [ ! -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" || echo "WARNING: zsh-syntax-highlighting installation failed"
-fi
-EOF
+install_omz_for shedos /home/shedos
+install_omz_for root /root root
 
-# Install Oh My Zsh for root user
-if [ ! -d /root/.oh-my-zsh ]; then
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git /root/.oh-my-zsh || echo "WARNING: Oh My Zsh installation for root failed"
-fi
-
-# Install Powerlevel10k theme for root
-if [ ! -d /root/.oh-my-zsh/custom/themes/powerlevel10k ]; then
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git /root/.oh-my-zsh/custom/themes/powerlevel10k || echo "WARNING: Powerlevel10k installation for root failed"
-fi
-
-# Install zsh plugins for root
-if [ ! -d /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions /root/.oh-my-zsh/custom/plugins/zsh-autosuggestions || echo "WARNING: zsh-autosuggestions installation for root failed"
-fi
-
-if [ ! -d /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git /root/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting || echo "WARNING: zsh-syntax-highlighting installation for root failed"
-fi
-
-
-
-echo "Oh My Zsh and Powerlevel10k installed"
+echo "Oh My Zsh and Powerlevel10k set up"
 
 # Deploy zsh configurations from /etc/skel
 echo "Deploying zsh configurations..."

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# shedos-power-confirm — walker-based confirmation for shutdown/reboot/logout.
+# Invoked by the waybar custom/power menu so a single misclick does not
+# immediately power off the machine.
+
+set -euo pipefail
+
+action="${1:-}"
+
+case "$action" in
+    shutdown)
+        label="Shut down"
+        cmd=(systemctl poweroff)
+        ;;
+    reboot)
+        label="Reboot"
+        cmd=(systemctl reboot)
+        ;;
+    logout)
+        label="Log out"
+        cmd=(loginctl lock-session)
+        ;;
+    *)
+        echo "usage: $(basename "$0") {shutdown|reboot|logout}" >&2
+        exit 2
+        ;;
+esac
+
+# Use walker in dmenu mode for a consistent shedOS look.
+# --current marks "Cancel" as the default so a stray Enter is safe.
+# If the user hits Escape (walker exits non-zero), treat as Cancel.
+choice="$(
+    printf 'Cancel\nYes, %s\n' "$label" |
+        walker --dmenu --placeholder "${label}?" --current 0 2>/dev/null
+)" || choice="Cancel"
+
+if [[ "$choice" == "Yes, $label" ]]; then
+    exec "${cmd[@]}"
+fi

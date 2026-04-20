@@ -46,6 +46,14 @@ echo "# AUR Packages" >> "$TEMP_FILE"
 echo "# ============" >> "$TEMP_FILE"
 grep -v '^#' "$PACKAGES_DIR/aur.txt" | grep -v '^$' | sort -u >> "$TEMP_FILE"
 
+# Add ShedOS native packages (served by build-local [shedos-repo] at ISO build,
+# and by [shedos] on the installed system for ongoing upgrades).
+echo "" >> "$TEMP_FILE"
+echo "# ShedOS Native Packages" >> "$TEMP_FILE"
+echo "# ======================" >> "$TEMP_FILE"
+echo "shedos-keyring" >> "$TEMP_FILE"
+echo "shedos-meta" >> "$TEMP_FILE"
+
 # Move to final location
 mv "$TEMP_FILE" "$OUTPUT_FILE"
 

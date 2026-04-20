@@ -7,7 +7,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PACKAGES_FILE="$PROJECT_ROOT/archiso/packages.x86_64"
-PACMAN_CONF="$PROJECT_ROOT/archiso/pacman.conf"
 CACHE_DIR="/var/cache/pacman/pkg"
 
 echo "=================================="
@@ -56,6 +55,11 @@ cp "$TEMP_DIR/all_packages.txt" "$TEMP_DIR/pkglist.txt"
 for pkg in "${AUR_PACKAGES[@]}"; do
     sed -i "/^${pkg}$/d" "$TEMP_DIR/pkglist.txt"
 done
+
+# Filter out ShedOS native packages — they're built locally by
+# scripts/build-shedos-packages.sh into archiso/shedos-repo/, not fetched
+# from official mirrors.
+sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"
 
 TOTAL_PACKAGES=$(wc -l < "$TEMP_DIR/all_packages.txt")
 OFFICIAL_PACKAGES=$(wc -l < "$TEMP_DIR/pkglist.txt")
