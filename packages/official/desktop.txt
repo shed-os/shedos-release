@@ -12,6 +12,7 @@ xdg-user-dirs
 
 # Status Bar & Launcher
 waybar
+rofi
 
 # Terminal
 kitty
