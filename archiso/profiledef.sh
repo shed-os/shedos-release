@@ -6,7 +6,11 @@ iso_name="shedos"
 iso_label="SHEDOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="ShedOS <https://github.com/theshedman/shedos>"
 iso_application="ShedOS Live/Install ISO"
-iso_version="0.1.0"
+# Substituted at build time by the Makefile from the repo-root VERSION file
+# (the same CalVer scripts/bump-version.sh writes, so the ISO label and the
+# packages on it agree). Edits made here by hand are clobbered on next build —
+# bump VERSION, not this literal.
+iso_version="@SHEDOS_VERSION@"
 install_dir="shedos"
 buildmodes=('iso')
 # Using syslinux for BIOS and GRUB for UEFI
