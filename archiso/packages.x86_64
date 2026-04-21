@@ -22,4 +22,12 @@ memtest86+
 memtest86+-efi
 edk2-shell
 
+# Pin the 'jack' virtual-dep provider to pipewire-jack. Without this line,
+# pacstrap (--noconfirm) resolves audacity/virtualbox/etc.'s `jack` dep to
+# `jack2` (alphabetically first) BEFORE it descends into shedos-meta's
+# depends=() which also lists pipewire-jack — leading to
+# "jack2 and pipewire-jack are in conflict" at install time. Making
+# pipewire-jack a root-level explicit install fixes the resolution order.
+pipewire-jack
+
 shedos-meta
