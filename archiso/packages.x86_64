@@ -11,4 +11,15 @@ linux
 linux-firmware
 mkinitcpio-archiso
 
+# Bootloader + live-boot extras — required by mkarchiso's strict profile
+# validation against bootmodes=('bios.syslinux' 'uefi.grub') in profiledef.sh.
+# These resolve transitively through shedos-meta too, but mkarchiso checks
+# the literal packages.x86_64 file before resolving dependencies, so they
+# must appear explicitly here or the build aborts before squashfs.
+syslinux
+grub
+memtest86+
+memtest86+-efi
+edk2-shell
+
 shedos-meta
