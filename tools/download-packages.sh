@@ -6,7 +6,12 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-PACKAGES_FILE="$PROJECT_ROOT/archiso/packages.x86_64"
+# Source of truth for the package-prefetch list is packages/official/*.txt.
+# archiso/packages.x86_64 only names the ISO-boot packages + shedos-meta now
+# (shedos-meta's depends= pulls in the rest at pacstrap time). Driving the
+# prefetch off packages.x86_64 would miss hundreds of transitive-via-meta
+# packages — so we read the per-group txts directly and let pacman -Syw
+# resolve transitive deps from there.
 CACHE_DIR="/var/cache/pacman/pkg"
 
 echo "=================================="
@@ -46,8 +51,12 @@ echo "Found ${#AUR_PACKAGES[@]} AUR packages to exclude from download"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# Extract package names (remove comments, blank lines, and versions)
-grep -v '^#' "$PACKAGES_FILE" | grep -v '^$' | awk '{print $1}' > "$TEMP_DIR/all_packages.txt"
+# Concatenate every packages/official/*.txt, strip comments/blank, dedupe.
+# These files are the source of truth for which Arch packages ship by default.
+find "$PROJECT_ROOT/packages/official" -maxdepth 1 -type f -name '*.txt' -print0 \
+    | xargs -0 grep -hEv '^\s*(#|$)' \
+    | awk '{print $1}' \
+    | sort -u > "$TEMP_DIR/all_packages.txt"
 
 # Filter out AUR packages - they cannot be downloaded via pacman -Sw
 # This prevents "error: target not found" messages
