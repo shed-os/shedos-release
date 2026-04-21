@@ -1,0 +1,25 @@
+# AUR packages that MUST NOT be republished to repo.shedos.org.
+#
+# These are listed in packages/aur.txt so the ISO build pacstrap can install
+# them onto the live/installed system at mkarchiso time (which is legally
+# equivalent to any end-user running `yay -S <pkg>` on their own machine —
+# the vendor's installer runs locally, their binaries are fetched from their
+# CDN, nothing transits ShedOS infrastructure).
+#
+# What we CAN'T do is take those fetched binaries, wrap them in a .pkg.tar.zst
+# signed by the ShedOS repo key, and serve that file from repo.shedos.org.
+# The vendors' EULAs don't grant that redistribution right.
+#
+# On an installed system these packages are therefore NOT resolvable via
+# `pacman -Syu shedos-meta` — they show up as optdepends= on the metapackage
+# and get installed via yay / shedos-welcome's "install proprietary apps"
+# step.
+#
+# One package per line. Comments with '#' are ignored.
+
+visual-studio-code-bin
+google-chrome
+slack-desktop
+obsidian-bin
+postman-bin
+ttf-ms-fonts

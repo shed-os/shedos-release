@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 # render-meta-depends.sh — regenerate packaging/shedos-meta/PKGBUILD.
 #
-# Source of truth: packages/official/*.txt + packages/aur.txt.
-# Output: packaging/shedos-meta/PKGBUILD with a fresh depends=() array.
+# Source of truth:
+#   packages/official/*.txt      → Arch core/extra/multilib deps
+#   packages/aur.txt              → AUR deps the ISO pacstrap installs
+#   packages/aur-norepublish.txt  → subset of aur.txt we are not allowed to
+#                                   redistribute under the ShedOS key (EULA).
+#                                   Moved from depends= to optdepends= so
+#                                   `pacman -Syu shedos-meta` on an installed
+#                                   system still resolves (those packages live
+#                                   on AUR, not in [shedos]; shedos-welcome
+#                                   handles them via yay at user consent).
+#
+# Output: packaging/shedos-meta/PKGBUILD with a fresh depends=() + optdepends=().
 #
 # Run this whenever packages/ changes, or let CI do it. The generated file
 # is committed so local makepkg works without re-running the script first.
@@ -22,6 +32,15 @@ mapfile -t aur < <(
     grep -hEv '^\s*(#|$)' "$root/packages/aur.txt" 2>/dev/null | sort -u
 )
 
+# Build an associative set of norepublish package names for O(1) lookup.
+declare -A norepublish=()
+if [[ -f "$root/packages/aur-norepublish.txt" ]]; then
+    while read -r p; do
+        [[ -z $p || $p == \#* ]] && continue
+        norepublish[$p]=1
+    done < <(grep -hEv '^\s*(#|$)' "$root/packages/aur-norepublish.txt")
+fi
+
 # ShedOS packages that ship from the [shedos] repo. Listed explicitly so a
 # typo here fails loudly rather than silently dropping a shedos-* dep.
 shedos_pkgs=(
@@ -33,13 +52,18 @@ shedos_pkgs=(
 )
 
 # De-dupe across all sources. Keep shedos-* first so the order reads naturally
-# in the generated PKGBUILD.
+# in the generated PKGBUILD. Split: republishable → depends=; proprietary AUR
+# → optdepends= (cannot live in [shedos], users install via yay).
 declare -A seen
 ordered=()
+optional=()
 for p in "${shedos_pkgs[@]}" "${official[@]}" "${aur[@]}"; do
     [[ -z $p ]] && continue
-    if [[ -z ${seen[$p]:-} ]]; then
-        seen[$p]=1
+    [[ -n ${seen[$p]:-} ]] && continue
+    seen[$p]=1
+    if [[ -n ${norepublish[$p]:-} ]]; then
+        optional+=("$p")
+    else
         ordered+=("$p")
     fi
 done
@@ -72,6 +96,13 @@ EOF
     done
     cat <<'EOF'
 )
+optdepends=(
+EOF
+    for p in "${optional[@]}"; do
+        printf "    '%s: proprietary AUR package; install via shedos-welcome / yay'\n" "$p"
+    done
+    cat <<'EOF'
+)
 
 package() {
     # Intentionally empty — this is a metapackage.
@@ -82,4 +113,4 @@ EOF
 
 install -Dm644 "$tmp" "$out"
 
-echo "Wrote $out ($(wc -l < "$tmp") lines, ${#ordered[@]} deps)"
+echo "Wrote $out ($(wc -l < "$tmp") lines, ${#ordered[@]} deps, ${#optional[@]} optdeps)"
