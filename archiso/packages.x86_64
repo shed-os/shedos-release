@@ -22,12 +22,18 @@ memtest86+
 memtest86+-efi
 edk2-shell
 
-# Pin the 'jack' virtual-dep provider to pipewire-jack. Without this line,
-# pacstrap (--noconfirm) resolves audacity/virtualbox/etc.'s `jack` dep to
-# `jack2` (alphabetically first) BEFORE it descends into shedos-meta's
-# depends=() which also lists pipewire-jack — leading to
-# "jack2 and pipewire-jack are in conflict" at install time. Making
-# pipewire-jack a root-level explicit install fixes the resolution order.
-pipewire-jack
+# Pin every virtual-dep provider we've chosen. Before the packages.x86_64
+# collapse (shedos-meta-only layout), every provider was explicit at root
+# level, so pacstrap's DFS resolver picked ours by position. Now that our
+# providers are transitive via shedos-meta's depends=(), pacman hits
+# `depends=('<virtual>')` from some other package FIRST, auto-picks the
+# alphabetical default (which is not always what we want), and conflicts
+# with our provider when it's finally pulled in. Listing them explicitly
+# here puts them back at the root of the resolution graph.
+#
+# See each pin for the conflict it prevents:
+pipewire-jack              # vs jack2 (default) — from audacity/virtualbox `jack` dep
+virtualbox-host-modules-arch  # vs virtualbox-host-dkms (default) — from VIRTUALBOX-HOST-MODULES
+qt6-multimedia-ffmpeg      # vs qt6-multimedia-gstreamer — matches default, eliminates prompt
 
 shedos-meta
