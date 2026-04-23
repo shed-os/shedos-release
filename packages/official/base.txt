@@ -50,6 +50,7 @@ usbutils
 pciutils
 lshw
 smartmontools
+lm_sensors
 hdparm
 
 # Text Editors (basic)
