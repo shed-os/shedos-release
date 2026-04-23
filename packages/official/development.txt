@@ -65,6 +65,7 @@ python-pip
 python-psutil
 python-pydantic
 python-rich
+python-textual
 pyright
 # Code Stats
 tokei
