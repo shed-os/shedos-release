@@ -221,6 +221,7 @@ python-pip
 python-psutil
 python-pydantic
 python-rich
+python-textual
 ripgrep
 ruby
 rubygems
