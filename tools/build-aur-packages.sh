@@ -1,7 +1,26 @@
 #!/bin/bash
-# Build AUR packages for shedOS
-# Creates a local repository with pre-built packages
-# Only rebuilds packages if version changed or doesn't exist
+# Build AUR packages for shedOS.
+#
+# Populates archiso/shedos-repo/ with .pkg.tar.zst files for every
+# package listed in packages/aur.txt. Two design points worth
+# understanding before editing:
+#
+# 1. Cache-trust pre-flight. The CI workflow restores
+#    archiso/shedos-repo/ from an actions/cache keyed on
+#    hashFiles('packages/aur.txt') BEFORE invoking this script. The
+#    cache hit means: every binary present was built for the current
+#    aur.txt content, so it is safe to consume. We honor that — if
+#    a package's .pkg.tar.zst exists, we skip the clone AND the
+#    build. AUR's HTTPS endpoint is intermittently broken
+#    (`error:0A000126:SSL routines::unexpected eof`) and the cache
+#    is the only thing standing between a TLS hiccup and a frozen
+#    release pipeline.
+#
+# 2. Force-rebuild escape valve. Set SHEDOS_AUR_FORCE_REBUILD=1 to
+#    bypass the cache-trust skip and pull every PKGBUILD fresh.
+#    Used by .github/workflows/release-weekly.yml to keep the cache
+#    from drifting too far behind upstream. Don't set this in the
+#    push-driven workflow — it would reintroduce the AUR fragility.
 
 set -euo pipefail
 
@@ -96,21 +115,50 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
-    # Clone or update AUR repo. aur.archlinux.org has intermittent TLS
-    # hiccups (`SSL routines::unexpected eof`) that surface ~once per few
-    # CI runs; one bad attempt would otherwise kill a 39-package build.
-    # Retry up to 3 times with backoff before giving up.
+    # ────────────────────────────────────────────────────────────
+    # Pre-flight: trust the GHA cache.
+    #
+    # When CI's actions/cache restored archiso/shedos-repo/ before
+    # this script ran, a cached .pkg.tar.zst for $PACKAGE means it
+    # was built for the current packages/aur.txt (cache key gates
+    # this). Skip the clone AND the build — net effect on
+    # cache-hit runs is zero AUR network calls.
+    #
+    # SHEDOS_AUR_FORCE_REBUILD=1 (set by release-weekly.yml) bypasses
+    # this skip so the weekly job can pull fresh upstream PKGBUILDs.
+    # ────────────────────────────────────────────────────────────
+    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
+        echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
+        SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+        continue
+    fi
+
+    # ────────────────────────────────────────────────────────────
+    # Clone or update AUR repo. aur.archlinux.org has chronic TLS
+    # flakiness (`SSL routines::unexpected eof while reading`) and
+    # occasional HTTP 500s. Hardenings:
+    #   • -c http.version=HTTP/1.1 — avoid the HTTP/2-vs-middlebox
+    #     scenario that produces 0A000126.
+    #   • --depth 1 — smallest possible transfer; less surface area
+    #     for mid-stream connection death.
+    #   • timeout 60 — fail fast on a hung TLS handshake.
+    #   • Jittered backoff 30s/60s/120s — push retries far enough
+    #     apart that they don't all land in the same flaky minute.
+    # 3 attempts; if all fail the script exits 1 and the run aborts.
+    # The weekly refresh's success keeps the cache fresh enough that
+    # this only matters for genuinely new aur.txt entries.
+    # ────────────────────────────────────────────────────────────
     if [ "$EUID" -eq 0 ]; then
         sudo -u builduser bash <<EOF
 set -e
 cd "$AUR_BUILD_DIR"
 for attempt in 1 2 3; do
     if [ -d "$PACKAGE" ]; then
-        if (cd "$PACKAGE" && git pull); then
+        if timeout 60 git -c http.version=HTTP/1.1 -C "$PACKAGE" pull --depth 1 --no-tags; then
             break
         fi
     else
-        if git clone https://aur.archlinux.org/$PACKAGE.git; then
+        if timeout 60 git -c http.version=HTTP/1.1 clone --depth 1 --no-tags https://aur.archlinux.org/$PACKAGE.git; then
             break
         fi
         # Half-cloned dir may linger; clean before next try.
@@ -120,19 +168,24 @@ for attempt in 1 2 3; do
         echo "FATAL: failed to fetch $PACKAGE from AUR after 3 attempts" >&2
         exit 1
     fi
-    echo "WARN: AUR fetch for $PACKAGE failed (attempt \$attempt); retrying…" >&2
-    sleep \$(( attempt * 5 ))
+    # Jitter [0,15)s on top of the base sleep so 3 parallel attempts
+    # don't synchronize onto the same flaky window.
+    base=\$(( attempt * 30 ))
+    jitter=\$(( RANDOM % 15 ))
+    delay=\$(( base + jitter ))
+    echo "WARN: AUR fetch for $PACKAGE failed (attempt \$attempt); retrying in \${delay}s…" >&2
+    sleep \$delay
 done
 EOF
     else
         cd "$AUR_BUILD_DIR"
         for attempt in 1 2 3; do
             if [ -d "$PACKAGE" ]; then
-                if (cd "$PACKAGE" && git pull); then
+                if timeout 60 git -c http.version=HTTP/1.1 -C "$PACKAGE" pull --depth 1 --no-tags; then
                     break
                 fi
             else
-                if git clone https://aur.archlinux.org/$PACKAGE.git; then
+                if timeout 60 git -c http.version=HTTP/1.1 clone --depth 1 --no-tags https://aur.archlinux.org/$PACKAGE.git; then
                     break
                 fi
                 rm -rf "$PACKAGE"
@@ -141,35 +194,36 @@ EOF
                 echo "FATAL: failed to fetch $PACKAGE from AUR after 3 attempts" >&2
                 exit 1
             fi
-            echo "WARN: AUR fetch for $PACKAGE failed (attempt $attempt); retrying…" >&2
-            sleep $(( attempt * 5 ))
+            base=$(( attempt * 30 ))
+            jitter=$(( RANDOM % 15 ))
+            delay=$(( base + jitter ))
+            echo "WARN: AUR fetch for $PACKAGE failed (attempt $attempt); retrying in ${delay}s…" >&2
+            sleep "$delay"
         done
     fi
 
     # Get version from PKGBUILD
     AUR_VERSION=$(get_pkgbuild_version "$AUR_BUILD_DIR/$PACKAGE")
 
-    # Special handling for -git packages: they always appear to have version changes
-    # because the PKGBUILD version differs from the built version (pkgver() runs during build)
-    # If we already have a built package, skip unless it's truly outdated
+    # Post-clone routing.
+    #
+    # -git packages have unstable PKGBUILD pkgvers (the real version
+    # is computed by pkgver() at build time), so version comparison
+    # is meaningless. Under FORCE we always rebuild them; without
+    # FORCE the pre-flight already short-circuited via the cached
+    # binary, so reaching this branch means we have no cache and
+    # must build.
     if [[ "$PACKAGE" == *-git ]]; then
-        if [ -n "$CURRENT_VERSION" ]; then
-            echo "✓ $PACKAGE $CURRENT_VERSION is up to date (skipping)"
-            SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
-            continue
-        fi
-    fi
-
-    # Compare versions
-    if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$AUR_VERSION" ]; then
-        echo "✓ $PACKAGE $CURRENT_VERSION is up to date (skipping)"
+        echo "⚠ $PACKAGE is a -git package; rebuilding from fresh checkout"
+        rm -f "$REPO_DIR"/${PACKAGE}-*.pkg.tar.zst*
+    elif [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$AUR_VERSION" ]; then
+        # Only reached under FORCE — the upstream pkgver matches
+        # what we already have, so no rebuild is needed.
+        echo "✓ $PACKAGE $CURRENT_VERSION pkgver unchanged upstream; keeping cached build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
         continue
-    fi
-
-    if [ -n "$CURRENT_VERSION" ]; then
+    elif [ -n "$CURRENT_VERSION" ]; then
         echo "⚠ $PACKAGE version changed: $CURRENT_VERSION → $AUR_VERSION (rebuilding)"
-        # Remove old version
         rm -f "$REPO_DIR"/${PACKAGE}-*.pkg.tar.zst*
     else
         echo "⚠ $PACKAGE not found in repo (building $AUR_VERSION)"
