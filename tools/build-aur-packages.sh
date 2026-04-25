@@ -96,26 +96,54 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
-    # Clone or update AUR repo
+    # Clone or update AUR repo. aur.archlinux.org has intermittent TLS
+    # hiccups (`SSL routines::unexpected eof`) that surface ~once per few
+    # CI runs; one bad attempt would otherwise kill a 39-package build.
+    # Retry up to 3 times with backoff before giving up.
     if [ "$EUID" -eq 0 ]; then
         sudo -u builduser bash <<EOF
 set -e
 cd "$AUR_BUILD_DIR"
-if [ -d "$PACKAGE" ]; then
-    cd "$PACKAGE"
-    git pull
-else
-    git clone https://aur.archlinux.org/$PACKAGE.git
-fi
+for attempt in 1 2 3; do
+    if [ -d "$PACKAGE" ]; then
+        if (cd "$PACKAGE" && git pull); then
+            break
+        fi
+    else
+        if git clone https://aur.archlinux.org/$PACKAGE.git; then
+            break
+        fi
+        # Half-cloned dir may linger; clean before next try.
+        rm -rf "$PACKAGE"
+    fi
+    if [ "\$attempt" = "3" ]; then
+        echo "FATAL: failed to fetch $PACKAGE from AUR after 3 attempts" >&2
+        exit 1
+    fi
+    echo "WARN: AUR fetch for $PACKAGE failed (attempt \$attempt); retrying…" >&2
+    sleep \$(( attempt * 5 ))
+done
 EOF
     else
         cd "$AUR_BUILD_DIR"
-        if [ -d "$PACKAGE" ]; then
-            cd "$PACKAGE"
-            git pull
-        else
-            git clone https://aur.archlinux.org/$PACKAGE.git
-        fi
+        for attempt in 1 2 3; do
+            if [ -d "$PACKAGE" ]; then
+                if (cd "$PACKAGE" && git pull); then
+                    break
+                fi
+            else
+                if git clone https://aur.archlinux.org/$PACKAGE.git; then
+                    break
+                fi
+                rm -rf "$PACKAGE"
+            fi
+            if [ "$attempt" = "3" ]; then
+                echo "FATAL: failed to fetch $PACKAGE from AUR after 3 attempts" >&2
+                exit 1
+            fi
+            echo "WARN: AUR fetch for $PACKAGE failed (attempt $attempt); retrying…" >&2
+            sleep $(( attempt * 5 ))
+        done
     fi
 
     # Get version from PKGBUILD
