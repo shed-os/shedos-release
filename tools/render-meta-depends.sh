@@ -50,6 +50,7 @@ shedos_pkgs=(
     shedos-nvim
     shedos-branding
     shedos-kernel
+    shedos-screensaver
 )
 
 # De-dupe across all sources. Keep shedos-* first so the order reads naturally
