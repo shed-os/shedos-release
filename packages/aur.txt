@@ -38,9 +38,6 @@ bluetui
 # API Testing
 postman-bin
 
-# Power
-auto-cpufreq
-
 # Fonts
 ttf-ms-fonts
 
@@ -79,3 +76,7 @@ usql
 
 # Hyprland shutdown utility
 hyprshutdown
+
+# Auto-renicer — keeps interactive apps responsive while heavy build
+# jobs (cargo, gcc, npm) are scheduled at lower priority.
+ananicy-cpp

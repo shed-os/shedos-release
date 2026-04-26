@@ -1,4 +1,10 @@
 # ShedOS Power Management Packages
+#
+# tlp owns the full power-management surface (CPU governor, disk
+# spin-down, SATA link power, WiFi/Bluetooth radio idle, PCIe runtime
+# PM, battery charge thresholds). power-profiles-daemon would compete
+# for CPU governor ownership and is declared as a conflict in
+# shedos-system.
 
 # Battery Optimization
 tlp
@@ -9,7 +15,6 @@ cpupower
 
 # Power Monitoring
 powertop
-power-profiles-daemon
 
 # Thermal Management
 thermald
