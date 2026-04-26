@@ -21,7 +21,7 @@
 #     obsidian, postman, ms-fonts). These stay as optdepends on shedos-meta
 #     and install via yay/shedos-welcome, not pacstrap.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"

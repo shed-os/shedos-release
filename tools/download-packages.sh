@@ -2,7 +2,7 @@
 # Download all packages for shedOS ISO build
 # This pre-downloads packages to avoid network issues during mkarchiso
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"

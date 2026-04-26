@@ -2,7 +2,7 @@
 # Fully offline XferCommand wrapper for deterministic ISO builds
 # Uses only cached packages and frozen database files - NO network access
 
-set -e
+set -euo pipefail
 
 OUTPUT_FILE="$1"
 URL="$2"
