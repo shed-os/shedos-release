@@ -79,4 +79,11 @@ hyprshutdown
 
 # Auto-renicer — keeps interactive apps responsive while heavy build
 # jobs (cargo, gcc, npm) are scheduled at lower priority.
-ananicy-cpp
+# Pinned to the -git variant: upstream v1.1.1 (the last tagged release
+# on AUR `ananicy-cpp`) fails to compile against glibc 2.41+ because
+# glibc now declares `sched_attr` / `sched_getattr` which collide with
+# `<linux/sched/types.h>`. The post-1.2.0 git snapshot guards the
+# include and builds cleanly. `ananicy-cpp-git` provides+conflicts
+# `ananicy-cpp`, so the depends string in shedos-system/PKGBUILD
+# stays as plain `ananicy-cpp` and resolves via `provides=`.
+ananicy-cpp-git
