@@ -49,6 +49,7 @@ shedos_pkgs=(
     shedos-hyprland
     shedos-nvim
     shedos-branding
+    shedos-kernel
 )
 
 # De-dupe across all sources. Keep shedos-* first so the order reads naturally
