@@ -1,37 +1,18 @@
-# ShedOS Media Production Packages
+# ShedOS Media CLI Packages
+#
+# Heavyweight GUI media-production apps (obs-studio, gimp, inkscape,
+# kdenlive, audacity, darktable, rawtherapee, fontforge, flameshot,
+# gcolor3, graphicsmagick) are NOT shipped on the ISO — they aren't
+# part of the developer-focused promise. Users who want them install
+# on demand:
+#
+#     pacman -S gimp inkscape obs-studio audacity kdenlive
+#
+# What stays here is the CLI media tooling that dev workflows
+# actually depend on (image scripting, video processing pipelines).
 
-# Video Recording/Streaming
-obs-studio
-
-# Image Editing
-gimp
-gimp-help-en
-
-# Vector Graphics
-inkscape
-
-# Video Editing
-kdenlive
-
-# Audio Editing
-audacity
-
-# Image Processing
+# Image Processing CLI
 imagemagick
-graphicsmagick
 
-# Video Processing
+# Video Processing CLI (also a transitive dep of kitty + browsers + wf-recorder)
 ffmpeg
-
-# Raw Photo
-darktable
-rawtherapee
-
-# Screen Capture
-flameshot
-
-# Color Picker
-gcolor3
-
-# Fonts for Design
-fontforge

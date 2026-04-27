@@ -1,31 +1,34 @@
 # ShedOS Font Packages
+#
+# A curated 9-font core. The previous 31-font set carried five
+# redundant Nerd Fonts plus noto-fonts-cjk (~250 MB on its own) and a
+# long tail of Latin-script duplicates. Users who want CJK / extra
+# scripts / extra Nerd Fonts install on demand:
+#
+#     pacman -S noto-fonts-cjk noto-fonts-extra ttf-cascadia-code-nerd
+#
+# What stays:
+#   - JetBrains Mono / FiraCode / Meslo Nerd — programmer-mono trio.
+#   - DejaVu + Liberation — standard system fonts every desktop app
+#     falls back to.
+#   - Noto core + Emoji — Unicode coverage for Latin/Greek/Cyrillic/
+#     Arabic/Hebrew/Thai etc. plus emoji.
+#   - Font Awesome + Nerd Fonts symbol set — icon glyphs for waybar,
+#     wlogout, walker UI.
 
-# Nerd Fonts
+# Nerd Fonts (programmer mono)
 ttf-jetbrains-mono-nerd
 ttf-firacode-nerd
-ttf-hack-nerd
 ttf-meslo-nerd
-ttf-cascadia-code-nerd
-ttf-victor-mono-nerd
-# System Fonts
+
+# System Fonts (universal fallbacks)
 ttf-dejavu
 ttf-liberation
-ttf-roboto
-ttf-opensans
+
+# Unicode Coverage
 noto-fonts
-noto-fonts-cjk
 noto-fonts-emoji
-noto-fonts-extra
-# Microsoft Fonts (AUR alternative)
-ttf-ubuntu-font-family
-ttf-droid
-ttf-ibm-plex
+
 # Icon Fonts
 otf-font-awesome
 ttf-nerd-fonts-symbols
-# Terminal Fonts
-terminus-font
-adobe-source-code-pro-fonts
-# Document Fonts
-tex-gyre-fonts
-gnu-free-fonts

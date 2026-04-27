@@ -1,30 +1,24 @@
-# ShedOS Virtualization Packages
+# ShedOS Virtualization Guest-Side Helpers
+#
+# Host-side virtualization tools (the ones that let ShedOS RUN VMs)
+# are NOT shipped on the ISO. They aren't part of the developer-
+# focused promise. Devs who want to run VMs from ShedOS install on
+# demand:
+#
+#     pacman -S qemu-full libvirt virt-manager virt-viewer edk2-ovmf \
+#               dnsmasq lvm2 virtualbox virtualbox-host-modules-arch
+#
+# What stays here is the guest-side tooling that makes ShedOS itself
+# behave well WHEN it's the guest in someone else's VM (clipboard
+# sharing, screen auto-resize, host-controlled snapshot integration).
+# The Linux kernel handles VirtIO/AHCI/Hyper-V/Xen/KVM emulation
+# natively — booting and installing in a VM works without any of
+# this. These three packages just upgrade the experience from
+# "boots fine" to "feels native".
 
-# QEMU/KVM
-qemu-full
-qemu-img
-libvirt
-virt-manager
-virt-viewer
-
-# Network
-dnsmasq
-# bridge-utils was removed from Arch repos in 2023; bridge tooling is now
-# provided by iproute2 (already a base package) and libvirt uses it directly.
-openbsd-netcat
-
-# UEFI for VMs
-edk2-ovmf
-
-# Storage
-lvm2
-
-# VirtualBox
-virtualbox
-virtualbox-host-modules-arch
-virtualbox-guest-iso
-virtualbox-guest-utils
-
-# VM Guest Agents
+# QEMU/KVM/SPICE guest-side integration
 qemu-guest-agent
 spice-vdagent
+
+# VirtualBox guest-side integration
+virtualbox-guest-utils

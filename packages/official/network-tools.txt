@@ -1,13 +1,11 @@
 # ShedOS Network Tools Packages
 
 # Analysis
-wireshark-qt
 wireshark-cli
 tcpdump
 
 # Scanning
 nmap
-masscan
 
 # Network Utilities
 socat
@@ -15,6 +13,7 @@ iftop
 nethogs
 bmon
 nload
+openbsd-netcat
 
 # Diagnostics
 mtr
@@ -27,12 +26,7 @@ ldns
 dog
 iputils
 
-# Proxy
-proxychains-ng
-tsocks
-
 # WiFi
-aircrack-ng
 wavemon
 iw
 
