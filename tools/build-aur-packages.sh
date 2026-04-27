@@ -2,25 +2,7 @@
 # Build AUR packages for shedOS.
 #
 # Populates archiso/shedos-repo/ with .pkg.tar.zst files for every
-# package listed in packages/aur.txt. Two design points worth
-# understanding before editing:
-#
-# 1. Cache-trust pre-flight. The CI workflow restores
-#    archiso/shedos-repo/ from an actions/cache keyed on
-#    hashFiles('packages/aur.txt') BEFORE invoking this script. The
-#    cache hit means: every binary present was built for the current
-#    aur.txt content, so it is safe to consume. We honor that — if
-#    a package's .pkg.tar.zst exists, we skip the clone AND the
-#    build. AUR's HTTPS endpoint is intermittently broken
-#    (`error:0A000126:SSL routines::unexpected eof`) and the cache
-#    is the only thing standing between a TLS hiccup and a frozen
-#    release pipeline.
-#
-# 2. Force-rebuild escape valve. Set SHEDOS_AUR_FORCE_REBUILD=1 to
-#    bypass the cache-trust skip and pull every PKGBUILD fresh.
-#    Used by .github/workflows/release-weekly.yml to keep the cache
-#    from drifting too far behind upstream. Don't set this in the
-#    push-driven workflow — it would reintroduce the AUR fragility.
+# package listed in packages/aur.txt.
 
 set -euo pipefail
 
