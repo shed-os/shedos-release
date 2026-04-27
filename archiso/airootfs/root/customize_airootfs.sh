@@ -73,6 +73,41 @@ sed -i 's/^shedos:!/shedos:/' /etc/shadow
 # perms than polkit expects — normalize.
 chmod 644 /etc/polkit-1/rules.d/*.rules 2>/dev/null || true
 
+# === Free-win cleanup before squashfs build (~1.3 GB savings) ===
+# These are bytes pacstrap left behind that the installed system never
+# uses. Wipe them now so the squashfs doesn't carry them either.
+#
+# Pacman cache: pacstrap downloads .pkg.tar.zst into /var/cache/pacman/pkg
+# AND unpacks them. The cached archives stay around in the squashfs but
+# Calamares' unpackfs-exclude.conf already wipes /var/cache/pacman/pkg/*
+# on the install target — they're useless on the installed system.
+# Stripping them here removes ~1 GB from the live ISO too. Live-ISO
+# `pacman -S` over the network still works; only OFFLINE live-ISO
+# `pacman -S` would degrade — which doesn't affect Calamares-driven
+# installs at all.
+rm -f /var/cache/pacman/pkg/*.pkg.tar.zst* 2>/dev/null || true
+
+# Translated locale data: keep en/en_US/C, drop the rest (~80 MB).
+# /usr/lib/locale is glibc-built (already filtered to en_US.UTF-8 by
+# `locale-gen` above). /usr/share/locale is per-package translation
+# catalogs — most apps will fall back to en cleanly.
+find /usr/share/locale -mindepth 1 -maxdepth 1 -type d \
+    ! -name 'en' ! -name 'en_US' ! -name 'C' \
+    -exec rm -rf {} + 2>/dev/null || true
+
+# Translated man pages: keep $LANG-agnostic man{1..8}; drop man-<lang>/.
+find /usr/share/man -mindepth 1 -maxdepth 1 -type d \
+    ! -name 'man*' \
+    -exec rm -rf {} + 2>/dev/null || true
+
+# Package docs: drop /usr/share/doc/*/{html,examples} and per-package
+# translations. Preserve the per-package directory itself for any
+# tooling that probes /usr/share/doc/<pkg> existence.
+rm -rf /usr/share/doc/*/{html,examples,*-translations} 2>/dev/null || true
+
+# GNU info pages — texinfo readers aren't part of the Hyprland flow.
+rm -rf /usr/share/info/*.info* 2>/dev/null || true
+
 # Regenerate initramfs with archiso hooks (and the shedos Plymouth theme,
 # which shedos-branding sets as default via its post_install hook).
 mkinitcpio -P
