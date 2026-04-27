@@ -5,6 +5,8 @@ hyprland
 hypridle
 hyprlock
 hyprsunset
+wayland
+libxkbcommon
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 xdg-utils

@@ -53,6 +53,12 @@ smartmontools
 lm_sensors
 hdparm
 
+# Memory / swap
+zram-generator
+
+# Python runtime libs (shedman config writers + reconcilers)
+python-tomlkit
+
 # Text Editors (basic)
 nano
 vim
