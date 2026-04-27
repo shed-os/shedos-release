@@ -1,4 +1,4 @@
-# ShedOS Media CLI Packages
+# ShedOS Media Packages
 #
 # Heavyweight GUI media-production apps (obs-studio, gimp, inkscape,
 # kdenlive, audacity, darktable, rawtherapee, fontforge, flameshot,
@@ -7,12 +7,15 @@
 # on demand:
 #
 #     pacman -S gimp inkscape obs-studio audacity kdenlive
-#
-# What stays here is the CLI media tooling that dev workflows
-# actually depend on (image scripting, video processing pipelines).
 
 # Image Processing CLI
 imagemagick
 
 # Video Processing CLI (also a transitive dep of kitty + browsers + wf-recorder)
 ffmpeg
+
+# Image viewers — imv covers the Hyprland keybind / Wayland-native
+# case (used in /etc/skel/.config/hypr binds), loupe covers the
+# graphical "double-click an image" flow.
+imv
+loupe

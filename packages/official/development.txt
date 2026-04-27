@@ -69,10 +69,8 @@ python-textual
 pyright
 # Code Stats
 tokei
-# Ruby
-ruby
-rubygems
 # JVM
+jdk-openjdk
 kotlin
 maven
 gradle

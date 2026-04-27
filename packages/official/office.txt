@@ -1,7 +1,14 @@
-# ShedOS Office & Productivity Packages
-
-# Office Suite
-libreoffice-fresh
+# ShedOS Productivity Packages
+#
+# Office suite (libreoffice-fresh), e-book reader (calibre), email
+# (thunderbird), calendar (gnome-calendar), and calculator (gnome-
+# calculator) are not part of the developer-focused promise. Users
+# install them on demand:
+#
+#     pacman -S libreoffice-fresh calibre thunderbird gnome-calendar gnome-calculator
+#
+# What stays here is the PDF tooling devs actually use day-to-day for
+# reading docs and rendering manuals.
 
 # PDF
 evince
@@ -10,15 +17,3 @@ zathura-pdf-mupdf
 zathura-djvu
 poppler
 pdfjs
-
-# E-book
-calibre
-
-# Calendar
-gnome-calendar
-
-# Email
-thunderbird
-
-# Calculator
-gnome-calculator

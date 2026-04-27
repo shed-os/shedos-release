@@ -29,7 +29,6 @@ zig
 
 # System Libraries
 glibc
-musl
 
 # Development Libraries
 openssl
@@ -42,8 +41,6 @@ cppcheck
 
 # Build Optimization
 ccache
-distcc
-sccache
 
 # Documentation
 doxygen
