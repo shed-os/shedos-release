@@ -66,6 +66,17 @@ useradd -m -G wheel,video,audio,input,storage -s /usr/bin/zsh shedos 2>/dev/null
 echo 'shedos:' | chpasswd -e
 sed -i 's/^shedos:!/shedos:/' /etc/shadow
 
+# Live user is pre-baked in airootfs/etc/{passwd,shadow,group}, so the
+# useradd above no-ops and never copies /etc/skel into /home/shedos.
+# Seed the home from /etc/skel manually now that pacstrap has installed
+# shedos-hyprland's dotfiles there. Without this the live user gets no
+# hyprland.conf / .zshrc and Hyprland boots with the watchdog warning
+# (the disable_watchdog_warning = true line lives in /etc/skel/.config/
+# hypr/hyprland.conf, not in any airootfs override).
+mkdir -p /home/shedos
+cp -a /etc/skel/. /home/shedos/
+chown -R shedos:shedos /home/shedos
+
 # Calamares ships a sudoers drop-in at install time; fix its mode if present.
 [[ -f /etc/sudoers.d/calamares ]] && chmod 440 /etc/sudoers.d/calamares
 

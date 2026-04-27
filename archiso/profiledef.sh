@@ -27,5 +27,4 @@ file_permissions=(
   ["/usr/local/bin/shedos-installer"]="0:0:755"
   ["/usr/local/bin/shedos-user-session.sh"]="0:0:755"
   ["/usr/local/bin/shedos-welcome"]="0:0:755"
-  ["/home/shedos/"]="1000:1000:755"
 )
