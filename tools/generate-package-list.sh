@@ -114,7 +114,7 @@ echo "  AUR (republishable):         $AUR_REPUB"
 echo "  AUR (excluded, proprietary): $AUR_EXCLUDED"
 echo "  Total explicit in ISO:       $TOTAL_COUNT"
 echo ""
-if [ -n "$SUDO_USER" ]; then
+if [ -n "${SUDO_USER:-}" ]; then
     chown "$SUDO_USER:$(id -gn "$SUDO_USER")" "$OUTPUT_FILE"
     echo "Restored ownership to user: $SUDO_USER"
 fi

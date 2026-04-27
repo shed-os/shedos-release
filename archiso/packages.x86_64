@@ -65,6 +65,7 @@ limine
 linux
 linux-firmware
 linux-headers
+lm_sensors
 lshw
 lsof
 lz4
@@ -370,7 +371,6 @@ zathura-pdf-mupdf
 # --- power-mgmt ---
 acpid
 cpupower
-power-profiles-daemon
 powertop
 thermald
 tlp
@@ -479,7 +479,7 @@ virt-viewer
 # AUR Packages (republishable only; proprietary ones in
 # aur-norepublish.txt stay as optdepends on shedos-meta)
 # ============
-auto-cpufreq
+ananicy-cpp-git
 bluetui
 calamares
 catppuccin-gtk-theme-mocha
