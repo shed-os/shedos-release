@@ -90,6 +90,7 @@ ntfs-3g
 nvme-cli
 openssh
 pacman-contrib
+pahole
 pciutils
 plymouth
 procps-ng
