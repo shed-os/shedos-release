@@ -1,11 +1,25 @@
 # ShedOS Base System Packages
 
 # Core System
+#
+# ShedOS ships a single kernel (shedos-kernel, declared in shedos-meta).
+# The vanilla `linux` + `linux-headers` packages were dropped to keep the
+# ISO under 3.5 GB; recovery from a bricked shedos-kernel goes through
+# `shedman rollback` to a pre-update BTRFS snapshot.
+#
+# Firmware is subsetted to ~95% of laptop hardware (AMD/Intel/NVIDIA GPUs,
+# Atheros + Realtek WiFi, plus the small `-other` catchall for misc audio
+# codecs / USB controllers / etc.). Users with Mediatek/Marvell/Broadcom/
+# Qualcomm chipsets install the matching split on demand:
+#     pacman -S linux-firmware-mediatek    # or -marvell / -broadcom / -qcom
 base
 base-devel
-linux
-linux-headers
-linux-firmware
+linux-firmware-amdgpu
+linux-firmware-atheros
+linux-firmware-intel
+linux-firmware-nvidia
+linux-firmware-other
+linux-firmware-realtek
 
 # Bootloader
 limine
