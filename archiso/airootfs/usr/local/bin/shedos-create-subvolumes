@@ -67,7 +67,6 @@ SUBVOLUMES=(
     "@pkg"
     "@srv"
     "@opt"
-    "@libvirt"
     "@docker"
     "@machines"
 )
