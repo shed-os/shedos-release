@@ -63,9 +63,12 @@ intel-ucode
 iwd
 less
 limine
-linux
-linux-firmware
-linux-headers
+linux-firmware-amdgpu
+linux-firmware-atheros
+linux-firmware-intel
+linux-firmware-nvidia
+linux-firmware-other
+linux-firmware-realtek
 lm_sensors
 lshw
 lsof
