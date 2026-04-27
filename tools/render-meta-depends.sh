@@ -50,6 +50,14 @@ shedos_pkgs=(
     shedos-nvim
     shedos-branding
     shedos-kernel
+    # shedos-kernel-headers is a split package off shedos-kernel's PKGBUILD.
+    # Required as a hard dep because we ship nvidia-open-dkms (and other
+    # potential DKMS modules) by default — DKMS iterates every installed
+    # kernel under /usr/lib/modules/ and tries to `make` against its
+    # /build/ symlink. Without these headers, `dkms install nvidia` fails
+    # for the shedos-kernel with "Missing 6.19.14-zen1-1-shedos-kernel
+    # kernel headers" during pacstrap or post-install.
+    shedos-kernel-headers
     shedos-screensaver
 )
 
