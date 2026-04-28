@@ -25,11 +25,8 @@ obsidian-bin
 
 # DevOps
 lazydocker
-minikube-bin
 
 # Utilities
-timeshift
-mission-center
 
 # TUI
 impala
