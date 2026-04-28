@@ -160,7 +160,6 @@ hyprpicker
 hyprsunset
 kdeconnect
 kitty
-kvantum
 libnotify
 libxkbcommon
 mako
@@ -173,9 +172,7 @@ papirus-icon-theme
 playerctl
 polkit
 polkit-gnome
-qt5ct
 qt5-wayland
-qt6ct
 qt6-wayland
 rofi
 sddm
@@ -389,13 +386,13 @@ libc++
 libffi
 lld
 lldb
-llvm
+llvm-libs
 ltrace
 make
 nasm
 openssl
 readline
-rustup
+rust
 valgrind
 yasm
 zig
