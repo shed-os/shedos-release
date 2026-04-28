@@ -1,12 +1,6 @@
 # ShedOS System Programming Packages
 
 # C/C++ Compilers
-#
-# `clang` ships /usr/bin/clangd (the LSP server backing nvim's
-# C/C++ completion) and depends on `llvm-libs` for runtime support.
-# The standalone `llvm` toolchain (~700 MB unpacked, includes
-# llc/opt/etc.) is dropped — devs who actually do LLVM IR work
-# install it on demand: `pacman -S llvm`.
 gcc
 clang
 llvm-libs
@@ -28,12 +22,7 @@ nasm
 yasm
 
 # Rust
-#
-# `rust` is Arch's stable rustc + cargo from extra. `rustup` (the
-# multi-toolchain installer/manager, ~600 MB unpacked) is dropped
-# from the default install — devs who need nightly or per-project
-# toolchain pinning install it on demand: `pacman -S rustup`.
-rust
+rustup
 
 # Zig
 zig

@@ -41,8 +41,9 @@ if [[ -f "$root/packages/aur-norepublish.txt" ]]; then
     done < <(grep -hEv '^\s*(#|$)' "$root/packages/aur-norepublish.txt")
 fi
 
-# ShedOS packages that ship from the [shedos] repo. Listed explicitly so a
-# typo here fails loudly rather than silently dropping a shedos-* dep.
+# shedos-* packages shipped from the [shedos] repo. Listed explicitly so
+# a typo here fails loudly. shedos-kernel-headers is a hard dep because
+# nvidia-open-dkms (default install) needs them at install time.
 shedos_pkgs=(
     shedos-keyring
     shedos-system
@@ -50,20 +51,11 @@ shedos_pkgs=(
     shedos-nvim
     shedos-branding
     shedos-kernel
-    # shedos-kernel-headers is a split package off shedos-kernel's PKGBUILD.
-    # Required as a hard dep because we ship nvidia-open-dkms (and other
-    # potential DKMS modules) by default — DKMS iterates every installed
-    # kernel under /usr/lib/modules/ and tries to `make` against its
-    # /build/ symlink. Without these headers, `dkms install nvidia` fails
-    # for the shedos-kernel with "Missing 6.19.14-zen1-1-shedos-kernel
-    # kernel headers" during pacstrap or post-install.
     shedos-kernel-headers
     shedos-screensaver
 )
 
-# De-dupe across all sources. Keep shedos-* first so the order reads naturally
-# in the generated PKGBUILD. Split: republishable → depends=; proprietary AUR
-# → optdepends= (cannot live in [shedos], users install via yay).
+# Republishable → depends=; proprietary AUR → optdepends= (yay-installed).
 declare -A seen
 ordered=()
 optional=()

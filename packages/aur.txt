@@ -56,7 +56,6 @@ elephant-todo
 elephant-unicode
 elephant-websearch
 elephant-archlinuxpkgs
-elephant-nirisessions
 
 # Walker (application launcher)
 walker

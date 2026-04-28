@@ -8,7 +8,6 @@ hyprsunset
 wayland
 libxkbcommon
 xdg-desktop-portal-hyprland
-xdg-desktop-portal-gtk
 xdg-utils
 xdg-user-dirs
 
@@ -57,13 +56,6 @@ seahorse
 sddm
 
 # GTK/Qt Theming
-#
-# qt5-wayland + qt6-wayland are runtime support for Qt apps under
-# Wayland (calamares uses them). The Qt theming GUIs (qt5ct, qt6ct,
-# kvantum) are dropped — most ShedOS user-facing apps are GTK
-# (nautilus, file-roller, mako, gnome-disk-utility, gnome-system-
-# monitor, etc.). nwg-look + gsettings cover GTK theming. Devs who
-# install Qt apps and want to theme them: `pacman -S qt6ct kvantum`.
 gtk3
 gtk4
 qt5-wayland

@@ -1,21 +1,11 @@
 # ShedOS Media Packages
-#
-# Heavyweight GUI media-production apps (obs-studio, gimp, inkscape,
-# kdenlive, audacity, darktable, rawtherapee, fontforge, flameshot,
-# gcolor3, graphicsmagick) are NOT shipped on the ISO — they aren't
-# part of the developer-focused promise. Users who want them install
-# on demand:
-#
-#     pacman -S gimp inkscape obs-studio audacity kdenlive
 
-# Image Processing CLI
+# Image processing
 imagemagick
 
-# Video Processing CLI (also a transitive dep of kitty + browsers + wf-recorder)
+# Video processing
 ffmpeg
 
-# Image viewers — imv covers the Hyprland keybind / Wayland-native
-# case (used in /etc/skel/.config/hypr binds), loupe covers the
-# graphical "double-click an image" flow.
+# Image viewers
 imv
 loupe

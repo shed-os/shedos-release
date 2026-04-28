@@ -4,7 +4,6 @@
 nvidia-open-dkms
 nvidia-utils
 nvidia-settings
-lib32-nvidia-utils
 
 # Wayland Support
 egl-wayland

@@ -2,14 +2,10 @@
 
 # Disk Management
 gparted
-gnome-disk-utility
 parted
 
 # Disk Usage
 baobab
-
-# System Monitor
-gnome-system-monitor
 
 # Backup
 snapper
@@ -18,10 +14,6 @@ snapper
 xarchiver
 atool
 libcdio
-
-# Flatpak
-flatpak
-xdg-desktop-portal
 
 # System Info
 fastfetch
