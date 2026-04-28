@@ -347,23 +347,6 @@ tlp
 tlp-rdw
 upower
 
-# --- printing ---
-avahi
-cups
-cups-filters
-cups-pdf
-foomatic-db
-foomatic-db-engine
-foomatic-db-nonfree
-foomatic-db-ppds
-gutenprint
-hplip
-nss-mdns
-sane
-sane-airscan
-simple-scan
-system-config-printer
-
 # --- privacy ---
 age
 gnupg
@@ -453,11 +436,8 @@ hadolint-bin
 hyprshutdown
 impala
 lazydocker
-minikube-bin
 mise-bin
-mission-center
 oh-my-zsh-git
-timeshift
 usql
 walker
 yay
