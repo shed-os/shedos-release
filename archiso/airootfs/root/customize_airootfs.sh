@@ -66,13 +66,8 @@ useradd -m -G wheel,video,audio,input,storage -s /usr/bin/zsh shedos 2>/dev/null
 echo 'shedos:' | chpasswd -e
 sed -i 's/^shedos:!/shedos:/' /etc/shadow
 
-# Live user is pre-baked in airootfs/etc/{passwd,shadow,group}, so the
-# useradd above no-ops and never copies /etc/skel into /home/shedos.
-# Seed the home from /etc/skel manually now that pacstrap has installed
-# shedos-hyprland's dotfiles there. Without this the live user gets no
-# hyprland.conf / .zshrc and Hyprland boots with the watchdog warning
-# (the disable_watchdog_warning = true line lives in /etc/skel/.config/
-# hypr/hyprland.conf, not in any airootfs override).
+# Pre-baked passwd makes useradd above a no-op, so seed the home
+# manually after pacstrap lays down shedos-hyprland's /etc/skel.
 mkdir -p /home/shedos
 cp -a /etc/skel/. /home/shedos/
 chown -R shedos:shedos /home/shedos
@@ -84,39 +79,16 @@ chown -R shedos:shedos /home/shedos
 # perms than polkit expects — normalize.
 chmod 644 /etc/polkit-1/rules.d/*.rules 2>/dev/null || true
 
-# === Free-win cleanup before squashfs build (~1.3 GB savings) ===
-# These are bytes pacstrap left behind that the installed system never
-# uses. Wipe them now so the squashfs doesn't carry them either.
-#
-# Pacman cache: pacstrap downloads .pkg.tar.zst into /var/cache/pacman/pkg
-# AND unpacks them. The cached archives stay around in the squashfs but
-# Calamares' unpackfs-exclude.conf already wipes /var/cache/pacman/pkg/*
-# on the install target — they're useless on the installed system.
-# Stripping them here removes ~1 GB from the live ISO too. Live-ISO
-# `pacman -S` over the network still works; only OFFLINE live-ISO
-# `pacman -S` would degrade — which doesn't affect Calamares-driven
-# installs at all.
+# Squashfs slim-down: drop pacman cache, non-en locales, translated
+# man pages, package doc/example dirs, GNU info.
 rm -f /var/cache/pacman/pkg/*.pkg.tar.zst* 2>/dev/null || true
-
-# Translated locale data: keep en/en_US/C, drop the rest (~80 MB).
-# /usr/lib/locale is glibc-built (already filtered to en_US.UTF-8 by
-# `locale-gen` above). /usr/share/locale is per-package translation
-# catalogs — most apps will fall back to en cleanly.
 find /usr/share/locale -mindepth 1 -maxdepth 1 -type d \
     ! -name 'en' ! -name 'en_US' ! -name 'C' \
     -exec rm -rf {} + 2>/dev/null || true
-
-# Translated man pages: keep $LANG-agnostic man{1..8}; drop man-<lang>/.
 find /usr/share/man -mindepth 1 -maxdepth 1 -type d \
     ! -name 'man*' \
     -exec rm -rf {} + 2>/dev/null || true
-
-# Package docs: drop /usr/share/doc/*/{html,examples} and per-package
-# translations. Preserve the per-package directory itself for any
-# tooling that probes /usr/share/doc/<pkg> existence.
 rm -rf /usr/share/doc/*/{html,examples,*-translations} 2>/dev/null || true
-
-# GNU info pages — texinfo readers aren't part of the Hyprland flow.
 rm -rf /usr/share/info/*.info* 2>/dev/null || true
 
 # Regenerate initramfs with archiso hooks (and the shedos Plymouth theme,

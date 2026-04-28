@@ -186,7 +186,6 @@ wf-recorder
 wl-clipboard
 wmctrl
 wtype
-xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xdg-user-dirs
 xdg-utils
@@ -324,7 +323,6 @@ wireshark-cli
 
 # --- nvidia ---
 egl-wayland
-lib32-nvidia-utils
 libva-nvidia-driver
 nvidia-container-toolkit
 nvidia-open-dkms
@@ -392,7 +390,7 @@ make
 nasm
 openssl
 readline
-rust
+rustup
 valgrind
 yasm
 zig
@@ -413,10 +411,7 @@ baobab
 bleachbit
 dmidecode
 fastfetch
-flatpak
 font-manager
-gnome-disk-utility
-gnome-system-monitor
 gparted
 hwinfo
 inxi
@@ -425,7 +420,6 @@ libcdio
 parted
 snapper
 xarchiver
-xdg-desktop-portal
 
 # --- virtualization ---
 qemu-guest-agent
@@ -449,7 +443,6 @@ elephant-clipboard
 elephant-desktopapplications
 elephant-files
 elephant-menus
-elephant-nirisessions
 elephant-providerlist
 elephant-runner
 elephant-symbols
