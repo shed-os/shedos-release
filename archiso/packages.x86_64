@@ -63,12 +63,14 @@ intel-ucode
 iwd
 less
 limine
+linux
 linux-firmware-amdgpu
 linux-firmware-atheros
 linux-firmware-intel
 linux-firmware-nvidia
 linux-firmware-other
 linux-firmware-realtek
+linux-headers
 lm_sensors
 lshw
 lsof
@@ -256,6 +258,7 @@ docker
 docker-compose
 
 # --- fonts ---
+inter-font
 noto-fonts
 noto-fonts-emoji
 otf-font-awesome
