@@ -66,11 +66,11 @@ useradd -m -G wheel,video,audio,input,storage -s /usr/bin/zsh shedos 2>/dev/null
 echo 'shedos:' | chpasswd -e
 sed -i 's/^shedos:!/shedos:/' /etc/shadow
 
-# Pre-baked passwd makes useradd above a no-op, so seed the home
-# manually after pacstrap lays down shedos-hyprland's /etc/skel.
-mkdir -p /home/shedos
-cp -a /etc/skel/. /home/shedos/
-chown -R shedos:shedos /home/shedos
+# Don't seed /home/shedos from /etc/skel here. The live shedos user has
+# a minimal Hyprland config in archiso/airootfs/home/shedos/ that
+# auto-launches Calamares and skips hyprlock; copying /etc/skel on top
+# of that would clobber the live-only override with the full installed-
+# system config.
 
 # Calamares ships a sudoers drop-in at install time; fix its mode if present.
 [[ -f /etc/sudoers.d/calamares ]] && chmod 440 /etc/sudoers.d/calamares
