@@ -54,8 +54,8 @@ seahorse
 
 # Display Manager
 greetd
-greetd-regreet
-hyprpaper
+cage
+shedos-greeter
 
 # GTK/Qt Theming
 gtk3
