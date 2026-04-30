@@ -37,6 +37,7 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 
 # Services needed for the live shell
 systemctl enable NetworkManager
+systemctl enable seatd
 systemctl enable greetd
 systemctl enable bluetooth
 systemctl enable iwd
@@ -56,7 +57,7 @@ cat > /etc/greetd/config.toml <<'EOF'
 vt = 1
 
 [default_session]
-command = "cage -s -- /usr/bin/shedos-greeter"
+command = "env HOME=/var/lib/greetd cage -s -- /usr/bin/shedos-greeter"
 user = "greeter"
 
 [initial_session]
