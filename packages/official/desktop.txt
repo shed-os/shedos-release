@@ -55,6 +55,7 @@ seahorse
 # Display Manager
 greetd
 cage
+seatd
 shedos-greeter
 
 # GTK/Qt Theming
