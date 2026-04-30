@@ -6,13 +6,13 @@
 # package should live in a package (packaging/shedos-*); things that must
 # happen at ISO-build time for the live-boot environment stay here:
 #   - locale/timezone
-#   - live-user account + SDDM autologin
-#   - service enables needed for the live shell (NetworkManager, sddm, …)
+#   - live-user account + greetd autologin
+#   - service enables needed for the live shell (NetworkManager, greetd, …)
 #   - mkinitcpio -P (archiso hooks + Plymouth theme picked up by shedos-branding)
 #
 # NOT here (owned by packages now):
 #   - /etc/sudoers.d/wheel              → shedos-system
-#   - /etc/sddm.conf.d/theme.conf       → shedos-system
+#   - /etc/greetd/config.toml           → shedos-system
 #   - /etc/NetworkManager/conf.d/…      → shedos-system
 #   - /etc/skel/**                      → shedos-hyprland / shedos-nvim
 #   - shedos-*.service enables          → each package's .install hook
