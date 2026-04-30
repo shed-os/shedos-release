@@ -65,7 +65,6 @@ hadolint-bin
 
 # Theming (AUR)
 catppuccin-gtk-theme-mocha
-catppuccin-sddm-theme-mocha
 
 # Database Tools (AUR)
 usql

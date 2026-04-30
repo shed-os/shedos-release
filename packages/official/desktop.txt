@@ -53,7 +53,9 @@ gnome-keyring
 seahorse
 
 # Display Manager
-sddm
+greetd
+greetd-regreet
+hyprpaper
 
 # GTK/Qt Theming
 gtk3
