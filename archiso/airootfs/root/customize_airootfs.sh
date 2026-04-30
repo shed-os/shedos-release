@@ -48,13 +48,15 @@ systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.serv
 
 # greetd live autologin: [initial_session] skips the greeter on first
 # boot and direct-logs shedos into Hyprland; shedos's Hyprland then
-# exec-onces Calamares. shedos_finalize strips this block on install.
+# exec-onces Calamares. shedos_finalize strips [initial_session] on
+# install. [default_session] launches cage + shedos-greeter for any
+# subsequent fall-through (e.g. shedos logs out of the live shell).
 cat > /etc/greetd/config.toml <<'EOF'
 [terminal]
 vt = 1
 
 [default_session]
-command = "Hyprland --config /etc/greetd/hyprland.conf"
+command = "cage -s -- /usr/bin/shedos-greeter"
 user = "greeter"
 
 [initial_session]
