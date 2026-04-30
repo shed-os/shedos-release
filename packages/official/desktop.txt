@@ -57,6 +57,7 @@ greetd
 cage
 seatd
 shedos-greeter
+uwsm
 
 # GTK/Qt Theming
 gtk3
