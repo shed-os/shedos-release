@@ -37,7 +37,7 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 
 # Services needed for the live shell
 systemctl enable NetworkManager
-systemctl enable sddm
+systemctl enable greetd
 systemctl enable bluetooth
 systemctl enable iwd
 systemctl enable vboxservice.service || true
@@ -46,17 +46,22 @@ systemctl enable qemu-guest-agent.service || true
 # PipeWire user-scope sockets for every user (live user included).
 systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service
 
-# SDDM live autologin. Session= is the filename stem of a .desktop in
-# /usr/share/wayland-sessions/. For Hyprland that's "hyprland" — using
-# "start-hyprland" (the wrapper binary) makes SDDM fall back to the login
-# form silently.
-cat > /etc/sddm.conf.d/live-session-autologin.conf <<EOF
-[Autologin]
-User=shedos
-Session=hyprland
-Relogin=false
+# greetd live autologin: [initial_session] skips the greeter on first
+# boot and direct-logs shedos into Hyprland; shedos's Hyprland then
+# exec-onces Calamares. shedos_finalize strips this block on install.
+cat > /etc/greetd/config.toml <<'EOF'
+[terminal]
+vt = 1
+
+[default_session]
+command = "Hyprland --config /etc/greetd/hyprland.conf"
+user = "greeter"
+
+[initial_session]
+command = "Hyprland"
+user = "shedos"
 EOF
-chmod 644 /etc/sddm.conf.d/live-session-autologin.conf
+chmod 644 /etc/greetd/config.toml
 
 # Empty passwords for live-session root + shedos user (live ISO only).
 echo 'root:' | chpasswd -e
