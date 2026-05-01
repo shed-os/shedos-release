@@ -65,6 +65,7 @@ ROOTS+=(
     waybar swaybg mako nautilus
     network-manager-applet nm-connection-editor pavucontrol
     yad
+    ttf-dejavu
 )
 
 echo "Lean roots: ${#ROOTS[@]} packages"
