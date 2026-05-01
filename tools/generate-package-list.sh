@@ -22,7 +22,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PACKAGES_DIR="$PROJECT_ROOT/packages"
 OUTPUT_FILE="$PROJECT_ROOT/archiso/packages.x86_64"
 
-LOCAL_PACKAGES=(calamares shedos-branding shedos-keyring)
+LOCAL_PACKAGES=(
+    calamares
+    shedos-branding
+    shedos-keyring
+    shedos-kernel
+    shedos-kernel-headers
+)
 
 if [[ $EUID -ne 0 ]]; then
     echo "ERROR: must be run as root — pacman -Sy syncs the db." >&2
