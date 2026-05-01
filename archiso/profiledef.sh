@@ -22,11 +22,6 @@ airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15' '-b' '1M'
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/etc/gshadow"]="0:0:400"
-  ["/etc/sudoers.d/wheel"]="0:0:440"
   ["/etc/sudoers.d/calamares-live"]="0:0:440"
-  ["/opt/shedos-installer/"]="0:0:755"
-  ["/usr/local/bin/shedos-installer"]="0:0:755"
-  ["/usr/local/bin/shedos-user-session.sh"]="0:0:755"
-  ["/usr/local/bin/shedos-welcome"]="0:0:755"
   ["/home/shedos/"]="1000:1000:755"
 )

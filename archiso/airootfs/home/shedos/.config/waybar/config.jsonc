@@ -5,7 +5,7 @@
     "spacing": 6,
     "modules-left":   ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right":  ["network", "pulseaudio", "battery", "tray"],
+    "modules-right":  ["tray", "pulseaudio", "battery"],
 
     "hyprland/workspaces": {
         "format": "{name}"
