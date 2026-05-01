@@ -94,6 +94,29 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     echo "----------------------------------------"
     echo "Checking $PACKAGE..."
 
+    # Cache-bust stock calamares before the version check so the
+    # post-clone PKGBUILD patch (further down) actually gets a chance
+    # to run. The patch enables packagechooser (which upstream's AUR
+    # PKGBUILD skips) and bumps epoch=1; the patched build's filename
+    # has a `1:` in it. If the cached pkg lacks the epoch prefix it's
+    # stock — wipe it so the pre-flight skip below doesn't keep us on
+    # the broken build forever.
+    if [ "$PACKAGE" = "calamares" ]; then
+        cached_pkg=$(find "$REPO_DIR" -maxdepth 1 \
+            -name 'calamares-[0-9]*.pkg.tar.zst' 2>/dev/null | head -1)
+        if [ -n "$cached_pkg" ]; then
+            cached_ver=$(pacman -Qpi "$cached_pkg" 2>/dev/null \
+                | awk '/^Version/ {print $3; exit}')
+            case "$cached_ver" in
+                1:*) ;;
+                *)
+                    echo "  cache-bust: stock calamares ($cached_ver) lacks packagechooser; forcing rebuild"
+                    rm -f "$REPO_DIR"/calamares*.pkg.tar.zst*
+                    ;;
+            esac
+        fi
+    fi
+
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
