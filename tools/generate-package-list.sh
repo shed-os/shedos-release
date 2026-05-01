@@ -5,8 +5,8 @@
 # repo.shedos.org/stable/x86_64/ via shedos-meta's deps (rendered by
 # scripts/render-meta-depends.sh).
 #
-# Output is FLAT (every chosen provider explicit) — pacstrap resolves
-# virtual deps (jack, qt6-multimedia-backend, etc.) by first match.
+# Output is FLAT. Virtual providers (jack, libxtables.so) must be
+# pinned here so pacstrap matches what download-packages.sh fetches.
 
 set -euo pipefail
 
@@ -44,6 +44,7 @@ cat >> "$TEMP_FILE" <<'EOF'
 calamares
 hyprland
 kitty
+pipewire-jack
 shedos-branding
 shedos-keyring
 EOF
