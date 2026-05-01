@@ -14,7 +14,8 @@ BASE_PROVIDED=(bash coreutils diffutils gcc-libs glibc systemd)
 # awk-per-file (vs cat) handles source files missing trailing newlines.
 sources_set() {
     {
-        for f in "$SOURCES_DIR"/official/*.txt "$SOURCES_DIR"/aur.txt; do
+        for f in "$SOURCES_DIR"/official/*.txt "$SOURCES_DIR"/aur.txt \
+                 "$SOURCES_DIR"/.meta-closure.txt; do
             [[ -r $f ]] || continue
             awk 'NF { print } END { }' "$f"
         done
