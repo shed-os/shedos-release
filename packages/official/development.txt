@@ -1,6 +1,7 @@
 # ShedOS Development Tools Packages
 
 # Editor
+code
 # Shell Enhancement
 zsh-autosuggestions
 zsh-syntax-highlighting
