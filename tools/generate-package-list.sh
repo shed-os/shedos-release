@@ -66,6 +66,7 @@ ROOTS+=(
     network-manager-applet nm-connection-editor pavucontrol
     yad
     ttf-dejavu
+    ttf-jetbrains-mono-nerd
 )
 
 echo "Lean roots: ${#ROOTS[@]} packages"

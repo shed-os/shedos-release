@@ -27,7 +27,7 @@
         "tooltip-format-disconnected": "Click to connect",
         "interval":                    3,
         "spacing":                     1,
-        "on-click":                    "kitty --hold -e nmtui"
+        "on-click":                    "kitty --class shedos-nmtui --hold -e nmtui"
     },
 
     "pulseaudio": {

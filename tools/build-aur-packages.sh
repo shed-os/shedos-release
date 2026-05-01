@@ -184,6 +184,25 @@ EOF
         done
     fi
 
+    # ShedOS-specific PKGBUILD overrides — applied after clone, before
+    # version read, so AUR_VERSION reflects the patched package and the
+    # cached stock build is correctly seen as out-of-date.
+    case "$PACKAGE" in
+        calamares)
+            # The upstream AUR PKGBUILD has _skip_modules=( ... packagechooser
+            # packagechooserq ... ), passed to CMake as -DSKIP_MODULES.
+            # ShedOS' settings.conf uses packagechooser for the optional-apps
+            # picker, so we need it built. Drop those two lines from the skip
+            # list and bump epoch=1 so this build supersedes any cached stock
+            # calamares-3.4.2-2 in archiso/shedos-repo.
+            sed -i '/^    packagechooser$/d; /^    packagechooserq$/d' \
+                "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD"
+            grep -q '^epoch=' "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD" || \
+                sed -i '/^pkgver=/i epoch=1' "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD"
+            echo "  patched calamares PKGBUILD: enable packagechooser, epoch=1"
+            ;;
+    esac
+
     # Get version from PKGBUILD
     AUR_VERSION=$(get_pkgbuild_version "$AUR_BUILD_DIR/$PACKAGE")
 
