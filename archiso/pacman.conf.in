@@ -35,7 +35,7 @@ XferCommand = /usr/bin/curl -L -C - -f --retry 10 --retry-delay 5 --retry-max-ti
 # The installed-system [shedos] entry is added by shedos-system's install
 # hook (or equivalent post-install configuration).
 [shedos-repo]
-SigLevel = Optional TrustAll
+SigLevel = Never
 Server = file://@SHEDOS_REPO@
 
 [core]
