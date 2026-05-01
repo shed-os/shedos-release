@@ -59,7 +59,13 @@ for f in base installer; do
         ROOTS+=("$pkg")
     done < "$file"
 done
-ROOTS+=(hyprland kitty pipewire-jack pipewire-pulse wireplumber greetd cage bluez)
+ROOTS+=(
+    hyprland kitty
+    pipewire-jack pipewire-pulse wireplumber
+    waybar swaybg mako nautilus
+    network-manager-applet nm-connection-editor pavucontrol
+    yad
+)
 
 echo "Lean roots: ${#ROOTS[@]} packages"
 
