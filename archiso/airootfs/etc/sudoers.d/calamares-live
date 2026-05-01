@@ -1,2 +1,2 @@
 Defaults env_keep += "WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE QT_QPA_PLATFORM XDG_CURRENT_DESKTOP DISPLAY"
-shedos ALL=(ALL) NOPASSWD: /usr/bin/calamares
+shedos ALL=(ALL) NOPASSWD,SETENV: /usr/bin/calamares
