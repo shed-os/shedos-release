@@ -22,12 +22,12 @@ window#waybar {
 #clock,
 #network,
 #pulseaudio,
-#battery,
-#tray {
+#battery {
     padding: 0 10px;
 }
 
+#network                  { color: #a6e3a1; }
 #network.disconnected     { color: #f38ba8; }
+#network.linked           { color: #f9e2af; }
 #battery.warning          { color: #f9e2af; }
 #battery.critical         { color: #f38ba8; }
-#tray > .needs-attention  { -gtk-icon-effect: highlight; }
