@@ -153,13 +153,12 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
-    # Trust the GHA cache (cache key already hashes aur.txt). Always
-    # rebuild -git packages — their pkgver() resolves at build time so
-    # an unchanged cache key can still hide an upstream commit.
-    # SHEDOS_AUR_FORCE_REBUILD=1 disables the skip entirely.
-    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] \
-       && [ -n "$CURRENT_VERSION" ] \
-       && [[ "$PACKAGE" != *-git ]]; then
+    # Trust the GHA cache (cache key already hashes aur.txt). The
+    # weekly aur-cache-refresh.yml job exhaustively rebuilds with
+    # SHEDOS_AUR_FORCE_REBUILD=1, so -git packages still get refreshed
+    # — but on every push we trust the cached build to insulate us
+    # from upstream regressions landing mid-week.
+    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
         echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
         continue
