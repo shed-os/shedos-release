@@ -82,16 +82,18 @@ shedos_conflicts=(
     jdk25-openjdk
     qt6-multimedia-gstreamer
     pipewire-media-session
+    gnu-free-fonts
+    ttf-bitstream-vera
+    ttf-croscore
+    ttf-droid
+    ttf-ibm-plex
+    ttf-input
+    ttf-input-nerd
+    ttf-roboto
 )
 
 # Republishable → depends=; proprietary AUR → optdepends= (yay-installed).
-# shedos_pkgs get >=$version pins so a fresh install can't end up with
-# stale shedos-* siblings the moment incremental builds skip one of them.
 declare -A seen
-declare -A is_shedos_pkg
-for p in "${shedos_pkgs[@]}"; do
-    is_shedos_pkg[$p]=1
-done
 ordered=()
 optional=()
 for p in "${shedos_pkgs[@]}" "${official[@]}" "${aur[@]}"; do
@@ -148,11 +150,7 @@ license=('GPL-3.0-or-later')
 depends=(
 EOF
     for p in "${ordered[@]}"; do
-        if [[ -n ${is_shedos_pkg[$p]:-} ]]; then
-            printf "    '%s>=%s'\n" "$p" "$version"
-        else
-            printf "    '%s'\n" "$p"
-        fi
+        printf "    '%s'\n" "$p"
     done
     cat <<'EOF'
 )
