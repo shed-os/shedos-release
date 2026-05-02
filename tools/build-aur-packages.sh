@@ -62,6 +62,33 @@ fi
 mapfile -t AUR_PACKAGES < <(grep -v '^#' "$AUR_FILE" | grep -v '^$' | tr -d ' ')
 echo "Found ${#AUR_PACKAGES[@]} AUR packages to build"
 
+# Drop cached packages whose source name was removed from aur.txt.
+# Without this they'd be re-signed and republished into shedos.db,
+# leaving 404-able entries once retention sweep deletes the file.
+declare -A keep_aur=()
+for p in "${AUR_PACKAGES[@]}"; do
+    keep_aur[$p]=1
+done
+phantom_count=0
+shopt -s nullglob
+for f in "$REPO_DIR"/*.pkg.tar.zst; do
+    base=$(basename "$f")
+    pkgname=${base%-*-*-*.pkg.tar.zst}
+    [[ "$pkgname" == shedos-* ]] && continue
+    [[ "$pkgname" == *-debug ]] && continue
+    if [[ -z ${keep_aur[$pkgname]:-} ]]; then
+        echo "  prune phantom AUR: $base"
+        rm -f "$f" "${f}.sig"
+        phantom_count=$((phantom_count + 1))
+    fi
+done
+shopt -u nullglob
+if (( phantom_count > 0 )); then
+    echo "Phantom sweep: removed $phantom_count stale AUR package file(s)"
+    # Force the downstream cache-skip gate to rebuild the repo DB.
+    echo "phantom-sweep" >> /tmp/built-pkgs.txt
+fi
+
 # Function to get version from package file
 get_package_version() {
     local pkgname=$1
@@ -126,19 +153,13 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
-    # ────────────────────────────────────────────────────────────
-    # Pre-flight: trust the GHA cache.
-    #
-    # When CI's actions/cache restored archiso/shedos-repo/ before
-    # this script ran, a cached .pkg.tar.zst for $PACKAGE means it
-    # was built for the current packages/aur.txt (cache key gates
-    # this). Skip the clone AND the build — net effect on
-    # cache-hit runs is zero AUR network calls.
-    #
-    # SHEDOS_AUR_FORCE_REBUILD=1 (set by release-weekly.yml) bypasses
-    # this skip so the weekly job can pull fresh upstream PKGBUILDs.
-    # ────────────────────────────────────────────────────────────
-    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
+    # Trust the GHA cache (cache key already hashes aur.txt). Always
+    # rebuild -git packages — their pkgver() resolves at build time so
+    # an unchanged cache key can still hide an upstream commit.
+    # SHEDOS_AUR_FORCE_REBUILD=1 disables the skip entirely.
+    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] \
+       && [ -n "$CURRENT_VERSION" ] \
+       && [[ "$PACKAGE" != *-git ]]; then
         echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
         continue
