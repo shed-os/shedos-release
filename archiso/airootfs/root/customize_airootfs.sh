@@ -26,6 +26,11 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 systemctl enable NetworkManager
 systemctl enable seatd
 
+# One-shot reflector at boot: replaces the static airootfs mirrorlist
+# with a freshly sorted one as soon as network is up, so pacstrap's
+# Arch-side downloads hit fast / current mirrors.
+systemctl enable shedos-mirrorlist.service
+
 # PipeWire user-scope sockets so the live user gets working audio.
 systemctl --global enable pipewire.socket pipewire-pulse.socket wireplumber.service
 
