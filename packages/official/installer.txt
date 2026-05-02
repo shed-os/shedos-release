@@ -1,6 +1,10 @@
 # ShedOS Installer Dependencies
 # Packages needed for Calamares installer
 
+# Pacman download accelerator — segmented downloads via aria2c
+# wired into airootfs/etc/pacman.conf.in's XferCommand.
+aria2
+
 # Core Calamares dependencies
 yaml-cpp
 icu
