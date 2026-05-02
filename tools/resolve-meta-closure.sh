@@ -41,6 +41,11 @@ while IFS= read -r p; do
     [[ -n "$p" ]] && aur_set[$p]=1
 done < <(grep -hEv '^\s*(#|$)' "$PACKAGES_DIR/aur.txt" 2>/dev/null | sort -u)
 
+# installer.txt is the live-ISO Calamares dep list (kf6-*, qt5-*,
+# etc.) — those libs only need to exist in the live env so Calamares
+# can run, NOT on the installed system. Exclude that file from the
+# meta closure so its entries don't bloat shedos-meta. The file still
+# feeds archiso/packages.x86_64 via generate-package-list.sh.
 ARCH_ROOTS=()
 while IFS= read -r pkg; do
     [[ -z "$pkg" || "$pkg" =~ ^# ]] && continue
@@ -48,7 +53,8 @@ while IFS= read -r pkg; do
     [[ -n ${aur_set[$pkg]:-} ]] && continue
     ARCH_ROOTS+=("$pkg")
 done < <(
-    find "$PACKAGES_DIR/official" -maxdepth 1 -type f -name '*.txt' -print0 \
+    find "$PACKAGES_DIR/official" -maxdepth 1 -type f -name '*.txt' \
+        ! -name 'installer.txt' -print0 \
         | xargs -0 grep -hEv '^\s*(#|$)' \
         | sort -u
 )
