@@ -20,6 +20,12 @@ mkdir -p "$REPO_DIR"
 mkdir -p "$AUR_BUILD_DIR"
 chmod 777 "$AUR_BUILD_DIR"
 
+# Truncate the rebuild manifest at the start of every run.
+# build-shedos-packages.sh appends to this file too — the gate in
+# build-packages.yml's "Build repo DB" step checks it for non-empty
+# to decide whether to actually repo-add fresh entries.
+: > /tmp/built-pkgs.txt
+
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
     echo "Running as root, creating build user..."
@@ -274,6 +280,10 @@ EOF
 
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
+    # Tell build-packages.yml's "Build repo DB" step to actually
+    # repo-add and re-sign — without this it early-exits on the
+    # no-op gate and shedos.db keeps the stale (pre-rebuild) entry.
+    echo "$PACKAGE" >> /tmp/built-pkgs.txt
 done
 
 echo ""
