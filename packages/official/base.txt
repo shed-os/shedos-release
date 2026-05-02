@@ -6,12 +6,6 @@ base-devel
 # Required by shedos-kernel-headers (BTF info for DKMS builds)
 pahole
 
-# Stock Arch kernel as fallback. shedos-kernel is the default boot
-# entry; if it ever fails to boot (DKMS rebuild gone wrong, panic on
-# upgrade), Limine's menu offers stock linux as a recovery path.
-linux
-linux-headers
-
 linux-firmware-amdgpu
 linux-firmware-atheros
 linux-firmware-intel
