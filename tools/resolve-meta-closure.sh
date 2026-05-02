@@ -113,4 +113,112 @@ if [ -n "${SUDO_USER:-}" ]; then
     echo "Restored ownership to user: $SUDO_USER"
 fi
 
+# Cross-check that every virtual provide in the closure has its
+# alternative providers covered by render-meta-depends.sh's
+# shedos_conflicts=(). Without this, pacstrap's noninteractive default
+# (alphabetical first) silently picks a provider that conflicts with
+# an explicit dep — e.g. jack2 over pipewire-jack — and aborts the
+# transaction with an unresolvable conflict.
+echo ""
+echo "Cross-checking virtual-provider disambiguation..."
+
+renderer="$SCRIPT_DIR/render-meta-depends.sh"
+declare -A in_conflicts=()
+if [[ -f "$renderer" ]]; then
+    # Parse shedos_conflicts=( … ) array. Tolerates comments and one entry
+    # per line; matches the layout the renderer ships.
+    while IFS= read -r entry; do
+        in_conflicts[$entry]=1
+    done < <(
+        awk '
+            /^shedos_conflicts=\(/ { seen=1; next }
+            seen && /^\)/          { exit }
+            seen {
+                sub(/#.*/, "")
+                for (i=1;i<=NF;i++) {
+                    gsub(/[()'"'"'"]/, "", $i)
+                    if ($i != "") print $i
+                }
+            }
+        ' "$renderer"
+    )
+fi
+
+declare -A in_closure=()
+while IFS= read -r p; do
+    [[ -n "$p" ]] && in_closure[$p]=1
+done < "$TMPDIR/closure.txt"
+
+# For every closure package, collect its `provides=` virtuals via
+# pacman -Si and find sibling providers. We only flag when (a) the
+# virtual has multiple concrete providers in available repos AND (b)
+# none of the alternative providers are already in shedos_conflicts.
+violations=0
+checked_virtuals=0
+declare -A reported=()
+
+while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    case "$line" in
+        "Provides "*)
+            virtuals=${line#Provides }
+            virtuals=${virtuals#: }
+            [[ "$virtuals" == "None" ]] && continue
+            for v in $virtuals; do
+                # Strip versioned-provides suffix (libfoo.so=12-64 → libfoo.so).
+                vname=${v%%=*}
+                vname=${vname%%>=*}
+                vname=${vname%%<=*}
+                [[ -z "$vname" ]] && continue
+                [[ -n ${reported[$vname]:-} ]] && continue
+                reported[$vname]=1
+                checked_virtuals=$((checked_virtuals + 1))
+
+                # Find every concrete provider of this virtual reachable
+                # from core/extra/multilib. -Ssq doesn't expand provides;
+                # -Sp on the bare name does.
+                mapfile -t providers < <(
+                    pacman -Sp --noconfirm --print-format '%n' \
+                        --dbpath "$TMPDIR/db" \
+                        --config "$TMPDIR/pacman.conf" \
+                        "$vname" 2>/dev/null | sort -u
+                )
+                (( ${#providers[@]} <= 1 )) && continue
+
+                in_closure_count=0
+                missing_conflicts=()
+                for p in "${providers[@]}"; do
+                    if [[ -n ${in_closure[$p]:-} ]]; then
+                        in_closure_count=$((in_closure_count + 1))
+                    elif [[ -z ${in_conflicts[$p]:-} ]]; then
+                        missing_conflicts+=("$p")
+                    fi
+                done
+
+                # If exactly one provider is in the closure (the one we
+                # picked) but other providers exist that are NOT listed
+                # in shedos_conflicts, the renderer needs to add them.
+                if (( in_closure_count == 1 )) && (( ${#missing_conflicts[@]} > 0 )); then
+                    echo "  WARN virtual '$vname': closure has 1 of ${#providers[@]} providers; missing from shedos_conflicts: ${missing_conflicts[*]}"
+                    violations=$((violations + 1))
+                fi
+            done
+            ;;
+    esac
+done < <(
+    pacman -Si --dbpath "$TMPDIR/db" --config "$TMPDIR/pacman.conf" \
+        $(grep -v '^#' "$TMPDIR/closure.txt" | tr '\n' ' ') 2>/dev/null \
+        | awk '/^Provides /'
+)
+
+echo "  checked $checked_virtuals distinct virtuals; $violations need shedos_conflicts updates"
+if (( violations > 0 )); then
+    echo ""
+    echo "ERROR: shedos_conflicts in render-meta-depends.sh is out of sync"
+    echo "       with upstream's virtual-provider landscape. Add the"
+    echo "       packages listed above to the shedos_conflicts=() array,"
+    echo "       then re-run this script to verify."
+    exit 1
+fi
+
 echo "=========================================="

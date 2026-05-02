@@ -60,13 +60,38 @@ shedos_pkgs=(
     shedos-hyprland
     shedos-nvim
     shedos-branding
+    shedos-greeter
     shedos-kernel
     shedos-kernel-headers
     shedos-screensaver
+    shedos-migrate-to-packaged
+)
+
+# Concrete providers of virtual deps we deliberately don't ship.
+# Listed here as conflicts=() on shedos-meta so pacstrap's
+# noninteractive resolver can't auto-roll them ahead of the providers
+# we DO ship (e.g. jack2 alphabetically beating pipewire-jack).
+# resolve-meta-closure.sh asserts this list stays in sync with the
+# closure's actual virtual-provider landscape.
+shedos_conflicts=(
+    jack2
+    iptables-legacy
+    booster
+    dracut
+    jdk21-openjdk
+    jdk25-openjdk
+    qt6-multimedia-gstreamer
+    pipewire-media-session
 )
 
 # Republishable → depends=; proprietary AUR → optdepends= (yay-installed).
+# shedos_pkgs get >=$version pins so a fresh install can't end up with
+# stale shedos-* siblings the moment incremental builds skip one of them.
 declare -A seen
+declare -A is_shedos_pkg
+for p in "${shedos_pkgs[@]}"; do
+    is_shedos_pkg[$p]=1
+done
 ordered=()
 optional=()
 for p in "${shedos_pkgs[@]}" "${official[@]}" "${aur[@]}"; do
@@ -123,7 +148,11 @@ license=('GPL-3.0-or-later')
 depends=(
 EOF
     for p in "${ordered[@]}"; do
-        printf "    '%s'\n" "$p"
+        if [[ -n ${is_shedos_pkg[$p]:-} ]]; then
+            printf "    '%s>=%s'\n" "$p" "$version"
+        else
+            printf "    '%s'\n" "$p"
+        fi
     done
     cat <<'EOF'
 )
@@ -131,6 +160,13 @@ optdepends=(
 EOF
     for p in "${optional[@]}"; do
         printf "    '%s: proprietary AUR package; install via shedos-welcome / yay'\n" "$p"
+    done
+    cat <<'EOF'
+)
+conflicts=(
+EOF
+    for p in "${shedos_conflicts[@]}"; do
+        printf "    '%s'\n" "$p"
     done
     cat <<'EOF'
 )
@@ -144,4 +180,4 @@ EOF
 
 install -Dm644 "$tmp" "$out"
 
-echo "Wrote $out ($(wc -l < "$tmp") lines, ${#ordered[@]} deps, ${#optional[@]} optdeps)"
+echo "Wrote $out ($(wc -l < "$tmp") lines, ${#ordered[@]} deps, ${#optional[@]} optdeps, ${#shedos_conflicts[@]} conflicts)"
