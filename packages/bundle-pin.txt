@@ -1,0 +1,2 @@
+# Packages forced into the offline bundle regardless of size budget.
+# One per line; comments with '#' are ignored.

@@ -22,4 +22,6 @@ google-chrome
 slack-desktop
 obsidian-bin
 postman-bin
+claude-code-bin
+jetbrains-toolbox
 ttf-ms-fonts
