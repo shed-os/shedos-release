@@ -1,10 +1,8 @@
-# Live ISO pacman.conf — used at runtime by:
-#   - the live shell (sudo pacman ... in the live env)
-#   - Calamares' shedos_pacstrap step (writes packages into /target)
-# See archiso/pacman.conf.in for the BUILD-time variant used by mkarchiso.
-#
-# @CHANNEL@ is rendered at ISO build time by build-iso.yml: stable tag
-# (v<CalVer>, no -rcN) → "stable"; RC tag / branch push → "test".
+# Live ISO pacman.conf — used at runtime by the live shell. The
+# [shedos] block is added on first install/upgrade by shedos-system's
+# post-install hook, so it has a single source of truth and survives
+# upgrades cleanly. See archiso/pacman.conf.in for the BUILD-time variant
+# used by mkarchiso.
 
 [options]
 HoldPkg     = pacman glibc
@@ -14,15 +12,6 @@ CheckSpace
 ParallelDownloads = 10
 SigLevel    = Required DatabaseOptional
 LocalFileSigLevel = Optional
-
-# aria2c — segmented downloads, multiple connections per server.
-# 30-50% faster than curl for large packages on bandwidth-limited
-# links. Falls back gracefully on small files.
-XferCommand = /usr/bin/aria2c --allow-overwrite=true --continue=true --file-allocation=none --log-level=error --max-tries=2 --max-connection-per-server=8 --max-file-not-found=5 --min-split-size=5M --no-conf --remote-time=true --split=8 --summary-interval=0 --timeout=5 --retry-wait=2 --console-log-level=error -d / -o %o %u
-
-[shedos]
-SigLevel = Required DatabaseRequired
-Server = https://repo.shedos.org/@CHANNEL@/$arch
 
 [core]
 Include = /etc/pacman.d/mirrorlist
