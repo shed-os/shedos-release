@@ -1,2 +1,0 @@
-# Packages excluded from the offline bundle even if they fit the budget.
-# One per line; comments with '#' are ignored.
