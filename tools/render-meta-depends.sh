@@ -90,6 +90,13 @@ shedos_conflicts=(
     ttf-input
     ttf-input-nerd
     ttf-roboto
+    # Stock kernel + its tied modules — shedos-kernel is the only kernel
+    # we ship; these conflicts stop pacman from auto-resolving any future
+    # transitive `depends=('linux')` to the stock package.
+    linux
+    linux-headers
+    virtualbox-guest-modules-arch
+    virtualbox-host-modules-arch
 )
 
 # Republishable → depends=; proprietary AUR → optdepends= (yay-installed).
