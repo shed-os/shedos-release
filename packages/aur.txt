@@ -21,7 +21,7 @@ google-chrome
 slack-desktop
 
 # Notes
-obsidian-bin
+obsidian
 
 # DevOps
 lazydocker
