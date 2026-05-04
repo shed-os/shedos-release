@@ -1,0 +1,17 @@
+# remove from airootfs!
+# glibc.install only runs locale-gen on post_upgrade; on first install
+# (which is what pacstrap does) it's never invoked, so the en_US.UTF-8
+# locale our /etc/locale.conf points at would never be generated. Run
+# it explicitly when glibc lands.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = glibc
+
+[Action]
+Description = Generating locales declared in /etc/locale.gen...
+When = PostTransaction
+Depends = glibc
+Exec = /usr/bin/locale-gen
