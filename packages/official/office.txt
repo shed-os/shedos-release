@@ -7,3 +7,6 @@ zathura-pdf-mupdf
 zathura-djvu
 poppler
 pdfjs
+
+# Notes
+obsidian

@@ -20,9 +20,6 @@ google-chrome
 # Communication
 slack-desktop
 
-# Notes
-obsidian
-
 # DevOps
 lazydocker
 
