@@ -349,6 +349,7 @@ imlib2
 imv
 inetutils
 iniparser
+inotify-tools
 intel-ucode
 inter-font
 inxi
