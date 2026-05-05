@@ -55,6 +55,7 @@ zip
 unrar
 lsof
 strace
+inotify-tools
 procps-ng
 inetutils
 usbutils
