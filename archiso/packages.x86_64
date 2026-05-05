@@ -446,9 +446,13 @@ limine
 linux-api-headers
 linux-firmware-amdgpu
 linux-firmware-atheros
+linux-firmware-broadcom
 linux-firmware-intel
+linux-firmware-marvell
+linux-firmware-mediatek
 linux-firmware-nvidia
 linux-firmware-other
+linux-firmware-qcom
 linux-firmware-realtek
 linux-firmware-whence
 llvm-libs
@@ -651,6 +655,7 @@ webkit2gtk-4.1
 webrtc-audio-processing-1
 wget
 which
+wireless-regdb
 wireplumber
 woff2
 wpa_supplicant
