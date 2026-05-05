@@ -85,3 +85,6 @@ hyprshutdown
 # `ananicy-cpp`, so the depends string in shedos-system/PKGBUILD
 # stays as plain `ananicy-cpp` and resolves via `provides=`.
 ananicy-cpp-git
+
+# WiFi USB-dongle support (RTL8811AU/RTL8821AU chipsets)
+rtl8821au-dkms-git

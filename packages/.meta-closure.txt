@@ -230,7 +230,6 @@ grep
 grilo
 grim
 groff
-grub
 gsettings-desktop-schemas
 gsettings-system-schemas
 gsfonts
@@ -378,7 +377,6 @@ kcodecs
 kcolorscheme
 kcompletion
 kconfig
-kconfigwidgets
 kcontacts
 kcoreaddons
 kcrash
@@ -402,8 +400,6 @@ kjobwidgets
 kmod
 knotifications
 kotlin
-kpackage
-kparts
 kpeople
 krb5
 kservice
@@ -412,7 +408,6 @@ ksvg
 kwallet
 kwidgetsaddons
 kwindowsystem
-kxmlgui
 lame
 lazygit
 lcms2
@@ -571,7 +566,6 @@ libpgm
 libpipeline
 libpipewire
 libplacebo
-libplasma
 libplist
 libpng
 libportal
@@ -677,13 +671,16 @@ libzip
 licenses
 lilv
 limine
-linux
 linux-api-headers
 linux-firmware-amdgpu
 linux-firmware-atheros
+linux-firmware-broadcom
 linux-firmware-intel
+linux-firmware-marvell
+linux-firmware-mediatek
 linux-firmware-nvidia
 linux-firmware-other
+linux-firmware-qcom
 linux-firmware-realtek
 linux-firmware-whence
 lld
@@ -772,6 +769,7 @@ nvidia-settings
 nvidia-utils
 nvme-cli
 nwg-look
+obsidian
 ocl-icd
 onetbb
 oniguruma
@@ -842,12 +840,10 @@ pipewire-pulse
 pixman
 pkcs11-helper
 pkgconf
-plasma-activities
 playerctl
 plymouth
 polkit
 polkit-gnome
-polkit-qt6
 poppler
 poppler-data
 poppler-glib
@@ -1132,7 +1128,6 @@ vapoursynth
 vid.stab
 vim
 vim-runtime
-virtualbox-guest-utils
 vlc
 vlc-cli
 vlc-gui-qt
@@ -1182,6 +1177,7 @@ wf-recorder
 wget
 which
 whois
+wireless-regdb
 wireplumber
 wireshark-cli
 wl-clipboard
@@ -1205,6 +1201,7 @@ xcb-util-wm
 xcur2png
 xdg-dbus-proxy
 xdg-desktop-portal
+xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xdg-user-dirs
 xdg-user-dirs-gtk
@@ -1219,14 +1216,12 @@ xorg-setxkbmap
 xorg-xhost
 xorg-xkbcomp
 xorg-xprop
-xorg-xrandr
 xorg-xset
 xorg-xwayland
 xvidcore
 xxhash
 xz
 yad
-yaml-cpp
 yasm
 yoga
 yq

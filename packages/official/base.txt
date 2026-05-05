@@ -8,9 +8,13 @@ pahole
 
 linux-firmware-amdgpu
 linux-firmware-atheros
+linux-firmware-broadcom
 linux-firmware-intel
+linux-firmware-marvell
+linux-firmware-mediatek
 linux-firmware-nvidia
 linux-firmware-other
+linux-firmware-qcom
 linux-firmware-realtek
 
 # Bootloader
@@ -31,6 +35,7 @@ networkmanager
 networkmanager-openvpn
 wpa_supplicant
 iwd
+wireless-regdb
 openssh
 curl
 wget
