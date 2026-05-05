@@ -181,6 +181,7 @@ iana-etc
 icu
 inetutils
 iniparser
+inotify-tools
 intel-ucode
 iproute2
 iptables
