@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build AUR packages for shedOS.
+# Build AUR packages for ShedOS.
 #
 # Populates archiso/shedos-repo/ with .pkg.tar.zst files for every
 # package listed in packages/aur.txt.
@@ -12,7 +12,7 @@ AUR_BUILD_DIR="/tmp/shedos-aur-build"
 REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 
 echo "=========================================="
-echo "Building AUR packages for shedOS"
+echo "Building AUR packages for ShedOS"
 echo "=========================================="
 
 # Create directories
