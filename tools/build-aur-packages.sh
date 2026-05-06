@@ -118,6 +118,45 @@ get_pkgbuild_version() {
     fi
 }
 
+# Read validpgpkeys=() from a PKGBUILD. Emits one 40-hex-char fingerprint
+# per line. Tolerates inline comments and either single- or multi-line
+# array bodies.
+_read_validpgpkeys() {
+    local pkgbuild=$1
+    awk '
+        /^validpgpkeys=\(/ { seen=1; next }
+        seen && /^\)/      { exit }
+        seen {
+            sub(/#.*/, "")
+            for (i=1;i<=NF;i++) {
+                gsub(/[()'"'"'"]/, "", $i)
+                if ($i ~ /^[A-F0-9]{40}$/) print $i
+            }
+        }
+    ' "$pkgbuild"
+}
+
+# Import each fingerprint into the build user's gpg keyring, trying
+# the standard public keyservers in order. Mirrors the kernel-key
+# import in build-shedos-packages.sh. Returns 0 on success (every key
+# imported), 1 on any failure.
+_import_pgp_keys() {
+    local fps=("$@")
+    (( ${#fps[@]} == 0 )) && return 0
+
+    local user_prefix=()
+    [[ $EUID -eq 0 ]] && user_prefix=(sudo -u builduser)
+
+    local server
+    for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkps://pgp.mit.edu; do
+        if "${user_prefix[@]}" gpg --batch --keyserver "$server" \
+                --recv-keys "${fps[@]}" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 BUILT_COUNT=0
 SKIPPED_COUNT=0
 
@@ -279,20 +318,48 @@ EOF
         echo "⚠ $PACKAGE not found in repo (building $AUR_VERSION)"
     fi
 
+    # Per-package PGP gating. The PKGBUILD's validpgpkeys=() (if any)
+    # is the upstream maintainer's signing-key declaration. Try to import
+    # those keys with multi-keyserver fallback so makepkg's source
+    # signature check actually runs. Only fall back to --skippgpcheck
+    # for a specific package when key retrieval fails — and warn loudly.
+    #
+    # SHEDOS_AUR_STRICT_PGP=1 turns the warn-and-skip into a build-fail
+    # for that package. Useful for hardening runs and one-off audits.
+    SKIP_PGP=()
+    mapfile -t pgp_fps < <(_read_validpgpkeys "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD")
+    if (( ${#pgp_fps[@]} == 0 )); then
+        # No validpgpkeys → no source signatures to check. --skippgpcheck
+        # would be a no-op; omit it.
+        :
+    elif _import_pgp_keys "${pgp_fps[@]}"; then
+        echo "  pgp: imported ${#pgp_fps[@]} key(s) for $PACKAGE; signature verification ENFORCED"
+    else
+        if [[ -n "${SHEDOS_AUR_STRICT_PGP:-}" ]]; then
+            echo "FATAL: pgp: could not retrieve all signing keys for $PACKAGE (strict mode)" >&2
+            echo "       fingerprints: ${pgp_fps[*]}" >&2
+            exit 1
+        fi
+        echo "  WARN: pgp: could not retrieve all signing keys for $PACKAGE — falling back to --skippgpcheck" >&2
+        echo "        fingerprints: ${pgp_fps[*]}" >&2
+        SKIP_PGP=(--skippgpcheck)
+    fi
+
     # Build the package
     echo "Building $PACKAGE $AUR_VERSION from AUR..."
 
     if [ "$EUID" -eq 0 ]; then
         # Run as builduser
+        SKIP_PGP_STR="${SKIP_PGP[*]:-}"
         sudo -u builduser bash <<EOF
 set -e
 cd "$AUR_BUILD_DIR/$PACKAGE"
-makepkg -sf --noconfirm --skippgpcheck
+makepkg -sf --noconfirm $SKIP_PGP_STR
 EOF
     else
         # Run as current user
         cd "$AUR_BUILD_DIR/$PACKAGE"
-        makepkg -sf --noconfirm --skippgpcheck
+        makepkg -sf --noconfirm "${SKIP_PGP[@]}"
     fi
 
     # Copy built package to repo
