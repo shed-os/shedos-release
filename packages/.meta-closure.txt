@@ -79,12 +79,12 @@ ccache
 cdparanoia
 cifs-utils
 clang
-clang20
+clang21
 cliphist
 cmake
 code
 compiler-rt
-compiler-rt20
+compiler-rt21
 confuse
 containerd
 coreutils
@@ -268,6 +268,7 @@ haskell-ansi-terminal-types
 haskell-assoc
 haskell-base-orphans
 haskell-bifunctors
+haskell-character-ps
 haskell-colour
 haskell-comonad
 haskell-contravariant
@@ -277,7 +278,6 @@ haskell-distributive
 haskell-dlist
 haskell-erf
 haskell-fgl
-haskell-foldable1-classes-compat
 haskell-generically
 haskell-hashable
 haskell-indexed-traversable
@@ -316,6 +316,7 @@ haskell-vector
 haskell-vector-stream
 haskell-witherable
 hdparm
+helm
 helvum
 hicolor-icon-theme
 hidapi
@@ -406,6 +407,7 @@ krb5
 kservice
 kstatusnotifieritem
 ksvg
+kubectl
 kwallet
 kwidgetsaddons
 kwindowsystem
@@ -685,10 +687,10 @@ linux-firmware-qcom
 linux-firmware-realtek
 linux-firmware-whence
 lld
-lld20
+lld21
 lldb
 llhttp
-llvm20-libs
+llvm21-libs
 llvm-libs
 lmdb
 lm_sensors
@@ -720,6 +722,7 @@ memtest86+
 memtest86+-efi
 mesa
 mesa-utils
+minikube
 minizip
 mkinitcpio
 mkinitcpio-archiso
