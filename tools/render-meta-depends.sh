@@ -11,10 +11,14 @@
 #   packages/aur-norepublish.txt  → subset of aur.txt we are not allowed to
 #                                   redistribute under the ShedOS key (EULA).
 #                                   Moved from depends= to optdepends= so
-#                                   `pacman -Syu shedos-meta` on an installed
-#                                   system still resolves (those packages live
-#                                   on AUR, not in [shedos]; shedos-welcome
-#                                   handles them via yay at user consent).
+#                                   they stay visible on the metapackage.
+#                                   They ship with the ISO unsigned; users
+#                                   reinstall via `shedman install` (yay).
+#   packages/installer-only.txt   → AUR packages bundled into the ISO for
+#                                   install-time use only. Excluded from
+#                                   both depends= and optdepends= so they
+#                                   never reach the installed system via
+#                                   shedos-meta (e.g. calamares).
 #
 # Output: packaging/shedos-meta/PKGBUILD with a fresh depends=() + optdepends=().
 #
@@ -49,6 +53,16 @@ if [[ -f "$root/packages/aur-norepublish.txt" ]]; then
         [[ -z $p || $p == \#* ]] && continue
         norepublish[$p]=1
     done < <(grep -hEv '^\s*(#|$)' "$root/packages/aur-norepublish.txt")
+fi
+
+# Installer-only packages — bundled into the ISO but excluded from
+# shedos-meta entirely (neither depends nor optdepends).
+declare -A installer_only=()
+if [[ -f "$root/packages/installer-only.txt" ]]; then
+    while read -r p; do
+        [[ -z $p || $p == \#* ]] && continue
+        installer_only[$p]=1
+    done < <(grep -hEv '^\s*(#|$)' "$root/packages/installer-only.txt")
 fi
 
 # shedos-* packages shipped from the [shedos] repo. Listed explicitly so
@@ -99,7 +113,8 @@ shedos_conflicts=(
     virtualbox-host-modules-arch
 )
 
-# Republishable → depends=; proprietary AUR → optdepends= (yay-installed).
+# Installer-only entries are dropped before the depends/optdepends split.
+# Everything else: republishable → depends=, proprietary AUR → optdepends=.
 declare -A seen
 ordered=()
 optional=()
@@ -107,6 +122,7 @@ for p in "${shedos_pkgs[@]}" "${official[@]}" "${aur[@]}"; do
     [[ -z $p ]] && continue
     [[ -n ${seen[$p]:-} ]] && continue
     seen[$p]=1
+    [[ -n ${installer_only[$p]:-} ]] && continue
     if [[ -n ${norepublish[$p]:-} ]]; then
         optional+=("$p")
     else
@@ -164,7 +180,7 @@ EOF
 optdepends=(
 EOF
     for p in "${optional[@]}"; do
-        printf "    '%s: proprietary AUR package; install via shedos-welcome / yay'\n" "$p"
+        printf "    '%s: proprietary AUR package; reinstall via shedman install'\n" "$p"
     done
     cat <<'EOF'
 )
