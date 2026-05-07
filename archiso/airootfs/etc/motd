@@ -1,10 +1,7 @@
 
-Welcome to shedOS
+Welcome to ShedOS — a developer-focused Operating System
 
-Quick Start:
-  • Run 'shedos-installer' to install shedOS
-  • Run 'neofetch' to see system info
-  • Run 'Hyprland' to start the desktop
-
-Documentation: https://github.com/theshedman/shedos
+  Website   https://shedos.org
+  Docs      https://shedos.org/docs
+  Source    https://github.com/theshedman/shedos
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Download all packages for shedOS ISO build
+# Download all packages for ShedOS ISO build
 # This pre-downloads packages to avoid network issues during mkarchiso
 
 set -euo pipefail
@@ -15,7 +15,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CACHE_DIR="/var/cache/pacman/pkg"
 
 echo "=================================="
-echo "Pre-downloading packages for shedOS"
+echo "Pre-downloading packages for ShedOS"
 echo "=================================="
 
 # Check if running as root
