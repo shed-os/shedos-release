@@ -33,6 +33,10 @@ mesa
 mesa-utils
 vulkan-swrast
 
+# Authentication
+fprintd
+libfprint
+
 # Screenshots
 grim
 slurp

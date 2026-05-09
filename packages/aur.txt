@@ -85,3 +85,23 @@ hyprshutdown
 # `ananicy-cpp`, so the depends string in shedos-system/PKGBUILD
 # stays as plain `ananicy-cpp` and resolves via `provides=`.
 ananicy-cpp-git
+
+# Fingerprint TOD drivers — closed-source vendor blobs in AUR. Listed
+# in aur-norepublish.txt because the EULAs forbid us hosting them on
+# repo.shedos.org. Bundled into the airootfs squashfs at ISO-build
+# time so first-boot fingerprint unlock works without a manual AUR
+# step. fprintd at runtime loads only the driver matching the user's
+# actual hardware — the others are inert.
+#
+# These all use the TOD plugin framework — they coexist with stock
+# libfprint. libfprint-* forks (e.g. libfprint-goodix-521d for newer
+# Goodix sensors) REPLACE stock libfprint and can only be one-at-a-
+# time, so we don't bundle them; `shedman fingerprint detect` points
+# users at the right fork when their sensor needs one.
+libfprint-2-tod1-broadcom
+libfprint-2-tod1-broadcom-cv3plus
+libfprint-2-tod1-elan
+libfprint-2-tod1-goodix
+libfprint-2-tod1-goodix-v2
+libfprint-2-tod1-synatudor-git
+libfprint-2-tod1-xps9300-bin
