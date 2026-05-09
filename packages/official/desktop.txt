@@ -34,8 +34,10 @@ mesa-utils
 vulkan-swrast
 
 # Authentication
+# libfprint-tod (TOD-enabled variant; AUR) replaces stock libfprint
+# via provides=. Listed in packages/aur.txt — TOD plugins like
+# libfprint-2-tod1-goodix only load against the TOD-enabled build.
 fprintd
-libfprint
 
 # Screenshots
 grim

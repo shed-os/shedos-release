@@ -24,7 +24,8 @@ claude-code-bin
 jetbrains-toolbox
 ttf-ms-fonts
 
-# Fingerprint TOD drivers (vendor closed-source).
+# Fingerprint stack — TOD-enabled libfprint + vendor TOD drivers.
+libfprint-tod
 libfprint-2-tod1-broadcom
 libfprint-2-tod1-broadcom-cv3plus
 libfprint-2-tod1-elan

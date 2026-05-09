@@ -86,18 +86,27 @@ hyprshutdown
 # stays as plain `ananicy-cpp` and resolves via `provides=`.
 ananicy-cpp-git
 
-# Fingerprint TOD drivers — closed-source vendor blobs in AUR. Listed
-# in aur-norepublish.txt because the EULAs forbid us hosting them on
+# Fingerprint stack — vendor closed-source bits + the TOD-enabled
+# libfprint variant they require. All listed in aur-norepublish.txt
+# because the closed-source blobs forbid us hosting them on
 # repo.shedos.org. Bundled into the airootfs squashfs at ISO-build
 # time so first-boot fingerprint unlock works without a manual AUR
-# step. fprintd at runtime loads only the driver matching the user's
-# actual hardware — the others are inert.
+# step.
 #
-# These all use the TOD plugin framework — they coexist with stock
-# libfprint. libfprint-* forks (e.g. libfprint-goodix-521d for newer
-# Goodix sensors) REPLACE stock libfprint and can only be one-at-a-
-# time, so we don't bundle them; `shedman fingerprint detect` points
-# users at the right fork when their sensor needs one.
+# Why libfprint-tod and not stock libfprint: Arch's stock libfprint
+# is built with tod=disabled, so TOD plugins (libfprint-2-tod1-*)
+# can't load against it. libfprint-tod is the same upstream sources
+# rebuilt with tod=enabled; it provides+conflicts libfprint, so
+# pacman swaps stock for the TOD-enabled build at install time and
+# fprintd's libfprint dep resolves cleanly.
+#
+# Each plugin binds to a specific USB ID via udev; the others stay
+# inert. libfprint-* forks (e.g. libfprint-goodix-521d) which
+# REPLACE libfprint with sources patches are NOT bundled — they
+# conflict with each other and with libfprint-tod, so we'd have to
+# pick one. `shedman fingerprint detect` points users at the right
+# fork when their sensor isn't in the bundle.
+libfprint-tod
 libfprint-2-tod1-broadcom
 libfprint-2-tod1-broadcom-cv3plus
 libfprint-2-tod1-elan
