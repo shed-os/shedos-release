@@ -11,6 +11,17 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 AUR_BUILD_DIR="/tmp/shedos-aur-build"
 REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 
+# Register $REPO_DIR as a build-local pacman repo for the duration of
+# this script so makepkg --syncdeps resolves AUR-internal deps (e.g.
+# libfprint-2-tod1-broadcom -> libfprint-tod, walker -> elephant)
+# regardless of whether the prereq was just built or restored from the
+# GHA cache. Mirrors build-shedos-packages.sh's [shedos-repo]
+# registration; uses a distinct section name + mount path so the two
+# scripts never collide if their setup blocks ever overlap in time.
+PUBLIC_REPO_DIR="/srv/shedos-aur-build-repo"
+PACMAN_CONF_BACKUP="/tmp/shedos-aur-pacman.conf.bak"
+PACMAN_CONF_MARKER="# >>> shedos-aur-build-local-repo (temporary) >>>"
+
 echo "=========================================="
 echo "Building AUR packages for ShedOS"
 echo "=========================================="
@@ -26,16 +37,49 @@ chmod 777 "$AUR_BUILD_DIR"
 # to decide whether to actually repo-add fresh entries.
 : > /tmp/built-pkgs.txt
 
+_strip_aur_pacman_block() {
+    # Idempotent re-entry: drop any prior registration block before re-adding.
+    if grep -qF "$PACMAN_CONF_MARKER" /etc/pacman.conf 2>/dev/null; then
+        sed -i "/$(printf '%s' "$PACMAN_CONF_MARKER" | sed 's/[][\/.^$*]/\\&/g')/,/# <<< shedos-aur-build-local-repo (temporary) <<</d" /etc/pacman.conf
+    fi
+}
+
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
     echo "Running as root, creating build user..."
 
+    _strip_aur_pacman_block
+    cp /etc/pacman.conf "$PACMAN_CONF_BACKUP"
+
+    # Bind-mount the repo at a stable path so pacman's alpm sandbox can
+    # reach it without traversing the runner's $HOME (which it can't).
+    mkdir -p "$PUBLIC_REPO_DIR"
+    mountpoint -q "$PUBLIC_REPO_DIR" && umount "$PUBLIC_REPO_DIR"
+    mount --bind "$REPO_DIR" "$PUBLIC_REPO_DIR"
+
+    cat >> /etc/pacman.conf <<EOF
+
+$PACMAN_CONF_MARKER
+[shedos-aur-build]
+SigLevel = Never
+Server = file://$PUBLIC_REPO_DIR
+# <<< shedos-aur-build-local-repo (temporary) <<<
+EOF
+
     # Cleanup runs on ANY exit path (success, error, signal) so we never
-    # leave a stale builduser + sudoers file behind between runs.
+    # leave stale builduser, sudoers file, pacman.conf block, or bind
+    # mount behind between runs.
     _cleanup_builduser() {
         echo "Cleaning up build user..."
         userdel -r builduser 2>/dev/null || true
         rm -f /etc/sudoers.d/builduser-aur
+        if [[ -f "$PACMAN_CONF_BACKUP" ]]; then
+            mv "$PACMAN_CONF_BACKUP" /etc/pacman.conf
+        fi
+        if mountpoint -q "$PUBLIC_REPO_DIR" 2>/dev/null; then
+            umount "$PUBLIC_REPO_DIR" 2>/dev/null || true
+        fi
+        rmdir "$PUBLIC_REPO_DIR" 2>/dev/null || true
     }
     trap _cleanup_builduser EXIT
 
@@ -50,6 +94,38 @@ if [ "$EUID" -eq 0 ]; then
         sudo -u builduser rustup default stable 2>/dev/null || true
     fi
 fi
+
+# repo-add every .pkg.tar.zst currently in $REPO_DIR (cached + freshly
+# built) and refresh pacman's view of [shedos-aur-build]. Called once
+# after the phantom sweep so cached AUR pkgs are visible to makepkg
+# --syncdeps from the very first iteration, and again after each
+# successful build so newly-built pkgs satisfy later iterations.
+_refresh_repo_db() {
+    local pkg_count
+    pkg_count=$(find "$REPO_DIR" -maxdepth 1 -name '*.pkg.tar.zst' 2>/dev/null | wc -l)
+    if (( pkg_count == 0 )); then
+        return 0
+    fi
+    (
+        cd "$REPO_DIR"
+        # -p: prevent-downgrade so the highest version always wins, even
+        # when glob expansion lex-sorts pkgrel "10" before "7".
+        repo-add -p shedos-repo.db.tar.gz ./*.pkg.tar.zst >/dev/null
+    )
+    # Guard against repo-add silently exiting 0 without producing a DB
+    # (mirrors build-shedos-packages.sh's same guard).
+    if [[ ! -e "$REPO_DIR/shedos-repo.db" ]]; then
+        echo "ERROR: $REPO_DIR/shedos-repo.db missing after repo-add" >&2
+        ls -la "$REPO_DIR" | head -20 >&2
+        return 1
+    fi
+    if [[ $EUID -eq 0 ]]; then
+        # -y without -u: refresh pacman's local DB cache from the
+        # newly-rebuilt [shedos-aur-build] DB without touching the host
+        # system's installed packages.
+        pacman -Sy --noconfirm >/dev/null
+    fi
+}
 
 # Read AUR packages from packages/aur.txt (single source of truth)
 AUR_FILE="$PROJECT_ROOT/packages/aur.txt"
@@ -88,6 +164,13 @@ if (( phantom_count > 0 )); then
     # Force the downstream cache-skip gate to rebuild the repo DB.
     echo "phantom-sweep" >> /tmp/built-pkgs.txt
 fi
+
+# Register the cached set with [shedos-aur-build] before the build loop
+# runs makepkg --syncdeps. Without this, an AUR pkg that depends on a
+# cached AUR pkg (e.g. libfprint-2-tod1-broadcom -> libfprint-tod when
+# only libfprint-tod was carried over from a prior cache) would resolve
+# the dep against pacman's repos, find nothing (it's AUR-only), and abort.
+_refresh_repo_db
 
 # Function to get version from package file
 get_package_version() {
@@ -365,15 +448,12 @@ EOF
     # Copy built package to repo
     find "$AUR_BUILD_DIR/$PACKAGE" -name "*.pkg.tar.zst" -exec cp -v {} "$REPO_DIR/" \;
 
-    # Install on the build host so subsequent AUR packages in the
-    # same loop can resolve this one as a dependency. libfprint-tod
-    # -> libfprint-2-tod1-* and elephant -> walker both need this.
-    # CI runners are ephemeral; the install pollution is fine.
-    for built_pkg in "$AUR_BUILD_DIR/$PACKAGE"/*.pkg.tar.zst; do
-        [[ -f $built_pkg ]] || continue
-        sudo pacman -U --noconfirm "$built_pkg" 2>/dev/null || \
-            echo "  WARN: pacman -U $(basename "$built_pkg") failed" >&2
-    done
+    # Re-add to [shedos-aur-build] + pacman -Sy so the next iteration's
+    # makepkg --syncdeps sees this freshly-built pkg as a resolvable dep.
+    # Replaces the old per-pkg `pacman -U` host-install: routing every
+    # cached and freshly-built pkg through the same repo-registration
+    # path is order-independent and matches build-shedos-packages.sh.
+    _refresh_repo_db
 
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
