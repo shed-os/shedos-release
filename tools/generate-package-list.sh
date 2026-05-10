@@ -1,5 +1,5 @@
 #!/bin/bash
-# Generate archiso/packages.x86_64 — the airootfs package list.
+# Generate archiso/packages.x86_64; the airootfs package list.
 #
 # airootfs IS the developer install (Calamares unpackfs copies it onto
 # /target). So packages.x86_64 must contain the FULL system: every
@@ -48,7 +48,7 @@ is_local() {
 
 ROOTS=()
 
-# Every category in packages/official/. Skip local entries — appended below.
+# Every category in packages/official/. Skip local entries; appended below.
 for f in "$PACKAGES_DIR"/official/*.txt; do
     [[ -f $f ]] || continue
     while IFS= read -r pkg; do
@@ -84,7 +84,7 @@ mkdir -p "$TMPDIR/db"
 # Same shape as the build-time pacman.conf (archiso/pacman.conf.in) so the
 # resolved closure matches what mkarchiso pacstrap will actually see. We
 # don't include [shedos-repo] here because resolve closure for *Arch*
-# packages only — local-repo packages get appended verbatim below and
+# packages only; local-repo packages get appended verbatim below and
 # pacstrap resolves their deps at build time.
 cat > "$TMPDIR/pacman.conf" << 'EOF'
 [options]
@@ -106,7 +106,7 @@ EOF
 pacman -Sy --noconfirm --dbpath "$TMPDIR/db" --config "$TMPDIR/pacman.conf" >/dev/null
 
 # Resolve the official-repo closure. AUR + shedos-* roots aren't in core/
-# extra/multilib so pacman -Sp would error on them — filter them out of
+# extra/multilib so pacman -Sp would error on them; filter them out of
 # the root list before resolution.
 ARCH_ROOTS=()
 for r in "${ROOTS[@]}"; do
@@ -126,7 +126,7 @@ pacman -Sp --noconfirm \
     | sort -u > "$TMPDIR/resolved.txt"
 
 # AUR entries (and local shedos-* not already in LOCAL_PACKAGES) get
-# appended literally — pacstrap finds them via [shedos-repo] (file://).
+# appended literally; pacstrap finds them via [shedos-repo] (file://).
 AUR_LITERAL=()
 for r in "${ROOTS[@]}"; do
     is_local "$r" && continue
@@ -139,7 +139,7 @@ done
     cat << 'EOF'
 # ShedOS airootfs package list
 #
-# AUTO-GENERATED — DO NOT EDIT MANUALLY.
+# AUTO-GENERATED; DO NOT EDIT MANUALLY.
 # Source: packages/official/*.txt + packages/aur.txt
 # Regenerate: sudo scripts/generate-package-list.sh
 #

@@ -10,7 +10,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # archiso/packages.x86_64 only names the ISO-boot packages + shedos-meta now
 # (shedos-meta's depends= pulls in the rest at pacstrap time). Driving the
 # prefetch off packages.x86_64 would miss hundreds of transitive-via-meta
-# packages — so we read the per-group txts directly and let pacman -Syw
+# packages; so we read the per-group txts directly and let pacman -Syw
 # resolve transitive deps from there.
 CACHE_DIR="/var/cache/pacman/pkg"
 
@@ -65,7 +65,7 @@ for pkg in "${AUR_PACKAGES[@]}"; do
     sed -i "/^${pkg}$/d" "$TEMP_DIR/pkglist.txt"
 done
 
-# Filter out ShedOS native packages — they're built locally by
+# Filter out ShedOS native packages; they're built locally by
 # scripts/build-shedos-packages.sh into archiso/shedos-repo/, not fetched
 # from official mirrors.
 sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"

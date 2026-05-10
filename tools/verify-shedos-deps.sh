@@ -25,7 +25,7 @@ sources_set() {
         | sort -u
 }
 
-# Known virtual providers — depend name → actual package in aur.txt.
+# Known virtual providers; depend name → actual package in aur.txt.
 declare -A VIRTUAL_PROVIDERS=(
     [ananicy-cpp]=ananicy-cpp-git    # -git builds against glibc 2.41+
 )

@@ -21,7 +21,7 @@ mkdir -p "$AUR_BUILD_DIR"
 chmod 777 "$AUR_BUILD_DIR"
 
 # Truncate the rebuild manifest at the start of every run.
-# build-shedos-packages.sh appends to this file too — the gate in
+# build-shedos-packages.sh appends to this file too; the gate in
 # build-packages.yml's "Build repo DB" step checks it for non-empty
 # to decide whether to actually repo-add fresh entries.
 : > /tmp/built-pkgs.txt
@@ -105,7 +105,7 @@ get_pkgbuild_version() {
     cd "$pkgbuild_dir"
 
     # PKGBUILDs reference makepkg-injected vars ($CARCH, $srcdir, etc.) that
-    # aren't set when we source directly — relax nounset for this one call.
+    # aren't set when we source directly; relax nounset for this one call.
     set +u
     # shellcheck source=/dev/null
     source PKGBUILD
@@ -171,7 +171,7 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # to run. The patch enables packagechooser (which upstream's AUR
     # PKGBUILD skips) and bumps epoch=1; the patched build's filename
     # has a `1:` in it. If the cached pkg lacks the epoch prefix it's
-    # stock — wipe it so the pre-flight skip below doesn't keep us on
+    # stock; wipe it so the pre-flight skip below doesn't keep us on
     # the broken build forever.
     if [ "$PACKAGE" = "calamares" ]; then
         cached_pkg=$(find "$REPO_DIR" -maxdepth 1 \
@@ -194,9 +194,9 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
 
     # Trust the GHA cache (cache key already hashes aur.txt). The
     # weekly aur-cache-refresh.yml job exhaustively rebuilds with
-    # SHEDOS_AUR_FORCE_REBUILD=1, so -git packages still get refreshed
-    # — but on every push we trust the cached build to insulate us
-    # from upstream regressions landing mid-week.
+    # SHEDOS_AUR_FORCE_REBUILD=1 so -git packages still get refreshed.
+    # Every push trusts the cached build to insulate us from upstream
+    # regressions landing mid-week.
     if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
         echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
@@ -207,12 +207,12 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # Clone or update AUR repo. aur.archlinux.org has chronic TLS
     # flakiness (`SSL routines::unexpected eof while reading`) and
     # occasional HTTP 500s. Hardenings:
-    #   • -c http.version=HTTP/1.1 — avoid the HTTP/2-vs-middlebox
+    #   • -c http.version=HTTP/1.1; avoid the HTTP/2-vs-middlebox
     #     scenario that produces 0A000126.
-    #   • --depth 1 — smallest possible transfer; less surface area
+    #   • --depth 1; smallest possible transfer; less surface area
     #     for mid-stream connection death.
-    #   • timeout 60 — fail fast on a hung TLS handshake.
-    #   • Jittered backoff 30s/60s/120s — push retries far enough
+    #   • timeout 60; fail fast on a hung TLS handshake.
+    #   • Jittered backoff 30s/60s/120s; push retries far enough
     #     apart that they don't all land in the same flaky minute.
     # 3 attempts; if all fail the script exits 1 and the run aborts.
     # The weekly refresh's success keeps the cache fresh enough that
@@ -272,7 +272,7 @@ EOF
         done
     fi
 
-    # ShedOS-specific PKGBUILD overrides — applied after clone, before
+    # ShedOS-specific PKGBUILD overrides; applied after clone, before
     # version read, so AUR_VERSION reflects the patched package and the
     # cached stock build is correctly seen as out-of-date.
     case "$PACKAGE" in
@@ -306,7 +306,7 @@ EOF
         echo "⚠ $PACKAGE is a -git package; rebuilding from fresh checkout"
         rm -f "$REPO_DIR"/${PACKAGE}-*.pkg.tar.zst*
     elif [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$AUR_VERSION" ]; then
-        # Only reached under FORCE — the upstream pkgver matches
+        # Only reached under FORCE; the upstream pkgver matches
         # what we already have, so no rebuild is needed.
         echo "✓ $PACKAGE $CURRENT_VERSION pkgver unchanged upstream; keeping cached build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
@@ -322,7 +322,7 @@ EOF
     # is the upstream maintainer's signing-key declaration. Try to import
     # those keys with multi-keyserver fallback so makepkg's source
     # signature check actually runs. Only fall back to --skippgpcheck
-    # for a specific package when key retrieval fails — and warn loudly.
+    # for a specific package when key retrieval fails; and warn loudly.
     #
     # SHEDOS_AUR_STRICT_PGP=1 turns the warn-and-skip into a build-fail
     # for that package. Useful for hardening runs and one-off audits.
@@ -378,7 +378,7 @@ EOF
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
     # Tell build-packages.yml's "Build repo DB" step to actually
-    # repo-add and re-sign — without this it early-exits on the
+    # repo-add and re-sign; without this it early-exits on the
     # no-op gate and shedos.db keeps the stale (pre-rebuild) entry.
     echo "$PACKAGE" >> /tmp/built-pkgs.txt
 done

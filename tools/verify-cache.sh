@@ -43,7 +43,7 @@ while IFS= read -r line; do
     [ "$is_aur" = true ] && continue
 
     # ShedOS-native packages live in archiso/shedos-repo/, not /var/cache/pacman.
-    # They're produced by scripts/build-shedos-packages.sh — check there instead.
+    # They're produced by scripts/build-shedos-packages.sh; check there instead.
     if [[ "$pkg" == shedos-* ]]; then
         CHECKED=$((CHECKED + 1))
         if ! ls "$AUR_REPO/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
