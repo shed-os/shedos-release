@@ -60,7 +60,7 @@ if [ "$EUID" -eq 0 ]; then
     cat >> /etc/pacman.conf <<EOF
 
 $PACMAN_CONF_MARKER
-[shedos-aur-build]
+[shedos-repo]
 SigLevel = Never
 Server = file://$PUBLIC_REPO_DIR
 # <<< shedos-aur-build-local-repo (temporary) <<<
@@ -95,11 +95,10 @@ EOF
     fi
 fi
 
-# repo-add every .pkg.tar.zst currently in $REPO_DIR (cached + freshly
-# built) and refresh pacman's view of [shedos-aur-build]. Called once
-# after the phantom sweep so cached AUR pkgs are visible to makepkg
-# --syncdeps from the very first iteration, and again after each
-# successful build so newly-built pkgs satisfy later iterations.
+# Full registration of every .pkg.tar.zst in $REPO_DIR with
+# [shedos-repo]'s DB. Called once after the phantom sweep so cached
+# AUR pkgs are visible to makepkg --syncdeps from the first build
+# iteration onward.
 _refresh_repo_db() {
     local pkg_count
     pkg_count=$(find "$REPO_DIR" -maxdepth 1 -name '*.pkg.tar.zst' 2>/dev/null | wc -l)
@@ -121,8 +120,31 @@ _refresh_repo_db() {
     fi
     if [[ $EUID -eq 0 ]]; then
         # -y without -u: refresh pacman's local DB cache from the
-        # newly-rebuilt [shedos-aur-build] DB without touching the host
-        # system's installed packages.
+        # rebuilt [shedos-repo] DB without touching the host system's
+        # installed packages.
+        pacman -Sy --noconfirm >/dev/null
+    fi
+}
+
+# Register only the .pkg.tar.zst files under $1 (the makepkg output
+# directory for the package just built). Per-iteration variant of
+# _refresh_repo_db that avoids the O(N²) "already existed" repo-add
+# warnings a full glob would emit every loop pass.
+_repo_add_built() {
+    local src_dir=$1
+    shopt -s nullglob
+    local fresh_pkgs=("$src_dir"/*.pkg.tar.zst)
+    shopt -u nullglob
+    (( ${#fresh_pkgs[@]} > 0 )) || return 0
+    local pkg_basenames=() f
+    for f in "${fresh_pkgs[@]}"; do
+        pkg_basenames+=("$(basename "$f")")
+    done
+    (
+        cd "$REPO_DIR"
+        repo-add -p shedos-repo.db.tar.gz "${pkg_basenames[@]}" >/dev/null
+    )
+    if [[ $EUID -eq 0 ]]; then
         pacman -Sy --noconfirm >/dev/null
     fi
 }
@@ -448,12 +470,11 @@ EOF
     # Copy built package to repo
     find "$AUR_BUILD_DIR/$PACKAGE" -name "*.pkg.tar.zst" -exec cp -v {} "$REPO_DIR/" \;
 
-    # Re-add to [shedos-aur-build] + pacman -Sy so the next iteration's
+    # Re-add to [shedos-repo] + pacman -Sy so the next iteration's
     # makepkg --syncdeps sees this freshly-built pkg as a resolvable dep.
-    # Replaces the old per-pkg `pacman -U` host-install: routing every
-    # cached and freshly-built pkg through the same repo-registration
-    # path is order-independent and matches build-shedos-packages.sh.
-    _refresh_repo_db
+    # Targeted incremental: only the just-built pkg(s) get re-added,
+    # not the entire repo glob.
+    _repo_add_built "$AUR_BUILD_DIR/$PACKAGE"
 
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
