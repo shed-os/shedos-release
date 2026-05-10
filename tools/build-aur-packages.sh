@@ -365,6 +365,16 @@ EOF
     # Copy built package to repo
     find "$AUR_BUILD_DIR/$PACKAGE" -name "*.pkg.tar.zst" -exec cp -v {} "$REPO_DIR/" \;
 
+    # Install on the build host so subsequent AUR packages in the
+    # same loop can resolve this one as a dependency. libfprint-tod
+    # -> libfprint-2-tod1-* and elephant -> walker both need this.
+    # CI runners are ephemeral; the install pollution is fine.
+    for built_pkg in "$AUR_BUILD_DIR/$PACKAGE"/*.pkg.tar.zst; do
+        [[ -f $built_pkg ]] || continue
+        sudo pacman -U --noconfirm "$built_pkg" 2>/dev/null || \
+            echo "  WARN: pacman -U $(basename "$built_pkg") failed" >&2
+    done
+
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
     # Tell build-packages.yml's "Build repo DB" step to actually
