@@ -86,6 +86,13 @@ hyprshutdown
 # stays as plain `ananicy-cpp` and resolves via `provides=`.
 ananicy-cpp-git
 
+# OpenSSL 1.1, needed by libfprint-2-tod1-elan. Lenovo's Ubuntu
+# binary blob is hard-linked against libcrypto.so=1.1; Arch dropped
+# openssl-1.1 from extra when 3.x became default, so we build it
+# from AUR. Republished under the ShedOS key; OpenSSL 1.1 is in
+# deep maintenance upstream so churn is minimal.
+openssl-1.1
+
 # Fingerprint stack — vendor closed-source bits + the TOD-enabled
 # libfprint variant they require. All listed in aur-norepublish.txt
 # because the closed-source blobs forbid us hosting them on
