@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shedos-power-confirm — walker-based confirmation for shutdown/reboot/logout.
+# shedos-power-confirm; walker-based confirmation for shutdown/reboot/logout.
 # Invoked by the waybar custom/power menu so a single misclick does not
 # immediately power off the machine.
 

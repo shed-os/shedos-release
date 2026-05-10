@@ -2,7 +2,7 @@
 # ShedOS pacman.conf template for ISO build
 #
 # Rendered into archiso/pacman.conf (or $BUILD_DIR/pacman.conf) at build time
-# by scripts/build-iso.sh — the placeholder in the Server line is substituted
+# by scripts/build-iso.sh; the placeholder in the Server line is substituted
 # with the absolute path to archiso/shedos-repo. Do NOT commit the rendered
 # file; see .gitignore.
 #
@@ -16,7 +16,7 @@ ParallelDownloads = 2
 # SigLevel is Never for the build environment (we pacstrap from official
 # mirrors that ARE signed, but the ISO build container may not have the
 # archlinux-keyring primed). On the installed system, pacman.conf's default
-# SigLevel (Required DatabaseOptional) applies — mkarchiso ships the
+# SigLevel (Required DatabaseOptional) applies; mkarchiso ships the
 # archlinux-keyring package, so verification works there.
 SigLevel    = Never
 LocalFileSigLevel = Never
@@ -27,7 +27,7 @@ XferCommand = /usr/bin/curl -L -C - -f --retry 10 --retry-delay 5 --retry-max-ti
 # ShedOS build-local repo. Holds AUR packages (calamares + deps) built at
 # ISO-build time by scripts/build-aur-packages.sh PLUS native ShedOS
 # packages built by scripts/build-shedos-packages.sh. Only used during
-# the mkarchiso pacstrap — the installed system never sees this.
+# the mkarchiso pacstrap; the installed system never sees this.
 #
 # The production [shedos] repo (repo.shedos.org, Cloudflare R2) is NOT
 # declared here because at build time we have no frozen db for it and

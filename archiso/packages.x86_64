@@ -1,6 +1,6 @@
 # ShedOS Live ISO Package List
 #
-# AUTO-GENERATED — DO NOT EDIT MANUALLY.
+# AUTO-GENERATED; DO NOT EDIT MANUALLY.
 # Source: packages/official/{base,installer}.txt + extras (hyprland,
 # kitty, pipewire-jack, calamares, shedos-branding, shedos-keyring).
 # Regenerate: sudo scripts/generate-package-list.sh
