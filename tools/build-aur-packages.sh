@@ -394,6 +394,26 @@ EOF
                 sed -i '/^pkgver=/i epoch=1' "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD"
             echo "  patched calamares PKGBUILD: enable packagechooser, epoch=1"
             ;;
+        ananicy-cpp-git)
+            # gcc 15 no longer pulls <unistd.h> transitively, and upstream's
+            # src/platform/linux/{process,debug}.cpp call getpid() without
+            # an explicit include. Inject the include via prepare(); the
+            # upstream PKGBUILD has no prepare() of its own, so appending
+            # one doesn't override anything.
+            cat >> "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD" <<'EOF'
+
+prepare() {
+    local f
+    for f in "${srcdir}/${_pkgname}/src/platform/linux/process.cpp" \
+             "${srcdir}/${_pkgname}/src/platform/linux/debug.cpp"; do
+        if [[ -f $f ]] && ! grep -q '^#include <unistd.h>' "$f"; then
+            sed -i '1i #include <unistd.h>' "$f"
+        fi
+    done
+}
+EOF
+            echo "  patched ananicy-cpp-git PKGBUILD: inject <unistd.h> for getpid() under gcc 15+"
+            ;;
     esac
 
     # Get version from PKGBUILD
