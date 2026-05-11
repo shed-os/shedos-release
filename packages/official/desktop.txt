@@ -3,7 +3,6 @@
 # Hyprland & Wayland
 hyprland
 hypridle
-hyprlock
 hyprsunset
 wayland
 libxkbcommon

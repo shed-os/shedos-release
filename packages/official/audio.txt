@@ -18,6 +18,7 @@ alsa-lib
 alsa-utils
 alsa-plugins
 alsa-firmware
+sof-firmware
 
 # Bluetooth Audio
 bluez
