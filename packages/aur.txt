@@ -75,6 +75,11 @@ usql
 # Hyprland shutdown utility
 hyprshutdown
 
+# Hyprland screen shader runner; ships the idle-dim shader applied
+# uniformly across every monitor (brightnessctl only touches the
+# laptop backlight).
+hyprshade
+
 # Auto-renicer — keeps interactive apps responsive while heavy build
 # jobs (cargo, gcc, npm) are scheduled at lower priority.
 # Pinned to the -git variant: upstream v1.1.1 (the last tagged release
