@@ -91,9 +91,14 @@ echo ""
 # 3. Uses the synced database for correct URLs
 echo "Starting package download..."
 
-# Create a download-specific pacman.conf based on archiso/pacman.conf
-# We exclude shedos-repo since those are local AUR packages (not downloadable)
-# but keep everything else identical for consistent dependency resolution
+# Create a download-specific pacman.conf based on archiso/pacman.conf.
+# It registers [core]/[extra]/[multilib] for official Arch mirrors plus the
+# local archiso/shedos-repo so pacman's dependency resolver can satisfy
+# AUR-only entries surfaced by step 2 below (`libcrypto.so=1.1` →
+# `openssl-1.1`, `libfprint-tod`, …). Without [shedos-repo] in scope the
+# resolver errors `target not found` on any AUR pkg whose runtime depends
+# resolve to other AUR pkgs we ship.
+AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 DOWNLOAD_PACMAN_CONF="$TEMP_DIR/pacman-download.conf"
 cat > "$DOWNLOAD_PACMAN_CONF" << 'EOF'
 [options]
@@ -117,7 +122,20 @@ Include = /etc/pacman.d/mirrorlist
 Include = /etc/pacman.d/mirrorlist
 EOF
 
-echo "Using download pacman.conf (matches archiso, excludes local shedos-repo)..."
+# Append [shedos-repo] only when its DB is actually present; the AUR build
+# step normally produces one but a fresh checkout with a cold AUR cache
+# could race ahead of repo-add. Guarding the append keeps pacman from
+# erroring on a missing repo file.
+if [ -f "$AUR_REPO_DIR/shedos-repo.db" ]; then
+    cat >> "$DOWNLOAD_PACMAN_CONF" <<EOF
+
+[shedos-repo]
+SigLevel = Never
+Server = file://$AUR_REPO_DIR
+EOF
+fi
+
+echo "Using download pacman.conf (core/extra/multilib + local shedos-repo)..."
 
 # Create temporary database path to avoid host package conflicts
 TEMP_DBPATH="$TEMP_DIR/db"
@@ -132,7 +150,6 @@ pacman -Syw --noconfirm --dbpath "$TEMP_DBPATH" --config "$DOWNLOAD_PACMAN_CONF"
 
 # 2. Automatically resolve and download dependencies for built AUR packages
 echo "Resolving dependencies for built AUR packages..."
-AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 if [ -d "$AUR_REPO_DIR" ]; then
     # Create a list of all dependencies required by our built AUR packages
     # We use pacman -Qpi to query the built package files directly for detailed info
