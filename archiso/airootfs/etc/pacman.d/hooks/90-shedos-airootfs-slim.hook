@@ -1,7 +1,18 @@
 # remove from airootfs!
-# Squashfs slim-down: drop pacman cache, non-en locales, translated
-# man pages, package doc/example dirs, GNU info. Idempotent; runs at
-# every transaction's PostTransaction during pacstrap.
+# Drop the pacman package cache from the live-ISO airootfs so the
+# squashfs doesn't ship ~600 MiB of downloaded .pkg.tar.zst archives.
+# We deliberately do NOT strip locales, man pages, doc dirs, or info
+# files: those are tracked in every package's local-db file list, and
+# stripping them while leaving the db intact makes pacman warn on
+# every `pacman -Syu` on the installed system ("could not get file
+# information for usr/share/locale/...") and breaks application i18n.
+# Other Arch derivatives (EndeavourOS, Manjaro, Garuda) all ship the
+# full set; ShedOS now matches.
+#
+# Idempotent; runs at every transaction's PostTransaction during
+# pacstrap. zzzz99-remove-custom-hooks-from-airootfs.hook strips this
+# file from the squashfs (matches the marker on line 1), so it does
+# not run on installed systems.
 
 [Trigger]
 Operation = Install
@@ -11,9 +22,7 @@ Type = Package
 Target = *
 
 [Action]
-Description = Trimming live-ISO airootfs (pacman cache, locales, man, doc, info)...
+Description = Dropping the pacman package cache from the live-ISO airootfs...
 When = PostTransaction
 Depends = sh
-Depends = coreutils
-Depends = findutils
-Exec = /bin/sh -c "rm -f /var/cache/pacman/pkg/*.pkg.tar.zst* 2>/dev/null; find /usr/share/locale -mindepth 1 -maxdepth 1 -type d ! -name 'en' ! -name 'en_US' ! -name 'C' -exec rm -rf {} + 2>/dev/null; find /usr/share/man -mindepth 1 -maxdepth 1 -type d ! -name 'man*' -exec rm -rf {} + 2>/dev/null; rm -rf /usr/share/doc/*/html /usr/share/doc/*/examples /usr/share/doc/*/*-translations 2>/dev/null; rm -rf /usr/share/info/*.info* 2>/dev/null; true"
+Exec = /bin/sh -c "rm -f /var/cache/pacman/pkg/*.pkg.tar.zst* 2>/dev/null; true"
