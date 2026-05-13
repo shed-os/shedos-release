@@ -69,6 +69,7 @@ hdparm
 zram-generator
 
 # Python runtime libs for shedman tools
+python-dbus
 python-tomlkit
 
 # Text Editors (basic)
