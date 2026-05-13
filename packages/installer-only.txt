@@ -26,5 +26,3 @@
 # (visible as optdepends but never republished).
 #
 # One package per line. Comments with '#' are ignored.
-
-calamares

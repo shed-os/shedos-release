@@ -60,9 +60,6 @@ elephant-archlinuxpkgs
 # Walker (application launcher)
 walker
 
-# Calamares installer
-calamares
-
 # Hadolint (Dockerfile linter)
 hadolint-bin
 
