@@ -65,6 +65,7 @@ python
 python-pip
 python-psutil
 python-pydantic
+python-pygments
 python-rich
 python-textual
 pyright
