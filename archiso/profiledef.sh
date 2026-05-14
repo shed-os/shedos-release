@@ -4,7 +4,7 @@
 
 iso_name="shedos"
 iso_label="SHEDOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
-iso_publisher="ShedOS <https://github.com/theshedman/shedos>"
+iso_publisher="ShedOS <https://github.com/Theshedman/shedos>"
 iso_application="ShedOS Live/Install ISO"
 # Substituted at build time by the Makefile from the repo-root VERSION file
 # (the same CalVer scripts/bump-version.sh writes, so the ISO label and the

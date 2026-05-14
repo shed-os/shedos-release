@@ -21,6 +21,6 @@ if [ -z "$SHEDOS_WELCOME_SHOWN" ] && [ -t 1 ]; then
     echo ""
     echo "      Website   https://shedos.org"
     echo "      Docs      https://shedos.org/docs"
-    echo "      Source    https://github.com/theshedman/shedos"
+    echo "      Source    https://github.com/Theshedman/shedos"
     echo ""
 fi
