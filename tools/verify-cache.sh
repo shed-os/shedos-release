@@ -55,8 +55,11 @@ while IFS= read -r line; do
 
     CHECKED=$((CHECKED + 1))
 
-    # Check if package exists in cache (any version)
-    if ! ls "$OFFICIAL_CACHE/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
+    # Check pacman cache first, then archiso/shedos-repo/ as a fallback
+    # for packages we build locally without the shedos- prefix (e.g. our
+    # patched calamares).
+    if ! ls "$OFFICIAL_CACHE/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1 \
+       && ! ls "$AUR_REPO/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
         echo "❌ MISSING: $pkg"
         MISSING=$((MISSING + 1))
     fi
