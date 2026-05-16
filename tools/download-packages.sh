@@ -70,10 +70,15 @@ done
 # from official mirrors.
 sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"
 
+AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 LOCAL_PKGS=()
 while IFS= read -r dir; do
     name=$(basename "$dir")
     [[ "$name" == shedos-* ]] && continue
+    shopt -s nullglob
+    cached=("$AUR_REPO_DIR/${name}-"*.pkg.tar.zst)
+    shopt -u nullglob
+    (( ${#cached[@]} > 0 )) || continue
     LOCAL_PKGS+=("$name")
 done < <(find "$PROJECT_ROOT/packaging" -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' | sort)
 if (( ${#LOCAL_PKGS[@]} > 0 )); then
