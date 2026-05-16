@@ -70,6 +70,18 @@ done
 # from official mirrors.
 sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"
 
+LOCAL_PKGS=()
+while IFS= read -r dir; do
+    name=$(basename "$dir")
+    [[ "$name" == shedos-* ]] && continue
+    LOCAL_PKGS+=("$name")
+done < <(find "$PROJECT_ROOT/packaging" -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' | sort)
+if (( ${#LOCAL_PKGS[@]} > 0 )); then
+    printf '%s\n' "${LOCAL_PKGS[@]}" >> "$TEMP_DIR/pkglist.txt"
+    sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
+    echo "Local-built non-shedos pkgs added for dep-resolution: ${LOCAL_PKGS[*]}"
+fi
+
 TOTAL_PACKAGES=$(wc -l < "$TEMP_DIR/all_packages.txt")
 OFFICIAL_PACKAGES=$(wc -l < "$TEMP_DIR/pkglist.txt")
 AUR_COUNT=${#AUR_PACKAGES[@]}
