@@ -173,8 +173,8 @@ for f in "$REPO_DIR"/*.pkg.tar.zst; do
     base=$(basename "$f")
     pkgname=${base%-*-*-*.pkg.tar.zst}
     [[ "$pkgname" == shedos-* ]] && continue
-    [[ "$pkgname" == *-debug ]] && continue
-    if [[ -z ${keep_aur[$pkgname]:-} ]]; then
+    parent=${pkgname%-debug}
+    if [[ -z ${keep_aur[$parent]:-} ]]; then
         echo "  prune phantom AUR: $base"
         rm -f "$f" "${f}.sig"
         phantom_count=$((phantom_count + 1))
