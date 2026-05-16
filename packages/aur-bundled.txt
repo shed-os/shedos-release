@@ -21,6 +21,4 @@ libfprint-2-tod1-broadcom
 libfprint-2-tod1-broadcom-cv3plus
 libfprint-2-tod1-elan
 libfprint-2-tod1-goodix
-libfprint-2-tod1-goodix-v2
 libfprint-2-tod1-synatudor-git
-libfprint-2-tod1-xps9300-bin
