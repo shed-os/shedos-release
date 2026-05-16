@@ -1,0 +1,26 @@
+# AUR packages whose built .pkg.tar.zst gets bundled into
+# shedos-migrate-to-packaged at build time and shipped to user systems
+# under /usr/share/shedos/aur-pkgs/. shedman migrate installs them via
+# pacman -U on legacy retrofits (and any other system that doesn't yet
+# have them) — bundling is the post-ISO install path for packages whose
+# vendor licenses forbid republishing as signed entries in shedos-repo.db.
+#
+# Every entry here must also appear in packages/aur.txt (where the AUR
+# builder picks it up) and in packages/aur-norepublish.txt (where its
+# no-republish status is recorded for the .db build).
+#
+# Build fails loudly if any entry has no matching .pkg.tar.zst in
+# archiso/shedos-repo/ at staging time, so a silently-skipped AUR build
+# or stale-version drift cannot ship.
+#
+# One package per line. Comments with '#' are ignored.
+
+# Fingerprint stack — TOD-enabled libfprint + vendor TOD drivers.
+libfprint-tod
+libfprint-2-tod1-broadcom
+libfprint-2-tod1-broadcom-cv3plus
+libfprint-2-tod1-elan
+libfprint-2-tod1-goodix
+libfprint-2-tod1-goodix-v2
+libfprint-2-tod1-synatudor-git
+libfprint-2-tod1-xps9300-bin
