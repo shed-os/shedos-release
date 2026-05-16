@@ -70,21 +70,27 @@ done
 # from official mirrors.
 sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"
 
-AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
-LOCAL_PKGS=()
+LOCAL_DEPS=()
 while IFS= read -r dir; do
     name=$(basename "$dir")
     [[ "$name" == shedos-* ]] && continue
-    shopt -s nullglob
-    cached=("$AUR_REPO_DIR/${name}-"*.pkg.tar.zst)
-    shopt -u nullglob
-    (( ${#cached[@]} > 0 )) || continue
-    LOCAL_PKGS+=("$name")
+    [[ -f "$dir/PKGBUILD" ]] || continue
+    deps=$(bash -c "
+        cd '$dir' && source PKGBUILD 2>/dev/null
+        printf '%s\n' \"\${depends[@]}\" 2>/dev/null
+    " 2>/dev/null)
+    [[ -n "$deps" ]] || continue
+    while IFS= read -r dep; do
+        [[ -n "$dep" ]] || continue
+        bare="${dep%%[<>=]*}"
+        [[ "$bare" == shedos-* ]] && continue
+        LOCAL_DEPS+=("$bare")
+    done <<< "$deps"
 done < <(find "$PROJECT_ROOT/packaging" -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' | sort)
-if (( ${#LOCAL_PKGS[@]} > 0 )); then
-    printf '%s\n' "${LOCAL_PKGS[@]}" >> "$TEMP_DIR/pkglist.txt"
+if (( ${#LOCAL_DEPS[@]} > 0 )); then
+    printf '%s\n' "${LOCAL_DEPS[@]}" >> "$TEMP_DIR/pkglist.txt"
     sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
-    echo "Local-built non-shedos pkgs added for dep-resolution: ${LOCAL_PKGS[*]}"
+    echo "Local-built non-shedos pkg deps added for prefetch: ${LOCAL_DEPS[*]}"
 fi
 
 TOTAL_PACKAGES=$(wc -l < "$TEMP_DIR/all_packages.txt")
