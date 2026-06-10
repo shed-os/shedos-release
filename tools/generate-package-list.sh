@@ -28,8 +28,6 @@ LOCAL_PACKAGES=(
     shedos-branding
     shedos-keyring
     shedos-meta
-    shedos-kernel
-    shedos-kernel-headers
 )
 
 if [[ $EUID -ne 0 ]]; then
