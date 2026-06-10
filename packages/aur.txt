@@ -24,6 +24,8 @@ slack-desktop
 lazydocker
 
 # Utilities
+# "Open in terminal" entry in the Nautilus right-click menu.
+nautilus-open-any-terminal
 
 # TUI
 impala
