@@ -34,6 +34,12 @@ linux-firmware-qlogic
 linux-firmware-radeon
 linux-firmware-realtek
 
+# Security — AppArmor mandatory access control, on by default. The LSM is
+# switched on via the kernel lsm= cmdline (baked in by the installer, and
+# backfilled onto existing installs by shedos-system); apparmor.service
+# loads the /etc/apparmor.d profile set at boot. Pulls audit for logging.
+apparmor
+
 # Bootloader
 limine
 efibootmgr
