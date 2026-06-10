@@ -6,6 +6,9 @@ base-devel
 # Required by shedos-kernel-headers (BTF info for DKMS builds)
 pahole
 
+# Fallback kernel — a bootable stock kernel if shedos-kernel won't boot.
+linux
+
 linux-firmware-amdgpu
 linux-firmware-atheros
 linux-firmware-broadcom
