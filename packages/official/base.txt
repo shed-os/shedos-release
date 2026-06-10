@@ -107,6 +107,8 @@ zsh-completions
 # Git
 git
 git-lfs
+# Syntax-highlighting pager; the skel gitconfig sets core.pager = delta
+git-delta
 
 # Microcode
 intel-ucode
