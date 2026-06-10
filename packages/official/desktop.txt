@@ -82,7 +82,6 @@ papirus-icon-theme
 # Network Applet
 network-manager-applet
 nm-connection-editor
-blueman
 
 # Media Controls
 playerctl

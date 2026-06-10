@@ -31,6 +31,9 @@ nautilus-open-any-terminal
 impala
 bluetui
 
+# Bluetooth (GUI; no tray applet, opened from waybar)
+overskride
+
 # API Testing
 postman-bin
 
