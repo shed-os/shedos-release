@@ -12,12 +12,18 @@ linux
 linux-firmware-amdgpu
 linux-firmware-atheros
 linux-firmware-broadcom
+linux-firmware-cirrus
 linux-firmware-intel
+linux-firmware-liquidio
 linux-firmware-marvell
 linux-firmware-mediatek
+linux-firmware-mellanox
+linux-firmware-nfp
 linux-firmware-nvidia
 linux-firmware-other
 linux-firmware-qcom
+linux-firmware-qlogic
+linux-firmware-radeon
 linux-firmware-realtek
 
 # Bootloader
