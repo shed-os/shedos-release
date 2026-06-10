@@ -95,7 +95,7 @@ pacman -Sp --noconfirm \
     --print-format '%n' \
     "${ARCH_ROOTS[@]}" \
     | grep -vE '^shedos-' \
-    | grep -vE '^(linux|linux-headers|virtualbox-guest-modules-arch|virtualbox-host-modules-arch)$' \
+    | grep -vE '^(virtualbox-guest-modules-arch|virtualbox-host-modules-arch)$' \
     | sort -u > "$TMPDIR/closure.txt"
 
 {

@@ -66,8 +66,8 @@ if [[ -f "$root/packages/installer-only.txt" ]]; then
 fi
 
 # shedos-* packages shipped from the [shedos] repo. Listed explicitly so
-# a typo here fails loudly. shedos-kernel-headers is a hard dep because
-# nvidia-open-dkms (default install) needs them at install time.
+# a typo here fails loudly. The kernel (linux-zen + linux-zen-headers) is
+# Arch's, pulled in through the normal closure, not from this set.
 shedos_pkgs=(
     shedos-keyring
     shedos-system
@@ -75,8 +75,6 @@ shedos_pkgs=(
     shedos-nvim
     shedos-branding
     shedos-greeter
-    shedos-kernel
-    shedos-kernel-headers
     shedos-screensaver
     shedos-migrate-to-packaged
 )
@@ -104,11 +102,8 @@ shedos_conflicts=(
     ttf-input
     ttf-input-nerd
     ttf-roboto
-    # Stock kernel + its tied modules; shedos-kernel is the only kernel
-    # we ship; these conflicts stop pacman from auto-resolving any future
-    # transitive `depends=('linux')` to the stock package.
-    linux
-    linux-headers
+    # virtualbox's kernel modules pin to a specific kernel package; we
+    # ship neither, so keep pacman from auto-rolling them into a closure.
     virtualbox-guest-modules-arch
     virtualbox-host-modules-arch
 )

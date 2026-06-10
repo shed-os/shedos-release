@@ -3,11 +3,19 @@
 # Core System
 base
 base-devel
-# Required by shedos-kernel-headers (BTF info for DKMS builds)
+# Supplies BTF info for DKMS builds against the kernel headers.
 pahole
 
-# Fallback kernel — a bootable stock kernel if shedos-kernel won't boot.
+# Primary kernel — Arch linux-zen (desktop-tuned scheduler/HZ). The
+# -headers package is an explicit root because nvidia-open-dkms builds
+# against it at install time.
+linux-zen
+linux-zen-headers
+
+# Fallback kernel — stock linux, so a worst-case linux-zen breakage still
+# leaves a bootable entry. linux-headers covers its own DKMS builds.
 linux
+linux-headers
 
 linux-firmware-amdgpu
 linux-firmware-atheros
