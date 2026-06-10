@@ -34,9 +34,6 @@ bluetui
 # API Testing
 postman-bin
 
-# AI / Agentic CLIs
-claude-code-bin
-
 # IDE managers
 jetbrains-toolbox
 
