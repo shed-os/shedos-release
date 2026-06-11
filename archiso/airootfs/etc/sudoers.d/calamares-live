@@ -1,2 +1,5 @@
+# Allow the live user to launch Calamares without a password, keeping
+# the Wayland/Qt session variables sudo would otherwise strip.
 Defaults env_keep += "WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE QT_QPA_PLATFORM XDG_CURRENT_DESKTOP DISPLAY"
 shedos ALL=(ALL) NOPASSWD,SETENV: /usr/bin/calamares
+%wheel ALL=(ALL) NOPASSWD,SETENV: /usr/bin/calamares

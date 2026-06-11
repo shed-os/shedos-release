@@ -27,5 +27,5 @@ alias grep='grep --color=auto'
 # Start installer hint
 echo ""
 echo "Welcome to ShedOS Live Environment!"
-echo "Run 'shedos-installer' to start the installation."
+echo "Double-click 'Install ShedOS' on the desktop (or run: sudo calamares) to install."
 echo ""
