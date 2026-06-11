@@ -194,14 +194,32 @@ fi
 # the dep against pacman's repos, find nothing (it's AUR-only), and abort.
 _refresh_repo_db
 
-# Function to get version from package file
+# Function to get version from package file. Exact-match on the parsed
+# pkgname — a bare prefix glob made `elephant` claim any cached
+# `elephant-<provider>-*` sibling, so a missing parent with a cached
+# sibling skipped the build entirely.
 get_package_version() {
-    local pkgname=$1
-    local pkgfile=$(ls "$REPO_DIR"/${pkgname}-*.pkg.tar.zst 2>/dev/null | head -n1)
-    if [ -n "$pkgfile" ]; then
+    local pkgname=$1 f base
+    for f in "$REPO_DIR/$pkgname"-*.pkg.tar.zst; do
+        [[ -e $f ]] || continue
+        base=$(basename "$f")
+        [[ ${base%-*-*-*.pkg.tar.zst} == "$pkgname" ]] || continue
         # Extract version from filename: pkgname-version-release-arch.pkg.tar.zst
-        basename "$pkgfile" | sed -E "s/^${pkgname}-(.+)-(x86_64|any)\.pkg\.tar\.zst$/\1/"
-    fi
+        sed -E "s/^${pkgname}-(.+)-(x86_64|any)\.pkg\.tar\.zst$/\1/" <<<"$base"
+        return 0
+    done
+}
+
+# Delete exactly one package's cached builds (and sigs), never a
+# prefix-sharing sibling's.
+remove_cached_package() {
+    local pkgname=$1 f base
+    for f in "$REPO_DIR/$pkgname"-*.pkg.tar.zst; do
+        [[ -e $f ]] || continue
+        base=$(basename "$f")
+        [[ ${base%-*-*-*.pkg.tar.zst} == "$pkgname" ]] || continue
+        rm -f "$f" "$f.sig"
+    done
 }
 
 # Function to get version from PKGBUILD
@@ -429,7 +447,7 @@ EOF
     # must build.
     if [[ "$PACKAGE" == *-git ]]; then
         echo "⚠ $PACKAGE is a -git package; rebuilding from fresh checkout"
-        rm -f "$REPO_DIR"/${PACKAGE}-*.pkg.tar.zst*
+        remove_cached_package "$PACKAGE"
     elif [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$AUR_VERSION" ]; then
         # Only reached under FORCE; the upstream pkgver matches
         # what we already have, so no rebuild is needed.
@@ -438,7 +456,7 @@ EOF
         continue
     elif [ -n "$CURRENT_VERSION" ]; then
         echo "⚠ $PACKAGE version changed: $CURRENT_VERSION → $AUR_VERSION (rebuilding)"
-        rm -f "$REPO_DIR"/${PACKAGE}-*.pkg.tar.zst*
+        remove_cached_package "$PACKAGE"
     else
         echo "⚠ $PACKAGE not found in repo (building $AUR_VERSION)"
     fi
