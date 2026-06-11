@@ -29,7 +29,10 @@ echo "=========================================="
 # Create directories
 mkdir -p "$REPO_DIR"
 mkdir -p "$AUR_BUILD_DIR"
-chmod 777 "$AUR_BUILD_DIR"
+# 755, not 777: world-writable /tmp paths invite symlink squatting on
+# shared machines. The root path chowns it to builduser below; a
+# non-root local run already owns it.
+chmod 755 "$AUR_BUILD_DIR"
 
 # Truncate the rebuild manifest at the start of every run.
 # build-shedos-packages.sh appends to this file too; the gate in
@@ -87,6 +90,7 @@ EOF
     useradd -m -G wheel builduser 2>/dev/null || true
     echo "builduser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builduser-aur
     chmod 440 /etc/sudoers.d/builduser-aur
+    chown builduser:builduser "$AUR_BUILD_DIR"
 
     # Setup rustup for build user (needed for Rust AUR packages like impala)
     if command -v rustup &> /dev/null; then
