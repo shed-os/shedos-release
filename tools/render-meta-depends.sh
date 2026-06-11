@@ -68,6 +68,8 @@ fi
 # shedos-* packages shipped from the [shedos] repo. Listed explicitly so
 # a typo here fails loudly. The kernel (linux-zen + linux-zen-headers) is
 # Arch's, pulled in through the normal closure, not from this set.
+# (shedos-prompt-ui is absent on purpose: it's a Rust library crate
+# vendored into the greeter/power/screensaver builds, not a package.)
 shedos_pkgs=(
     shedos-keyring
     shedos-system
@@ -76,6 +78,7 @@ shedos_pkgs=(
     shedos-branding
     shedos-greeter
     shedos-screensaver
+    shedos-power
     shedos-migrate-to-packaged
 )
 
