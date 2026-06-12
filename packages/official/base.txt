@@ -138,12 +138,8 @@ plymouth
 dhclient
 dhcpcd
 
-# ArchISO support
-mkinitcpio-archiso
-memtest86+
-memtest86+-efi
-edk2-shell
-syslinux
+# ArchISO support lives in packages/iso-only-official.txt — those
+# packages ship on the ISO but stay out of the shedos-meta closure.
 
 # Disk Tools
 gptfdisk
@@ -152,5 +148,4 @@ mtools
 nbd
 nvme-cli
 f2fs-tools
-squashfs-tools
 testdisk

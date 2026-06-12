@@ -26,6 +26,7 @@ alsa-ucm-conf
 alsa-utils
 amd-ucode
 aom
+apparmor
 appstream
 aquamarine
 arch-install-scripts
@@ -53,7 +54,6 @@ bind
 binutils
 bison
 bleachbit
-blueman
 bluez
 bluez-libs
 bluez-utils
@@ -107,6 +107,7 @@ dconf
 debugedit
 debuginfod
 default-cursors
+delve
 desktop-file-utils
 device-mapper
 dhclient
@@ -122,13 +123,14 @@ docker
 docker-compose
 dog
 dosfstools
+dotnet-host
+dotnet-runtime-9.0
 double-conversion
 doxygen
 duf
 duktape
 dust
 e2fsprogs
-edk2-shell
 efibootmgr
 efivar
 eglexternalplatform
@@ -137,6 +139,7 @@ egl-wayland
 egl-wayland2
 egl-x11
 electron39
+electron42
 elfutils
 ell
 enchant
@@ -194,6 +197,7 @@ ghostscript
 giflib
 girara
 git
+git-delta
 git-lfs
 glib2
 glibc
@@ -215,6 +219,8 @@ gnupg
 gnutls
 go
 gobject-introspection-runtime
+gofumpt
+golangci-lint
 gopls
 gparted
 gperftools
@@ -473,6 +479,7 @@ libdrm
 libdv
 libdvdnav
 libdvdread
+libebml
 libebur128
 libedit
 libei
@@ -525,6 +532,7 @@ liblsan
 libluv
 libmakepkg-dropins
 libmanette
+libmatroska
 libmaxminddb
 libmbim
 libmd
@@ -558,6 +566,7 @@ libnotify
 libnsbmp
 libnsgif
 libnsl
+libntfs-3g
 libnvidia-container
 libnvme
 libobjc
@@ -678,18 +687,28 @@ libzip
 licenses
 lilv
 limine
+linux
 linux-api-headers
 linux-firmware-amdgpu
 linux-firmware-atheros
 linux-firmware-broadcom
+linux-firmware-cirrus
 linux-firmware-intel
+linux-firmware-liquidio
 linux-firmware-marvell
 linux-firmware-mediatek
+linux-firmware-mellanox
+linux-firmware-nfp
 linux-firmware-nvidia
 linux-firmware-other
 linux-firmware-qcom
+linux-firmware-qlogic
+linux-firmware-radeon
 linux-firmware-realtek
 linux-firmware-whence
+linux-headers
+linux-zen
+linux-zen-headers
 lld
 lld21
 lldb
@@ -705,6 +724,7 @@ l-smash
 lsof
 ltrace
 lua
+lua51
 lua51-lpeg
 lua54
 luajit
@@ -718,18 +738,16 @@ make
 mako
 man-db
 man-pages
+marksman
 maven
 md4c
 mdadm
 media-player-info
-memtest86+
-memtest86+-efi
 mesa
 mesa-utils
 minikube
 minizip
 mkinitcpio
-mkinitcpio-archiso
 mkinitcpio-busybox
 mobile-broadband-provider-info
 modemmanager
@@ -769,6 +787,7 @@ npth
 nspr
 nss
 ntfs-3g
+ntfsprogs
 numactl
 nvidia-container-toolkit
 nvidia-open-dkms
@@ -776,6 +795,8 @@ nvidia-prime
 nvidia-settings
 nvidia-utils
 nvme-cli
+nwg-dock-hyprland
+nwg-drawer
 nwg-look
 obsidian
 ocl-icd
@@ -883,9 +904,9 @@ python-autocommand
 python-babel
 python-beautifulsoup4
 python-black
-python-cairo
 python-certifi
 python-cffi
+python-chardet
 python-charset-normalizer
 python-click
 python-cli_helpers
@@ -911,6 +932,7 @@ python-jaraco.text
 python-jedi
 python-jinja
 python-leather
+python-legacy-cgi
 python-linkify-it-py
 python-lsp-jsonrpc
 python-lsp-server
@@ -1012,8 +1034,8 @@ rhythmbox
 ripgrep
 rofi
 rsync
-rtkit
 rubberband
+ruff
 runc
 run-parts
 rust-analyzer
@@ -1057,7 +1079,6 @@ speexdsp
 spice-vdagent
 spirv-tools
 sqlite
-squashfs-tools
 sratom
 srt
 sshfs
@@ -1069,12 +1090,12 @@ sudo
 svt-av1
 swappy
 swaybg
-syslinux
 systemd
 systemd-libs
 systemd-sysvcompat
 taglib
 talloc
+taplo-cli
 tar
 tcpdump
 tdb
@@ -1153,6 +1174,7 @@ vlc-plugin-inflate
 vlc-plugin-journal
 vlc-plugin-jpeg
 vlc-plugin-lua
+vlc-plugin-matroska
 vlc-plugin-mpg123
 vlc-plugin-ogg
 vlc-plugin-opus
@@ -1231,6 +1253,7 @@ xvidcore
 xxhash
 xz
 yad
+yaml-language-server
 yasm
 yoga
 yq
@@ -1245,6 +1268,7 @@ zip
 zix
 zlib
 zlib-ng
+zls
 zoxide
 zram-generator
 zsh
