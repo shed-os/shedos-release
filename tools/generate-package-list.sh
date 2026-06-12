@@ -46,8 +46,10 @@ is_local() {
 
 ROOTS=()
 
-# Every category in packages/official/. Skip local entries; appended below.
-for f in "$PACKAGES_DIR"/official/*.txt; do
+# Every category in packages/official/, plus the ISO-only official
+# packages (live-environment tooling kept out of the meta closure).
+# Skip local entries; appended below.
+for f in "$PACKAGES_DIR"/official/*.txt "$PACKAGES_DIR"/iso-only-official.txt; do
     [[ -f $f ]] || continue
     while IFS= read -r pkg; do
         [[ -z "$pkg" || "$pkg" =~ ^# ]] && continue
