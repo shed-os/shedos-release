@@ -50,15 +50,18 @@ main() {
 
         while IFS= read -r dep; do
             [[ -z $dep ]] && continue
-            [[ $dep == shedos-* ]] && continue
+            # Match on the bare name. A dep may pin an ABI version like
+            # hyprland=0.55.4, but coverage only needs the package in the lists.
+            local bare=${dep%%[<>=]*}
+            [[ $bare == shedos-* ]] && continue
             local in_base=0
             for b in "${BASE_PROVIDED[@]}"; do
-                [[ $dep == "$b" ]] && { in_base=1; break; }
+                [[ $bare == "$b" ]] && { in_base=1; break; }
             done
             (( in_base )) && continue
-            local lookup_dep=$dep
-            if [[ -n "${VIRTUAL_PROVIDERS[$dep]:-}" ]]; then
-                lookup_dep=${VIRTUAL_PROVIDERS[$dep]}
+            local lookup_dep=$bare
+            if [[ -n "${VIRTUAL_PROVIDERS[$bare]:-}" ]]; then
+                lookup_dep=${VIRTUAL_PROVIDERS[$bare]}
             fi
             if ! grep -qx "$lookup_dep" <<<"$sources"; then
                 missing+=("$pkgname  →  $dep")
