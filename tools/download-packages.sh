@@ -51,10 +51,13 @@ echo "Found ${#AUR_PACKAGES[@]} AUR packages to exclude from download"
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# Concatenate every packages/official/*.txt, strip comments/blank, dedupe.
-# These files are the source of truth for which Arch packages ship by default.
-find "$PROJECT_ROOT/packages/official" -maxdepth 1 -type f -name '*.txt' -print0 \
-    | xargs -0 grep -hEv '^\s*(#|$)' \
+# official/*.txt + iso-only-official.txt, the same sources generate-package-list.sh
+# folds into packages.x86_64; strip comments/blank, dedupe.
+{
+    find "$PROJECT_ROOT/packages/official" -maxdepth 1 -type f -name '*.txt' -print0 \
+        | xargs -0 grep -hEv '^\s*(#|$)'
+    grep -hEv '^\s*(#|$)' "$PROJECT_ROOT/packages/iso-only-official.txt"
+} \
     | awk '{print $1}' \
     | sort -u > "$TEMP_DIR/all_packages.txt"
 
