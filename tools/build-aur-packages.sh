@@ -287,8 +287,14 @@ _import_pgp_keys() {
 BUILT_COUNT=0
 SKIPPED_COUNT=0
 
-# Build each package
-for PACKAGE in "${AUR_PACKAGES[@]}"; do
+# Build a single AUR package end-to-end: fetch, apply ShedOS PKGBUILD
+# overrides, gate PGP, makepkg, and register it in the local repo. Returns
+# nonzero on any per-package failure. Each fallible step is guarded with
+# `|| return 1` rather than leaning on set -e, because the best-effort caller
+# invokes this inside an `if !` test, where bash suppresses errexit for the
+# whole function body.
+build_one_package() {
+    local PACKAGE="$1"
     echo ""
     echo "----------------------------------------"
     echo "Checking $PACKAGE..."
@@ -327,7 +333,7 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
         echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
-        continue
+        return 0
     fi
 
     # ────────────────────────────────────────────────────────────
@@ -346,7 +352,7 @@ for PACKAGE in "${AUR_PACKAGES[@]}"; do
     # this only matters for genuinely new aur.txt entries.
     # ────────────────────────────────────────────────────────────
     if [ "$EUID" -eq 0 ]; then
-        sudo -u builduser bash <<EOF
+        sudo -u builduser bash <<EOF || return 1
 set -e
 cd "$AUR_BUILD_DIR"
 for attempt in 1 2 3; do
@@ -389,7 +395,7 @@ EOF
             fi
             if [ "$attempt" = "3" ]; then
                 echo "FATAL: failed to fetch $PACKAGE from AUR after 3 attempts" >&2
-                exit 1
+                return 1
             fi
             base=$(( attempt * 30 ))
             jitter=$(( RANDOM % 15 ))
@@ -457,7 +463,7 @@ EOF
         # what we already have, so no rebuild is needed.
         echo "✓ $PACKAGE $CURRENT_VERSION pkgver unchanged upstream; keeping cached build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
-        continue
+        return 0
     elif [ -n "$CURRENT_VERSION" ]; then
         echo "⚠ $PACKAGE version changed: $CURRENT_VERSION → $AUR_VERSION (rebuilding)"
         remove_cached_package "$PACKAGE"
@@ -485,7 +491,7 @@ EOF
         if [[ -n "${SHEDOS_AUR_STRICT_PGP:-}" ]]; then
             echo "FATAL: pgp: could not retrieve all signing keys for $PACKAGE (strict mode)" >&2
             echo "       fingerprints: ${pgp_fps[*]}" >&2
-            exit 1
+            return 1
         fi
         echo "  WARN: pgp: could not retrieve all signing keys for $PACKAGE — falling back to --skippgpcheck" >&2
         echo "        fingerprints: ${pgp_fps[*]}" >&2
@@ -498,7 +504,7 @@ EOF
     if [ "$EUID" -eq 0 ]; then
         # Run as builduser
         SKIP_PGP_STR="${SKIP_PGP[*]:-}"
-        sudo -u builduser bash <<EOF
+        sudo -u builduser bash <<EOF || return 1
 set -e
 cd "$AUR_BUILD_DIR/$PACKAGE"
 makepkg -sf --noconfirm $SKIP_PGP_STR
@@ -506,17 +512,17 @@ EOF
     else
         # Run as current user
         cd "$AUR_BUILD_DIR/$PACKAGE"
-        makepkg -sf --noconfirm "${SKIP_PGP[@]}"
+        makepkg -sf --noconfirm "${SKIP_PGP[@]}" || return 1
     fi
 
     # Copy built package to repo
-    find "$AUR_BUILD_DIR/$PACKAGE" -name "*.pkg.tar.zst" -exec cp -v {} "$REPO_DIR/" \;
+    find "$AUR_BUILD_DIR/$PACKAGE" -name "*.pkg.tar.zst" -exec cp -v {} "$REPO_DIR/" \; || return 1
 
     # Re-add to [shedos-repo] + pacman -Sy so the next iteration's
     # makepkg --syncdeps sees this freshly-built pkg as a resolvable dep.
     # Targeted incremental: only the just-built pkg(s) get re-added,
     # not the entire repo glob.
-    _repo_add_built "$AUR_BUILD_DIR/$PACKAGE"
+    _repo_add_built "$AUR_BUILD_DIR/$PACKAGE" || return 1
 
     echo "✓ $PACKAGE built successfully!"
     BUILT_COUNT=$((BUILT_COUNT + 1))
@@ -524,6 +530,25 @@ EOF
     # repo-add and re-sign; without this it early-exits on the
     # no-op gate and shedos.db keeps the stale (pre-rebuild) entry.
     echo "$PACKAGE" >> /tmp/built-pkgs.txt
+    return 0
+}
+
+# Build each package. The default release path (build-packages.yml) leaves
+# SHEDOS_AUR_BEST_EFFORT unset: a single failure trips set -e and aborts the
+# run, so a broken build never ships a half-populated repo. The weekly
+# aur-cache-refresh sets it to 1 and records the failure instead, leaving the
+# package's cached build in place, so one upstream breakage can't sink the
+# whole sweep.
+FAILED_PKGS=()
+for PACKAGE in "${AUR_PACKAGES[@]}"; do
+    if [ -n "${SHEDOS_AUR_BEST_EFFORT:-}" ]; then
+        if ! build_one_package "$PACKAGE"; then
+            FAILED_PKGS+=("$PACKAGE")
+            echo "::warning::aur-cache-refresh: $PACKAGE failed to rebuild; keeping its cached build" >&2
+        fi
+    else
+        build_one_package "$PACKAGE"
+    fi
 done
 
 echo ""
@@ -531,6 +556,10 @@ echo "=========================================="
 echo "Build Summary:"
 echo "  Built: $BUILT_COUNT packages"
 echo "  Skipped (up to date): $SKIPPED_COUNT packages"
+if [ "${#FAILED_PKGS[@]}" -gt 0 ]; then
+    echo "  Failed (best-effort, kept cached build): ${#FAILED_PKGS[@]} packages"
+    printf '    - %s\n' "${FAILED_PKGS[@]}"
+fi
 echo "=========================================="
 
 # Check if we have packages in repo
