@@ -29,7 +29,13 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd -- "$here/.." && pwd)
 
 _skip() { echo "live-iso-lock-assert: SKIP — $1" >&2; exit "$SKIP"; }
-_fail() { echo "live-iso-lock-assert: FAIL — $1" >&2; exit 1; }
+_fail() {
+    echo "live-iso-lock-assert: FAIL — $1" >&2
+    # Save the boot logs the cleanup trap is about to wipe, so CI can see why.
+    [[ -n ${serial:-} && -f ${serial:-} ]] && cp "$serial" "$art/serial.log" 2>/dev/null
+    [[ -n ${work:-} && -f $work/qemu.out ]] && cp "$work/qemu.out" "$art/qemu.out" 2>/dev/null
+    exit 1
+}
 
 [[ -c /dev/kvm && -w /dev/kvm ]] || _skip "no usable KVM (graphical desktop needs it)"
 for t in qemu-system-x86_64 socat; do command -v "$t" >/dev/null 2>&1 || _skip "$t not installed"; done
