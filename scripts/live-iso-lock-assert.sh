@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# End-to-end proof of the passwordless lock, both directions:
-#   live      booted from the ISO (/run/archiso present): any keypress
-#             returns to the desktop with no password.
-#   installed installed to disk (no /run/archiso): a bare keypress is
-#             rejected and only the real password unlocks.
-# Together these prove the no-auth path keys on /run/archiso and cannot
-# leak onto installed systems.
+# Test the passwordless lock in QEMU, both directions:
+#   live       booted from the ISO: any key returns to the desktop, no password.
+#   installed  installed to disk: a bare key is rejected, the password unlocks.
 #
-# Oracle: the screensaver prints "shedos-screensaver: locked" / "unlocked"
-# to stderr -> journald -> serial console (journald.forward_to_console=1).
-# We trigger the lock with the real Super+Escape keybind via QEMU's monitor
-# (sendkey) and read the markers off serial. No screenshots in the gate.
+# The screensaver logs "shedos-screensaver: locked"/"unlocked" to the journal,
+# forwarded to the serial console. We trigger the lock with Super+Escape via
+# the QEMU monitor and read those lines off serial.
 #
 # Inputs (env):
 #   SHEDOS_LIVE_ISO          built ShedOS live ISO (runs the live scenario)
@@ -70,8 +65,8 @@ _wait_new() {
     return 1
 }
 
-# Drive the real lock keybind (Super+Escape) until the screensaver reports
-# locked, polling so we don't depend on a fragile "desktop is up" marker.
+# Drive the lock keybind (Super+Escape) until the screensaver reports locked,
+# polling instead of waiting for a "desktop is up" marker.
 _engage_lock() {
     local deadline=$(( SECONDS + 300 )) base
     while (( SECONDS < deadline )); do
@@ -153,7 +148,7 @@ scenario_installed() {
         _mon "screendump $art/inst-leaked.ppm"
         _fail "[installed] a bare keypress UNLOCKED — the no-auth path leaked to disk"
     fi
-    # The real password must.
+    # The password must.
     base=$(_lines)
     _type "$pass"; _key ret
     if _wait_new "shedos-screensaver: unlocked" "$base" 30; then

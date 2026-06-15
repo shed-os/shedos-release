@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
-# Build an installed-ShedOS UEFI qcow2 from the live ISO's airootfs squashfs,
-# for the QEMU boot harnesses (emergency-boot-assert.sh, live-iso-lock-assert.sh).
+# Build an installed-ShedOS UEFI qcow2 from the live ISO's airootfs squashfs:
+# partition a disk, unpack the squashfs as the root, write fstab, install
+# Limine via shedos_installer, add a login user, enable the default services.
+# The result is what the QEMU boot tests run against.
 #
-# It mirrors the Calamares install with the SAME artifacts users get: the
-# airootfs squashfs is the rootfs, and the real shedos_installer LimineInstaller
-# installs the bootloader (it runs render-limine-config.sh in the chroot). Only
-# the generic partition/unpack/fstab steps are standard — Calamares' versions are
-# C++ and can't be called headlessly.
-#
-# Runs as ROOT (nbd + chroot). Inputs (env):
+# Runs as root (nbd + chroot). Inputs (env):
 #   SHEDOS_ISO             live ISO to pull /shedos/x86_64/airootfs.sfs from
 #                          (required unless SHEDOS_AIROOTFS_DIR is set)
 #   SHEDOS_AIROOTFS_DIR    alternate rootfs source: a prepared airootfs tree
@@ -17,7 +13,7 @@
 #   SHEDOS_BASE_PASS       test password (default shedos) — CI-internal only
 #   SHEDOS_BASE_SIZE       virtual disk size (default 16G)
 #   SHEDOS_BASE_AUTOLOGIN  1 = append a greetd [initial_session] so the lock
-#                          harness can reach the desktop (default 1)
+#                          test can reach the desktop (default 1)
 set -euo pipefail
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -58,7 +54,7 @@ qemu-nbd --connect="$nbd" "$out"
 # Settle: the kernel needs a moment to surface /dev/nbd0p* after connect.
 for _ in $(seq 1 20); do [[ -b $nbd ]] && break; sleep 0.2; done
 
-# --- partition: 1G ESP (matches the 1G-ESP boot fix) + btrfs root ----------
+# --- partition: 1G ESP + btrfs root ----------------------------------------
 sgdisk -Z "$nbd" >/dev/null
 sgdisk -n1:0:+1G -t1:ef00 -c1:ESP -n2:0:0 -t2:8300 -c2:shedos "$nbd" >/dev/null
 partprobe "$nbd"; sleep 1
@@ -78,7 +74,7 @@ mkdir -p "$mnt/home" "$mnt/boot/efi"
 mount -o subvol=@home,compress=zstd "$root_part" "$mnt/home"
 mount "$esp_part" "$mnt/boot/efi"
 
-# --- lay down the real rootfs ----------------------------------------------
+# --- unpack the rootfs -----------------------------------------------------
 if [[ -n $iso ]]; then
     echo "build-base-image: extracting airootfs.sfs from $iso"
     xorriso -osirrox on -indev "$iso" \
@@ -100,7 +96,7 @@ while IFS= read -r rel; do
     rm -rf "${mnt:?}/$rel"
 done < "$repo/installer/calamares/modules/unpackfs-exclude.conf"
 
-# --- fstab (root + home subvols + ESP with the nofail safety we ship) ------
+# --- fstab (root + home subvols + ESP with nofail) -------------------------
 root_uuid=$(blkid -s UUID -o value "$root_part")
 esp_uuid=$(blkid -s UUID -o value "$esp_part")
 cat > "$mnt/etc/fstab" <<EOF
@@ -121,7 +117,7 @@ arch-chroot "$mnt" systemd-machine-id-setup >/dev/null 2>&1 || true
 echo "build-base-image: mkinitcpio -P"
 arch-chroot "$mnt" mkinitcpio -P >/dev/null 2>&1 \
     || _die "mkinitcpio failed in the target"
-# Replicate copykernel: /usr/lib/modules/<kver>/vmlinuz -> /boot/vmlinuz-<pkgbase>
+# Copy each installed kernel: /usr/lib/modules/<kver>/vmlinuz -> /boot/vmlinuz-<pkgbase>
 for pkgbase_file in "$mnt"/usr/lib/modules/*/pkgbase; do
     [[ -f $pkgbase_file ]] || continue
     pkgbase=$(<"$pkgbase_file"); moddir=$(dirname "$pkgbase_file")
@@ -129,7 +125,7 @@ for pkgbase_file in "$mnt"/usr/lib/modules/*/pkgbase; do
     cp "$moddir/vmlinuz" "$mnt/boot/vmlinuz-$pkgbase"
 done
 
-# --- bootloader via the REAL installer (it chroots render-limine-config.sh) -
+# --- install Limine via shedos_installer -----------------------------------
 echo "build-base-image: LimineInstaller"
 PYTHONPATH="$repo/installer" python3 - "$mnt" "$root_uuid" "$nbd" <<'PY'
 import sys
@@ -143,18 +139,18 @@ PY
 arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/zsh "$user"
 echo "$user:$pass" | arch-chroot "$mnt" chpasswd
 
-# --- finalize: enable the exact shedos_finalize service set ----------------
+# --- enable the shedos_finalize service set --------------------------------
 for svc in NetworkManager.service bluetooth.service iwd.service seatd.service \
            greetd.service fstrim.timer postgresql.service docker.service \
            thermald.service; do
     systemctl --root="$mnt" enable "$svc" >/dev/null 2>&1 || true
 done
 
-# --- test-only autologin so the lock harness reaches the desktop -----------
+# --- test-only autologin so the lock test reaches the desktop --------------
 if [[ $autologin == 1 ]]; then
     cat >> "$mnt/etc/greetd/config.toml" <<EOF
 
-# Added by build-base-image.sh for the lock harness (test image only).
+# Added by build-base-image.sh for the lock test (test image only).
 [initial_session]
 command = "Hyprland"
 user = "$user"
