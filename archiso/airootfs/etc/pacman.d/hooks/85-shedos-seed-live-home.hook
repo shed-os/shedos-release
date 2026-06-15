@@ -1,0 +1,20 @@
+# remove from airootfs!
+# Seed the live `shedos` user's home from /etc/skel so the live ISO runs
+# the exact same Hyprland (Lua) configs an installed user gets — one
+# source of truth, no parallel stripped tree. cp -n preserves the one
+# live-only file we ship (.zprofile: autologin + installer autostart).
+# Runs during pacstrap only; zzzz99-remove-custom-hooks-from-airootfs.hook
+# strips this file (matching the marker on line 1) from the squashfs, so
+# it never runs on installed systems.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Seeding the live shedos home from /etc/skel...
+When = PostTransaction
+Depends = coreutils
+Exec = /bin/sh -c 'test -f /etc/skel/.config/hypr/hyprland.lua && { cp -a -n /etc/skel/. /home/shedos/ 2>/dev/null; chown -R 1000:1000 /home/shedos; } || true'
