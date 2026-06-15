@@ -46,7 +46,7 @@ cleanup() {
     set +e
     mountpoint -q "$mnt/boot/efi" && umount "$mnt/boot/efi"
     umount -R "$mnt" 2>/dev/null
-    [[ -n $loop ]] && losetup -d "$loop" >/dev/null 2>&1
+    [[ -n $loop ]] && { losetup -d "$loop" >/dev/null 2>&1; rm -f "$loop"p*; }
     rm -rf "$work"
 }
 trap cleanup EXIT
@@ -62,8 +62,18 @@ sgdisk -n1:0:+1G -t1:ef00 -c1:ESP -n2:0:0 -t2:8300 -c2:shedos "$loop" >/dev/null
 partprobe "$loop"
 esp_part=${loop}p1
 root_part=${loop}p2
-# Settle: the partition nodes can lag the partprobe by a beat.
-for _ in $(seq 1 20); do [[ -b $esp_part && -b $root_part ]] && break; sleep 0.2; done
+# partprobe registers the partitions in sysfs, but a CI container's /dev has
+# no udev to turn them into /dev/loopNpN nodes. Wait for sysfs, then create
+# the nodes by hand; the -b guard no-ops where udev already made them.
+loop_base=${loop#/dev/}
+for _ in $(seq 1 20); do [[ -e /sys/block/$loop_base/${loop_base}p2/dev ]] && break; sleep 0.2; done
+for sp in "/sys/block/$loop_base/$loop_base"p*; do
+    [[ -r $sp/dev ]] || continue
+    node=/dev/$(basename "$sp")
+    [[ -b $node ]] && continue
+    IFS=: read -r maj min < "$sp/dev"
+    mknod "$node" b "$maj" "$min"
+done
 [[ -b $esp_part && -b $root_part ]] || _die "partition nodes ${loop}p1/p2 never appeared"
 
 mkfs.fat -F32 -n SHEDOS_ESP "$esp_part" >/dev/null
@@ -166,7 +176,7 @@ sync
 echo "build-base-image: unmounting, detaching loop, converting to qcow2"
 umount "$mnt/boot/efi"
 umount -R "$mnt"
-losetup -d "$loop"; loop=
+losetup -d "$loop"; rm -f "$loop"p*; loop=
 qemu-img convert -f raw -O qcow2 "$raw" "$out"
 sha256sum "$out" | tee "$out.sha256"
 echo "build-base-image: wrote $out"
