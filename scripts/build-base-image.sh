@@ -130,7 +130,7 @@ arch-chroot "$mnt" systemd-machine-id-setup >/dev/null 2>&1 || true
 
 # --- initramfs for the installed kernels, then kernels into /boot ----------
 echo "build-base-image: mkinitcpio -P"
-arch-chroot "$mnt" mkinitcpio -P >/dev/null 2>&1 \
+arch-chroot "$mnt" mkinitcpio -P \
     || _die "mkinitcpio failed in the target"
 # Copy each installed kernel: /usr/lib/modules/<kver>/vmlinuz -> /boot/vmlinuz-<pkgbase>
 for pkgbase_file in "$mnt"/usr/lib/modules/*/pkgbase; do
