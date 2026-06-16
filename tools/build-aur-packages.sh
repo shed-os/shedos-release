@@ -10,6 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 AUR_BUILD_DIR="/tmp/shedos-aur-build"
 REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
+# Trust-on-first-use ledger of upstream PKGBUILD/.install hashes (pkgname=sha256);
+# the build refuses to compile + sign a package whose code changed vs its record.
+AUR_HASH_FILE="$PROJECT_ROOT/packages/aur-pkgbuild-hashes.txt"
 
 # Register $REPO_DIR as a build-local pacman repo for the duration of
 # this script so makepkg --syncdeps resolves AUR-internal deps (e.g.
@@ -287,6 +290,57 @@ _import_pgp_keys() {
 BUILT_COUNT=0
 SKIPPED_COUNT=0
 
+# Hash the upstream-executable files (PKGBUILD + any .install) with stable
+# basename separators, so a maintainer can't slip code past the gate via a
+# .install scriptlet and the digest doesn't depend on the build dir.
+_aur_pkgbuild_hash() {
+    local dir=$1 f
+    {
+        cat "$dir/PKGBUILD"
+        for f in "$dir"/*.install; do
+            [[ -e $f ]] || continue
+            printf '\n::%s::\n' "${f##*/}"
+            cat "$f"
+        done
+    } 2>/dev/null | sha256sum | awk '{print $1}'
+}
+
+_record_aur_hash() {
+    local pkg=$1 hash=$2 tmp
+    tmp=$(mktemp)
+    { [[ -f $AUR_HASH_FILE ]] && awk -F= -v p="$pkg" '$1!=p' "$AUR_HASH_FILE"
+      echo "$pkg=$hash"; } | sort -u > "$tmp"
+    mv "$tmp" "$AUR_HASH_FILE"
+}
+
+# Refuse to build+sign a package whose upstream PKGBUILD changed against its
+# recorded hash. SHEDOS_AUR_SEED_HASHES=1 records the current hash instead — the
+# deliberate, reviewed accept step. Returns 1 to abort the package otherwise.
+_gate_aur_pkgbuild() {
+    local dir=$1 pkg=$2 cur recorded rel=${AUR_HASH_FILE#"$PROJECT_ROOT"/}
+    cur=$(_aur_pkgbuild_hash "$dir")
+    if [[ -n ${SHEDOS_AUR_SEED_HASHES:-} ]]; then
+        _record_aur_hash "$pkg" "$cur"
+        echo "  seeded $pkg PKGBUILD hash: $cur"
+        return 0
+    fi
+    recorded=$(awk -F= -v p="$pkg" '$1==p {print $2; exit}' "$AUR_HASH_FILE" 2>/dev/null)
+    if [[ -z $recorded ]]; then
+        echo "FATAL: $pkg has no recorded PKGBUILD hash in $rel — a new AUR package" >&2
+        echo "       must be reviewed and seeded before it is built and signed:" >&2
+        echo "         SHEDOS_AUR_SEED_HASHES=1 $0   # then review + commit $rel" >&2
+        return 1
+    fi
+    if [[ $cur != "$recorded" ]]; then
+        echo "FATAL: $pkg upstream PKGBUILD changed — refusing to build + sign unreviewed code." >&2
+        echo "       recorded $recorded, got $cur" >&2
+        echo "       Review the change, then accept it in $rel ($pkg=$cur)," >&2
+        echo "       or re-run with SHEDOS_AUR_SEED_HASHES=1 after review, and commit." >&2
+        return 1
+    fi
+    return 0
+}
+
 # Build a single AUR package end-to-end: fetch, apply ShedOS PKGBUILD
 # overrides, gate PGP, makepkg, and register it in the local repo. Returns
 # nonzero on any per-package failure. Each fallible step is guarded with
@@ -330,7 +384,8 @@ build_one_package() {
     # SHEDOS_AUR_FORCE_REBUILD=1 so -git packages still get refreshed.
     # Every push trusts the cached build to insulate us from upstream
     # regressions landing mid-week.
-    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -n "$CURRENT_VERSION" ]; then
+    if [ -z "${SHEDOS_AUR_FORCE_REBUILD:-}" ] && [ -z "${SHEDOS_AUR_SEED_HASHES:-}" ] \
+       && [ -n "$CURRENT_VERSION" ]; then
         echo "✓ $PACKAGE $CURRENT_VERSION cached (aur.txt unchanged); skipping clone + build"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
         return 0
@@ -404,6 +459,11 @@ EOF
             sleep "$delay"
         done
     fi
+
+    # Supply-chain gate: verify the upstream PKGBUILD against its recorded hash
+    # before any ShedOS override, build, or signature. Seed mode records + stops.
+    _gate_aur_pkgbuild "$AUR_BUILD_DIR/$PACKAGE" "$PACKAGE" || return 1
+    [[ -n ${SHEDOS_AUR_SEED_HASHES:-} ]] && return 0
 
     # ShedOS-specific PKGBUILD overrides; applied after clone, before
     # version read, so AUR_VERSION reflects the patched package and the
