@@ -161,14 +161,25 @@ for svc in NetworkManager.service bluetooth.service iwd.service seatd.service \
     systemctl --root="$mnt" enable "$svc" >/dev/null 2>&1 || true
 done
 
-# --- test-only autologin so the lock test reaches the desktop --------------
+# Mirror shedos_finalize's installed-system getty@tty1 mask in the test image.
+systemctl --root="$mnt" mask getty@tty1.service autovt@tty1.service >/dev/null 2>&1 || true
+
+# --- test-only autologin so the lock test reaches a real (uwsm) desktop ----
 if [[ $autologin == 1 ]]; then
-    cat >> "$mnt/etc/greetd/config.toml" <<EOF
+    install -Dm644 "$mnt/usr/share/shedos/greetd/config.toml" \
+        "$mnt/etc/greetd/shedos-autologin.toml"
+    cat >> "$mnt/etc/greetd/shedos-autologin.toml" <<EOF
 
 # Added by build-base-image.sh for the lock test (test image only).
 [initial_session]
-command = "Hyprland"
+command = "/usr/lib/shedos/start-hyprland-session.sh"
 user = "$user"
+EOF
+    install -d "$mnt/etc/systemd/system/greetd.service.d"
+    cat > "$mnt/etc/systemd/system/greetd.service.d/20-autologin.conf" <<EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/greetd --config /etc/greetd/shedos-autologin.toml
 EOF
 fi
 
