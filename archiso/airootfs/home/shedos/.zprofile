@@ -24,5 +24,5 @@ if [[ $(tty) == "/dev/tty1" ]]; then
     ) &
 
     echo "Starting graphical environment..."
-    exec Hyprland
+    exec /usr/lib/shedos/start-hyprland-session.sh
 fi
