@@ -6,8 +6,6 @@ set -euo pipefail
 
 # Colors
 RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
@@ -64,6 +62,39 @@ setup_ovmf_vars() {
     fi
 
     echo "$vars_path"
+}
+
+# Pick a graphical display + virtio GPU from what QEMU actually has. Arch
+# ships these as separate modules: GTK in qemu-ui-gtk, the virtio display
+# devices in qemu-hw-display-virtio-*. qemu-base alone has neither, so fail
+# loud with the exact package instead of QEMU's opaque "not a valid device
+# model name" / "gtk is not a valid display". Use virgl GL only when a *-gl
+# device is actually present; the ShedOS desktop needs a virtio GPU (DRM), so
+# the built-in VGA/cirrus framebuffers won't run it.
+DISPLAY_ARGS=()
+VGA_ARGS=()
+select_display() {
+    local backends devices
+    backends=$(qemu-system-x86_64 -display help 2>/dev/null)
+    devices=$(qemu-system-x86_64 -device help 2>&1)
+    if ! grep -qw gtk <<<"$backends"; then
+        log_error "QEMU has no GTK display backend. Install: sudo pacman -S qemu-ui-gtk"
+        exit 1
+    fi
+    if grep -q '"virtio-vga-gl"' <<<"$devices" && pacman -Q virglrenderer &>/dev/null; then
+        VGA_ARGS=(-device virtio-vga-gl); DISPLAY_ARGS=(-display "gtk,gl=on")
+    elif grep -q '"virtio-vga"' <<<"$devices"; then
+        VGA_ARGS=(-device virtio-vga); DISPLAY_ARGS=(-display gtk)
+    elif grep -q '"virtio-gpu-pci-gl"' <<<"$devices" && pacman -Q virglrenderer &>/dev/null; then
+        VGA_ARGS=(-device virtio-gpu-pci-gl); DISPLAY_ARGS=(-display "gtk,gl=on")
+    elif grep -q '"virtio-gpu-pci"' <<<"$devices"; then
+        VGA_ARGS=(-device virtio-gpu-pci); DISPLAY_ARGS=(-display gtk)
+    else
+        log_error "QEMU has no virtio GPU device — the ShedOS desktop needs one."
+        log_error "Arch splits these into modules that don't pull each other. Install the chain:"
+        log_error "  sudo pacman -S qemu-hw-display-virtio-{gpu,gpu-gl,vga,vga-gl}"
+        exit 1
+    fi
 }
 
 find_iso() {
@@ -125,8 +156,8 @@ run_qemu_uefi() {
             -drive file="$disk_path",format=qcow2,if=virtio \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -device virtio-net-pci,netdev=net0 \
-            -device virtio-vga-gl \
-            -display gtk,gl=on \
+            "${VGA_ARGS[@]}" \
+            "${DISPLAY_ARGS[@]}" \
             -serial stdio \
             -usb \
             -device usb-tablet \
@@ -146,8 +177,8 @@ run_qemu_uefi() {
             -boot menu=on \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -device virtio-net-pci,netdev=net0 \
-            -device virtio-vga-gl \
-            -display gtk,gl=on \
+            "${VGA_ARGS[@]}" \
+            "${DISPLAY_ARGS[@]}" \
             -serial stdio \
             -usb \
             -device usb-tablet \
@@ -172,8 +203,8 @@ run_qemu_bios() {
         -boot d \
         -netdev user,id=net0,hostfwd=tcp::2222-:22 \
         -device virtio-net-pci,netdev=net0 \
-        -vga virtio \
-        -display gtk \
+        "${VGA_ARGS[@]}" \
+        "${DISPLAY_ARGS[@]}" \
         -serial stdio \
         -usb \
         -device usb-tablet \
@@ -250,6 +281,7 @@ main() {
     done
 
     check_dependencies
+    select_display
 
     if [[ "$clean" == true ]]; then
         rm -rf "$TEST_DIR"
