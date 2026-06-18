@@ -483,26 +483,30 @@ EOF
             echo "  patched calamares PKGBUILD: enable packagechooser, epoch=1"
             ;;
         ananicy-cpp-git)
-            # gcc 15 no longer pulls <unistd.h> transitively, so every source
-            # that calls getpid() fails to compile. Inject the include into
-            # each one via prepare(); upstream ships no prepare() of its own.
+            # gcc 16/libstdc++ no longer pulls the C-compat headers in
+            # transitively, so sources using std::memset, std::int32_t,
+            # std::printf, etc. stop compiling. Inject each missing header via
+            # prepare(); upstream ships none. Verified against gcc 16.1.1 by
+            # building ananicy-cpp-git locally to a clean link.
             cat >> "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD" <<'EOF'
 
 prepare() {
-    local f
-    # gcc 15+/libstdc++ stopped transitively pulling these headers, so every
-    # source that calls getpid() (<unistd.h>) or a C string/memory helper such
-    # as memset/strerror (<cstring>) fails to compile. Upstream ships no
-    # prepare(); inject the missing includes ourselves.
-    while IFS= read -r -d '' f; do
-        grep -q 'include <unistd.h>' "$f" || sed -i '1i #include <unistd.h>' "$f"
-    done < <(grep -rlZ getpid "${srcdir}/${_pkgname}/src")
-    while IFS= read -r -d '' f; do
-        grep -q 'include <cstring>' "$f" || sed -i '1i #include <cstring>' "$f"
-    done < <(grep -rlZE '\b(mem(set|cpy|move|cmp|chr)|str(error|len|n?cmp|n?cpy|n?cat|chr|rchr|str|tok|dup))\b' "${srcdir}/${_pkgname}/src")
+    local _src="${srcdir}/${_pkgname}/src"
+    _shedos_inject() {  # <header> <symbol-ERE>: prepend the header where used
+        local g
+        while IFS= read -r -d '' g; do
+            grep -q "include <$1>" "$g" || sed -i "1i #include <$1>" "$g"
+        done < <(grep -rlZE "$2" "$_src")
+    }
+    _shedos_inject unistd.h '\bgetpid\b'
+    _shedos_inject cstring  'std::(mem(set|cpy|move|cmp|chr)|str(error|len|n?cmp|n?cpy|n?cat|chr|rchr|str|tok|dup))'
+    _shedos_inject cstdint  'std::u?int(_fast|_least)?(8|16|32|64)_t|std::u?intptr_t'
+    _shedos_inject cstdlib  'std::(malloc|calloc|realloc|free|abort|exit|atoi|atol|strtol|strtoul|getenv|system|qsort)'
+    _shedos_inject cstdio   'std::(printf|fprintf|snprintf|sprintf|sscanf|fopen|fclose|fread|fwrite|fputs|fgets|perror|FILE)'
+    _shedos_inject ctime    'std::(time|clock|difftime|mktime|localtime|gmtime|strftime)\b'
 }
 EOF
-            echo "  patched ananicy-cpp-git PKGBUILD: inject <unistd.h>/getpid + <cstring>/memset,strerror for gcc 15+"
+            echo "  patched ananicy-cpp-git PKGBUILD: inject C-compat headers (cstring/cstdint/cstdlib/cstdio/ctime) + unistd.h for gcc 16"
             ;;
     esac
 
