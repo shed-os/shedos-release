@@ -51,6 +51,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# The loop image and the unsquashed rootfs both live under $work; on a tmpfs
+# (or any fs without ~25G free) they overrun and the loop-backed btrfs
+# silently flips read-only mid-build. Refuse up front with a clear message.
+work_fstype=$(findmnt -no FSTYPE -T "$work" 2>/dev/null)
+work_avail=$(findmnt -nbo AVAIL -T "$work" 2>/dev/null)
+if [[ $work_fstype == tmpfs ]]; then
+    _die "workdir $work is on tmpfs — the $size image would overrun RAM; point TMPDIR at real disk (e.g. TMPDIR=/var/tmp)"
+fi
+if (( ${work_avail:-0} < 25 * 1024**3 )); then
+    _die "workdir $work has $(( ${work_avail:-0} / 1024**3 ))G free; need ~25G for the $size image + rootfs — point TMPDIR at a path with more space"
+fi
+
 echo "build-base-image: creating $size disk"
 modprobe loop 2>/dev/null || true
 qemu-img create -f raw "$raw" "$size" >/dev/null
