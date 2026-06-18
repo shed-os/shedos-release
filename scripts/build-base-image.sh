@@ -31,7 +31,7 @@ autologin=${SHEDOS_BASE_AUTOLOGIN:-1}
 _die() { echo "build-base-image: $1" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || _die "must run as root (loop + chroot)"
 [[ -n $iso || -n $airootfs_dir ]] || _die "set SHEDOS_ISO or SHEDOS_AIROOTFS_DIR"
-for t in qemu-img losetup sgdisk mkfs.btrfs mkfs.fat arch-chroot unsquashfs blkid; do
+for t in qemu-img losetup sgdisk mkfs.btrfs mkfs.fat arch-chroot xorriso unsquashfs blkid; do
     command -v "$t" >/dev/null || _die "missing tool: $t"
 done
 command -v limine >/dev/null || _die "limine not installed on the build host (LimineInstaller needs /usr/share/limine)"
@@ -93,7 +93,7 @@ mount "$esp_part" "$mnt/boot/efi"
 if [[ -n $iso ]]; then
     echo "build-base-image: extracting airootfs.sfs from $iso"
     xorriso -osirrox on -indev "$iso" \
-        -extract /shedos/x86_64/airootfs.sfs "$work/airootfs.sfs" >/dev/null 2>&1 \
+        -extract /shedos/x86_64/airootfs.sfs "$work/airootfs.sfs" >/dev/null \
         || _die "could not extract airootfs.sfs from the ISO"
     unsquashfs -f -d "$mnt" "$work/airootfs.sfs" >/dev/null
 else
@@ -128,17 +128,22 @@ sed -i 's/^#\(en_US.UTF-8 UTF-8\)/\1/' "$mnt/etc/locale.gen" 2>/dev/null || true
 arch-chroot "$mnt" locale-gen >/dev/null 2>&1 || true
 arch-chroot "$mnt" systemd-machine-id-setup >/dev/null 2>&1 || true
 
-# --- initramfs for the installed kernels, then kernels into /boot ----------
-echo "build-base-image: mkinitcpio -P"
-arch-chroot "$mnt" mkinitcpio -P \
-    || _die "mkinitcpio failed in the target"
-# Copy each installed kernel: /usr/lib/modules/<kver>/vmlinuz -> /boot/vmlinuz-<pkgbase>
+# --- kernels into /boot, then initramfs for them --------------------------
+# The copy MUST precede mkinitcpio: each preset keys on /boot/vmlinuz-<pkgbase>
+# being readable, but the extracted squashfs leaves /boot empty (the live
+# kernel lives on the ISO boot image, not in airootfs). The guarded
+# linux-zen.preset tolerates a missing kernel; the stock linux.preset does
+# not, and -P then fails with "/boot/vmlinuz-linux must be readable".
 for pkgbase_file in "$mnt"/usr/lib/modules/*/pkgbase; do
     [[ -f $pkgbase_file ]] || continue
     pkgbase=$(<"$pkgbase_file"); moddir=$(dirname "$pkgbase_file")
     [[ -n $pkgbase && -f $moddir/vmlinuz ]] || continue
     cp "$moddir/vmlinuz" "$mnt/boot/vmlinuz-$pkgbase"
 done
+
+echo "build-base-image: mkinitcpio -P"
+arch-chroot "$mnt" mkinitcpio -P \
+    || _die "mkinitcpio failed in the target"
 
 # --- install Limine via shedos_installer -----------------------------------
 echo "build-base-image: LimineInstaller"
@@ -151,7 +156,14 @@ raise SystemExit(0 if ok else 1)
 PY
 
 # --- a login user with a known (CI-internal) password ----------------------
-arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/zsh "$user"
+# The live airootfs already ships the `shedos` user, so a plain useradd would
+# collide and abort under set -e. Create only if absent, then always normalise:
+# ensure wheel + zsh and set the known test password.
+if arch-chroot "$mnt" id -u "$user" >/dev/null 2>&1; then
+    arch-chroot "$mnt" usermod -aG wheel -s /usr/bin/zsh "$user"
+else
+    arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/zsh "$user"
+fi
 echo "$user:$pass" | arch-chroot "$mnt" chpasswd
 
 # --- enable the shedos_finalize service set --------------------------------
