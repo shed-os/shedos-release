@@ -490,12 +490,19 @@ EOF
 
 prepare() {
     local f
+    # gcc 15+/libstdc++ stopped transitively pulling these headers, so every
+    # source that calls getpid() (<unistd.h>) or a C string/memory helper such
+    # as memset/strerror (<cstring>) fails to compile. Upstream ships no
+    # prepare(); inject the missing includes ourselves.
     while IFS= read -r -d '' f; do
         grep -q 'include <unistd.h>' "$f" || sed -i '1i #include <unistd.h>' "$f"
     done < <(grep -rlZ getpid "${srcdir}/${_pkgname}/src")
+    while IFS= read -r -d '' f; do
+        grep -q 'include <cstring>' "$f" || sed -i '1i #include <cstring>' "$f"
+    done < <(grep -rlZE '\b(mem(set|cpy|move|cmp|chr)|str(error|len|n?cmp|n?cpy|n?cat|chr|rchr|str|tok|dup))\b' "${srcdir}/${_pkgname}/src")
 }
 EOF
-            echo "  patched ananicy-cpp-git PKGBUILD: inject <unistd.h> for getpid() under gcc 15+"
+            echo "  patched ananicy-cpp-git PKGBUILD: inject <unistd.h>/getpid + <cstring>/memset,strerror for gcc 15+"
             ;;
     esac
 
