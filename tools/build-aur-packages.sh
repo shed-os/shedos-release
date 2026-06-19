@@ -8,7 +8,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-AUR_BUILD_DIR="/tmp/shedos-aur-build"
+# Build on disk, not a RAM-backed /tmp: a full AUR pass (walker's GTK4 Rust
+# tree alone is multiple GB) overflows tmpfs. /var/tmp is disk-backed and, like
+# /tmp, world-traversable (1777) so the unprivileged builduser can reach it.
+AUR_BUILD_DIR="${SHEDOS_AUR_BUILD_DIR:-/var/tmp/shedos-aur-build}"
 REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
 # Trust-on-first-use ledger of upstream PKGBUILD/.install hashes (pkgname=sha256);
 # the build refuses to compile + sign a package whose code changed vs its record.
