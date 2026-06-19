@@ -92,10 +92,19 @@ EOF
     }
     trap _cleanup_builduser EXIT
 
-    # Create temporary build user
-    useradd -m -G wheel builduser 2>/dev/null || true
+    # Create temporary build user. Deliberately NOT in wheel: a %wheel rule in
+    # a drop-in that sorts after builduser-aur would shadow this NOPASSWD grant
+    # (sudo's last match wins), and makepkg --syncdeps would then stall on an
+    # interactive `sudo pacman` prompt for a user that has no password.
+    useradd -m builduser 2>/dev/null || true
     echo "builduser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builduser-aur
     chmod 440 /etc/sudoers.d/builduser-aur
+    # Prove the grant is effective now, not 30 minutes into the build.
+    if ! sudo -u builduser sudo -n true 2>/dev/null; then
+        echo "FATAL: builduser lacks passwordless sudo; /etc/sudoers.d/builduser-aur is not taking effect." >&2
+        echo "       Ensure /etc/sudoers has '@includedir /etc/sudoers.d' and no later drop-in re-requires a password." >&2
+        exit 1
+    fi
     chown builduser:builduser "$AUR_BUILD_DIR"
 
     # Setup rustup for build user (needed for Rust AUR packages like impala)
