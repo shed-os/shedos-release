@@ -180,12 +180,17 @@ if [ -d "$AUR_REPO_DIR" ]; then
     # Create a list of all dependencies required by our built AUR packages
     # We use pacman -Qpi to query the built package files directly for detailed info
     echo "Extracting dependencies from local packages..."
+    # Drop shedos-* deps: those are built locally by `make shedos-packages`
+    # (which runs after this step), never downloaded. A leftover shedos pkg in
+    # the repo — dev machines accumulate them across builds — otherwise pulls
+    # its shedos-* runtime deps into the download and fails `target not found`.
     find "$AUR_REPO_DIR" -name "*.pkg.tar.zst" -exec pacman -Qpi {} + | \
         grep "^Depends On" | \
         cut -d':' -f2 | \
         tr ' ' '\n' | \
         sed 's/^[ \t]*//' | \
         grep -v "None" | \
+        grep -v '^shedos-' | \
         sort -u | \
         grep -v "^$" > "$TEMP_DIR/aur_deps.txt" || true
     
