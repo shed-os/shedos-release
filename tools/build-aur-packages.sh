@@ -289,12 +289,24 @@ _import_pgp_keys() {
     local user_prefix=()
     [[ $EUID -eq 0 ]] && user_prefix=(sudo -u builduser)
 
+    # gpg --recv-keys exits 0 even on a partial fetch, so its exit code can't
+    # tell us every key landed. Re-list each fingerprint after every server and
+    # accumulate across them — return success only once all keys are present,
+    # which also tolerates a single keyserver missing one of them.
+    _have_all_keys() {
+        local fp
+        for fp in "${fps[@]}"; do
+            "${user_prefix[@]}" gpg --batch --list-keys "$fp" >/dev/null 2>&1 || return 1
+        done
+        return 0
+    }
+
+    _have_all_keys && return 0
     local server
     for server in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org hkps://pgp.mit.edu; do
-        if "${user_prefix[@]}" gpg --batch --keyserver "$server" \
-                --recv-keys "${fps[@]}" >/dev/null 2>&1; then
-            return 0
-        fi
+        "${user_prefix[@]}" gpg --batch --keyserver "$server" \
+            --recv-keys "${fps[@]}" >/dev/null 2>&1 || true
+        _have_all_keys && return 0
     done
     return 1
 }
