@@ -10,7 +10,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Default settings
-RAM="4G"
+RAM="8G"   # Calamares requires >=6 GiB; 4G trips the welcome-screen RAM gate
 CPUS="4"
 DISK_SIZE="50G"
 BOOT_MODE="uefi"
@@ -221,7 +221,7 @@ show_help() {
     echo "  BOOT_MODE   uefi or bios (default: uefi)"
     echo ""
     echo "Options:"
-    echo "  --ram SIZE      RAM size (default: 4G)"
+    echo "  --ram SIZE      RAM size (default: 8G)"
     echo "  --cpus NUM      Number of CPUs (default: 4)"
     echo "  --disk SIZE     Test disk size (default: 50G)"
     echo "  --clean         Remove test disk before starting"
