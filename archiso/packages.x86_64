@@ -969,6 +969,7 @@ python-packaging
 python-parsedatetime
 python-parso
 python-pathspec
+python-pefile
 python-pgspecial
 python-pip
 python-pkg_resources
@@ -1063,6 +1064,7 @@ rust-analyzer
 rustup
 s3cmd
 sbc
+sbctl
 sd
 sdbus-cpp
 sdl2-compat
@@ -1116,6 +1118,7 @@ syslinux
 systemd
 systemd-libs
 systemd-sysvcompat
+systemd-ukify
 taglib
 talloc
 taplo-cli
@@ -1141,6 +1144,7 @@ tokei
 tomlplusplus
 tor
 totem-pl-parser
+tpm2-tools
 tpm2-tss
 traceroute
 tree
