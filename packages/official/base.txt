@@ -44,6 +44,13 @@ apparmor
 limine
 efibootmgr
 
+# Secure Boot + measured boot. sbctl manages the db/KEK/PK key set and
+# verifies signatures; tpm2-tools backs passphrase-free TPM2 unlock;
+# systemd-ukify is the single signer that sbsigns and PCR-11-signs the UKI.
+sbctl
+tpm2-tools
+systemd-ukify
+
 # Filesystem
 btrfs-progs
 cryptsetup
