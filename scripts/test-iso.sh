@@ -23,7 +23,15 @@ TEST_DIR="$PROJECT_DIR/test"
 
 # OVMF paths (Arch Linux) - separate CODE and VARS for proper boot control
 OVMF_CODE="/usr/share/edk2/x64/OVMF_CODE.4m.fd"
+OVMF_CODE_SECBOOT="/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd"
 OVMF_VARS="/usr/share/edk2/x64/OVMF_VARS.4m.fd"
+
+# --secureboot: boot the SB-enforcing firmware from the stock (Setup Mode) VARS
+# and attach an emulated TPM2, so the installer's SB enrollment + `shedman tpm2`
+# /`secureboot` verbs run against real measured-boot firmware. Off by default.
+SECUREBOOT=false
+TPM_DIR=""
+SWTPM_PID=""
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1" >&2
@@ -48,6 +56,69 @@ check_dependencies() {
             log_error "OVMF_VARS not found. Install: pacman -S edk2-ovmf"
             exit 1
         fi
+    fi
+
+    if [[ "$SECUREBOOT" == true ]]; then
+        if [[ "$BOOT_MODE" != "uefi" ]]; then
+            log_error "--secureboot needs UEFI (Secure Boot is a UEFI feature)"
+            exit 1
+        fi
+        if [[ ! -f "$OVMF_CODE_SECBOOT" ]]; then
+            log_error "Secure Boot firmware not found: $OVMF_CODE_SECBOOT (pacman -S edk2-ovmf)"
+            exit 1
+        fi
+        if ! command -v swtpm &>/dev/null; then
+            log_error "swtpm not found — the TPM2 unlock proof needs it. Install: pacman -S swtpm"
+            exit 1
+        fi
+    fi
+}
+
+# Emulated TPM2 backing the measured-boot unlock. State persists under test/tpm
+# (cleared by --clean) so a TPM2-sealed key survives reboots; killed on exit.
+start_swtpm() {
+    TPM_DIR="$TEST_DIR/tpm"
+    mkdir -p "$TPM_DIR"
+    log_info "Starting emulated TPM2 (swtpm)..."
+    swtpm socket --tpm2 --tpmstate "dir=$TPM_DIR" \
+        --ctrl "type=unixio,path=$TPM_DIR/swtpm-sock" \
+        --flags startup-clear --daemon --pid "file=$TPM_DIR/swtpm.pid"
+    local i=0
+    while [[ ! -S "$TPM_DIR/swtpm-sock" && $i -lt 50 ]]; do sleep 0.1; ((i++)); done
+    [[ -f "$TPM_DIR/swtpm.pid" ]] && SWTPM_PID=$(cat "$TPM_DIR/swtpm.pid")
+}
+stop_swtpm() {
+    [[ -n "$SWTPM_PID" ]] && kill "$SWTPM_PID" 2>/dev/null
+    SWTPM_PID=""
+}
+trap stop_swtpm EXIT INT TERM
+
+# Firmware + TPM QEMU args for the given VARS file. Secure Boot needs SMM and a
+# write-protected pflash, else the firmware will not enforce signatures.
+FW_ARGS=()
+TPM_QEMU_ARGS=()
+build_fw_args() {
+    local vars_path="$1"
+    if [[ "$SECUREBOOT" == true ]]; then
+        FW_ARGS=(
+            -machine "q35,smm=on,accel=kvm"
+            -global "driver=cfi.pflash01,property=secure,value=on"
+            -global "ICH9-LPC.disable_s3=1"
+            -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE_SECBOOT"
+            -drive "if=pflash,unit=1,format=raw,file=$vars_path"
+        )
+        TPM_QEMU_ARGS=(
+            -chardev "socket,id=chrtpm,path=$TPM_DIR/swtpm-sock"
+            -tpmdev "emulator,id=tpm0,chardev=chrtpm"
+            -device "tpm-crb,tpmdev=tpm0"
+        )
+    else
+        FW_ARGS=(
+            -machine "q35,accel=kvm"
+            -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE"
+            -drive "if=pflash,format=raw,file=$vars_path"
+        )
+        TPM_QEMU_ARGS=()
     fi
 }
 
@@ -143,16 +214,18 @@ run_qemu_uefi() {
         vars_path=$(setup_ovmf_vars)
     fi
 
+    build_fw_args "$vars_path"
+    [[ "$SECUREBOOT" == true ]] && start_swtpm
+
     if [[ "$boot_from_disk" == "true" ]]; then
         log_info "Starting QEMU in UEFI mode (booting from installed disk)..."
         qemu-system-x86_64 \
             -enable-kvm \
-            -machine q35,accel=kvm \
+            "${FW_ARGS[@]}" \
             -cpu host \
             -m "$RAM" \
             -smp "$CPUS" \
-            -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-            -drive if=pflash,format=raw,file="$vars_path" \
+            "${TPM_QEMU_ARGS[@]}" \
             -drive file="$disk_path",format=qcow2,if=virtio \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
             -device virtio-net-pci,netdev=net0 \
@@ -166,12 +239,11 @@ run_qemu_uefi() {
         log_info "Starting QEMU in UEFI mode (booting from ISO)..."
         qemu-system-x86_64 \
             -enable-kvm \
-            -machine q35,accel=kvm \
+            "${FW_ARGS[@]}" \
             -cpu host \
             -m "$RAM" \
             -smp "$CPUS" \
-            -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-            -drive if=pflash,format=raw,file="$vars_path" \
+            "${TPM_QEMU_ARGS[@]}" \
             -drive file="$iso_path",media=cdrom,index=0 \
             -drive file="$disk_path",format=qcow2,if=virtio \
             -boot menu=on \
@@ -226,6 +298,7 @@ show_help() {
     echo "  --disk SIZE     Test disk size (default: 50G)"
     echo "  --clean         Remove test disk before starting"
     echo "  --disk-only     Boot from installed disk (no ISO)"
+    echo "  --secureboot    SB-enforcing firmware (Setup Mode) + emulated TPM2"
     echo "  -h, --help      Show this help message"
     echo ""
     echo "Examples:"
@@ -261,6 +334,10 @@ main() {
                 ;;
             --disk-only)
                 disk_only=true
+                shift
+                ;;
+            --secureboot)
+                SECUREBOOT=true
                 shift
                 ;;
             -h|--help)
