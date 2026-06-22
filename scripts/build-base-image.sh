@@ -153,17 +153,22 @@ for pkgbase_file in "$mnt"/usr/lib/modules/*/pkgbase; do
     cp "$moddir/vmlinuz" "$mnt/boot/vmlinuz-$pkgbase"
 done
 
-echo "build-base-image: mkinitcpio -P"
-arch-chroot "$mnt" mkinitcpio -P \
-    || _die "mkinitcpio failed in the target"
-
-# --- install Limine via shedos_installer -----------------------------------
-echo "build-base-image: LimineInstaller"
+# --- bootloader: the same sequence the installer runs ----------------------
+# install() lays down Limine and the ESP layout; configure_mkinitcpio() rewrites
+# HOOKS to the installed-system set, runs mkinitcpio -P, then builds, places, and
+# (off-box this stays keyless/unsigned) renders the efi_chainload menu over the
+# UKIs. Calling install() alone — the old behaviour — left no UKIs and no menu,
+# so the image no longer booted after the T3/T4 UKI switch. register_nvram=False
+# keeps _register_nvram_entry from running efibootmgr against the build HOST's
+# firmware; a QEMU image boots the default \EFI\BOOT path with no NVRAM entry.
+echo "build-base-image: install bootloader + build UKIs"
 PYTHONPATH="$repo/installer" python3 - "$mnt" "$root_uuid" "$loop" <<'PY'
 import sys
 from shedos_installer.core.bootloader import LimineInstaller
 mount, root_uuid, disk = sys.argv[1:4]
-ok = LimineInstaller(mount_point=mount, root_uuid=root_uuid, uefi=True).install(disk)
+inst = LimineInstaller(mount_point=mount, root_uuid=root_uuid, uefi=True,
+                       register_nvram=False)
+ok = inst.install(disk) and inst.configure_mkinitcpio()
 raise SystemExit(0 if ok else 1)
 PY
 
