@@ -1065,6 +1065,7 @@ rustup
 s3cmd
 sbc
 sbctl
+sbsigntools
 sd
 sdbus-cpp
 sdl2-compat
