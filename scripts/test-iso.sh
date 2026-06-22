@@ -84,7 +84,7 @@ start_swtpm() {
         --ctrl "type=unixio,path=$TPM_DIR/swtpm-sock" \
         --flags startup-clear --daemon --pid "file=$TPM_DIR/swtpm.pid"
     local i=0
-    while [[ ! -S "$TPM_DIR/swtpm-sock" && $i -lt 50 ]]; do sleep 0.1; ((i++)); done
+    while [[ ! -S "$TPM_DIR/swtpm-sock" && $i -lt 50 ]]; do sleep 0.1; i=$((i+1)); done
     [[ -f "$TPM_DIR/swtpm.pid" ]] && SWTPM_PID=$(cat "$TPM_DIR/swtpm.pid")
 }
 stop_swtpm() {
@@ -214,8 +214,10 @@ run_qemu_uefi() {
         vars_path=$(setup_ovmf_vars)
     fi
 
-    build_fw_args "$vars_path"
+    # start_swtpm sets TPM_DIR + creates the socket; build_fw_args reads TPM_DIR
+    # to wire -chardev at it, so swtpm must come first.
     [[ "$SECUREBOOT" == true ]] && start_swtpm
+    build_fw_args "$vars_path"
 
     if [[ "$boot_from_disk" == "true" ]]; then
         log_info "Starting QEMU in UEFI mode (booting from installed disk)..."
