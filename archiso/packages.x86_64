@@ -473,6 +473,7 @@ libcaca
 libcanberra
 libcap
 libcap-ng
+libcbor
 libcdio
 libcdio-paranoia
 libcloudproviders
@@ -504,6 +505,7 @@ libexif
 libfakekey
 libfdk-aac
 libffi
+libfido2
 libfontenc
 libfprint
 libfreeaptx
