@@ -525,6 +525,7 @@ libgweather-4
 libgxps
 libhandy
 libheif
+libhwasan
 libice
 libidn
 libidn2
