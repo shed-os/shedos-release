@@ -1,0 +1,15 @@
+[Unit]
+Description=Diagnostic: capture the reboot requester onto the install ESP
+DefaultDependencies=no
+Conflicts=reboot.target poweroff.target halt.target
+Before=reboot.target poweroff.target halt.target shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/bin/bash /usr/local/bin/shedos-reboot-capture.sh
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
