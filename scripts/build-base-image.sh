@@ -181,6 +181,10 @@ if arch-chroot "$mnt" id -u "$user" >/dev/null 2>&1; then
 else
     arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/zsh "$user"
 fi
+# The live user's home lived on tmpfs, so usermod leaves the installed @home
+# empty — and without a home the autologin desktop can't write its config.
+# Populate it from skel the way useradd -m would.
+[[ -d $mnt/home/$user ]] || arch-chroot "$mnt" mkhomedir_helper "$user"
 echo "$user:$pass" | arch-chroot "$mnt" chpasswd
 
 # --- enable the shedos_finalize service set --------------------------------

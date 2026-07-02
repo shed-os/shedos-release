@@ -12,15 +12,16 @@
 #   SHEDOS_INSTALLED_IMAGE   installed-ShedOS qcow2 from build-base-image.sh
 #                            (runs the installed scenario)
 #   SHEDOS_BASE_PASS         the image's login password (default shedos)
-#   SHEDOS_OVMF_CODE/_VARS   OVMF firmware
 #
-# Exit 77 = SKIP: no KVM (a Wayland desktop under TCG is too slow to gate),
-# missing qemu/socat/OVMF, or neither input image set.
+# Both scenarios boot the kernel+initrd directly (the installed one is pulled
+# out of its UKI) so we can force the serial console the markers ride on.
+#
+# Exit 77 = SKIP: no KVM (a Wayland desktop under TCG is too slow to gate), no
+# host DRM render node (egl-headless needs a GPU), missing qemu/socat, or
+# neither input image set.
 set -uo pipefail
 SKIP=77
 
-OVMF_CODE=${SHEDOS_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}
-OVMF_VARS=${SHEDOS_OVMF_VARS:-/usr/share/edk2/x64/OVMF_VARS.4m.fd}
 iso=${SHEDOS_LIVE_ISO:-}
 installed=${SHEDOS_INSTALLED_IMAGE:-}
 pass=${SHEDOS_BASE_PASS:-shedos}
@@ -38,8 +39,10 @@ _fail() {
 }
 
 [[ -c /dev/kvm && -w /dev/kvm ]] || _skip "no usable KVM (graphical desktop needs it)"
+# egl-headless renders through a host DRM node; GPU-less CI runners have none,
+# so the desktop can't come up there — SKIP rather than fail a bad boot.
+ls /dev/dri/renderD* >/dev/null 2>&1 || _skip "no DRM render node (egl-headless needs a host GPU)"
 for t in qemu-system-x86_64 socat; do command -v "$t" >/dev/null 2>&1 || _skip "$t not installed"; done
-[[ -f $OVMF_CODE && -f $OVMF_VARS ]] || _skip "OVMF firmware not found (edk2-ovmf)"
 [[ -n $iso || -n $installed ]] || _skip "set SHEDOS_LIVE_ISO and/or SHEDOS_INSTALLED_IMAGE"
 
 work=$(mktemp -d -t lock-assert.XXXXXX)
@@ -89,7 +92,7 @@ _qemu() {  # extra qemu args via "$@"; backgrounds qemu, sets qemu_pid
     rm -f "$mon"
     qemu-system-x86_64 \
         -accel kvm -m 4096 -smp 4 -machine q35 \
-        -device virtio-gpu-gl-pci -display egl-headless \
+        -vga none -device virtio-gpu-gl-pci -display egl-headless \
         -serial "file:$serial" \
         -monitor "unix:$mon,server,nowait" \
         -no-reboot "$@" >"$work/qemu.out" 2>&1 &
@@ -129,20 +132,29 @@ scenario_live() {
 # ========================== INSTALLED =====================================
 scenario_installed() {
     echo "live-iso-lock-assert: [installed] booting $installed"
-    command -v guestfish >/dev/null 2>&1 || _skip "guestfish needed to arm serial on the installed image"
-    local overlay vars
-    overlay=$work/installed.qcow2; vars=$work/vars.fd
+    command -v guestfish >/dev/null 2>&1 || _skip "guestfish needed to read the installed image"
+    command -v objcopy   >/dev/null 2>&1 || _skip "objcopy (binutils) needed to extract the UKI"
+    local overlay; overlay=$work/installed.qcow2
     qemu-img create -f qcow2 -F qcow2 -b "$installed" "$overlay" >/dev/null
-    cp "$OVMF_VARS" "$vars"
-    # Append console + journald-forward to the Limine cmdline so the markers
-    # reach serial (mirrors emergency-boot-assert.sh's limine edit).
-    guestfish --rw -a "$overlay" -i sh \
-      'for f in /boot/efi/EFI/limine/limine.conf /boot/efi/limine.conf /efi/EFI/limine/limine.conf /efi/limine.conf /boot/limine.conf; do [ -f "$f" ] && sed -i "/cmdline:/ s|$| console=ttyS0,115200 systemd.journald.forward_to_console=1|" "$f"; done; true' \
-      || _skip "[installed] guestfish could not arm the image"
+    # The installed image boots the default entry's UKI via Limine efi_chainload,
+    # so its cmdline — including the console= the markers ride on — is baked into
+    # the UKI, not limine.conf. Extract the kernel+initrd+cmdline and boot them
+    # directly with a forced serial console (mirrors emergency-boot-assert.sh).
+    local uki cmdline
+    uki=$(guestfish --ro -a "$overlay" -i sh \
+        'sed -n "s|^ *image_path: *boot():||p" /boot/efi/EFI/limine/limine.conf | head -1' | tr -d '\r')
+    [[ -n $uki ]] || _skip "[installed] no efi_chainload image_path in limine.conf"
+    guestfish --ro -a "$overlay" -i download "/boot/efi$uki" "$work/uki.efi" \
+        || _skip "[installed] could not read the UKI from the image"
+    objcopy -O binary --only-section=.linux  "$work/uki.efi" "$work/vmlinuz" 2>/dev/null
+    objcopy -O binary --only-section=.initrd "$work/uki.efi" "$work/initrd"  2>/dev/null
+    cmdline=$(objcopy -O binary --only-section=.cmdline "$work/uki.efi" /dev/stdout 2>/dev/null | tr -d '\0')
+    [[ -s $work/vmlinuz && -s $work/initrd && -n $cmdline ]] \
+        || _skip "[installed] UKI has no extractable kernel/initrd/cmdline"
 
     _qemu \
-        -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-        -drive if=pflash,format=raw,file="$vars" \
+        -kernel "$work/vmlinuz" -initrd "$work/initrd" \
+        -append "$cmdline console=ttyS0,115200 systemd.journald.forward_to_console=1" \
         -drive file="$overlay",format=qcow2,if=virtio
 
     _engage_lock || { _mon "screendump $art/inst-nolock.ppm"; _fail "[installed] lock never engaged (desktop never came up?)"; }
@@ -154,7 +166,9 @@ scenario_installed() {
         _mon "screendump $art/inst-leaked.ppm"
         _fail "[installed] a bare keypress UNLOCKED — the no-auth path leaked to disk"
     fi
-    # The password must.
+    # The password must. Clear the bare key out of the field first — it landed
+    # in the password buffer, and an "a" prefix would make the password wrong.
+    for _ in $(seq 20); do _key backspace; done
     base=$(_lines)
     _type "$pass"; _key ret
     if _wait_new "shedos-screensaver: unlocked" "$base" 30; then
@@ -168,7 +182,9 @@ scenario_installed() {
 
 # ============================== run =======================================
 ran=0
-[[ -n $iso ]]       && { [[ -f $iso ]]       || _skip "SHEDOS_LIVE_ISO not a file"; scenario_live; ran=1; }
-[[ -n $installed ]] && { [[ -f $installed ]] || _skip "SHEDOS_INSTALLED_IMAGE not a file"; scenario_installed; ran=1; }
+# Resolve to absolute paths: qemu-img records an overlay's -b backing path
+# relative to the overlay's dir (a mktemp dir), not $PWD.
+[[ -n $iso ]]       && { [[ -f $iso ]]       || _skip "SHEDOS_LIVE_ISO not a file"; iso=$(realpath -- "$iso"); scenario_live; ran=1; }
+[[ -n $installed ]] && { [[ -f $installed ]] || _skip "SHEDOS_INSTALLED_IMAGE not a file"; installed=$(realpath -- "$installed"); scenario_installed; ran=1; }
 (( ran )) || _skip "nothing to run"
 echo "live-iso-lock-assert: PASS"

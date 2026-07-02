@@ -4,10 +4,11 @@
 # Exit 77 = SKIP when a prerequisite is missing (rootless CI has none, and the
 # repo doesn't cache an installed image yet):
 #   $SHEDOS_EMERGENCY_TEST_IMAGE  installed-ShedOS UEFI qcow2
-#   qemu-system-x86_64, qemu-img, OVMF (edk2-ovmf), libguestfs (guestfish)
-# Edits go through guestfish (no root, no loop mounts). Serial markers + OVMF
-# disk boot follow boot-assert.sh and test-iso.sh:run_qemu_uefi. The limine
-# cmdline edit + banner string need re-checking once a base image exists.
+#   qemu-system-x86_64, qemu-img, libguestfs (guestfish), binutils (objcopy)
+# Edits go through guestfish (no root, no loop mounts). The image boots a UKI
+# via Limine, so we extract its kernel+initrd and boot them directly with a
+# forced serial console rather than chainloading — the assertion is about fstab
+# recovery on the real root, not the bootloader.
 
 set -uo pipefail
 SKIP=77
@@ -16,17 +17,17 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd -- "$here/.." && pwd)
 lib=$repo/packaging/shedos-system/tree/usr/lib/shedos
 
-OVMF_CODE=${SHEDOS_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}
-OVMF_VARS=${SHEDOS_OVMF_VARS:-/usr/share/edk2/x64/OVMF_VARS.4m.fd}
 base=${SHEDOS_EMERGENCY_TEST_IMAGE:-}
 
 _skip() { echo "emergency-boot-assert: SKIP — $1" >&2; exit "$SKIP"; }
 
-for t in qemu-system-x86_64 qemu-img guestfish; do
+for t in qemu-system-x86_64 qemu-img guestfish objcopy; do
     command -v "$t" >/dev/null 2>&1 || _skip "$t not installed"
 done
 [[ -n $base && -f $base ]] || _skip "set SHEDOS_EMERGENCY_TEST_IMAGE to an installed-ShedOS qcow2"
-[[ -f $OVMF_CODE && -f $OVMF_VARS ]] || _skip "OVMF firmware not found (edk2-ovmf)"
+# qemu-img stores -b relative to the overlay's dir, not $PWD; the overlay lives
+# under a mktemp dir, so a relative $base would resolve to a path that isn't there.
+base=$(realpath -- "$base")
 qemu-system-x86_64 -accel help 2>/dev/null | grep -qiE 'kvm|tcg' || _skip "no usable qemu accelerator"
 
 if [[ -c /dev/kvm && -w /dev/kvm ]]; then timeout=300; else timeout=1200; fi
@@ -41,9 +42,23 @@ cleanup() {
 trap cleanup EXIT
 
 overlay=$work/disk.qcow2
-vars=$work/OVMF_VARS.fd
 qemu-img create -f qcow2 -F qcow2 -b "$base" "$overlay" >/dev/null
-cp "$OVMF_VARS" "$vars"
+
+# The image boots the default entry's UKI via Limine efi_chainload, so the
+# kernel cmdline — including the console= the serial markers ride on — is baked
+# into the UKI, not limine.conf. Pull the kernel, initrd, and cmdline out of it
+# and boot them directly so we can force ttyS0.
+uki=$(guestfish --ro -a "$overlay" -i sh \
+    'sed -n "s|^ *image_path: *boot():||p" /boot/efi/EFI/limine/limine.conf | head -1' \
+    | tr -d '\r')
+[[ -n $uki ]] || _skip "no efi_chainload image_path in limine.conf"
+guestfish --ro -a "$overlay" -i download "/boot/efi$uki" "$work/uki.efi" \
+    || _skip "could not read the UKI $uki from the image"
+objcopy -O binary --only-section=.linux  "$work/uki.efi" "$work/vmlinuz" 2>/dev/null
+objcopy -O binary --only-section=.initrd "$work/uki.efi" "$work/initrd"  2>/dev/null
+cmdline=$(objcopy -O binary --only-section=.cmdline "$work/uki.efi" /dev/stdout 2>/dev/null | tr -d '\0')
+[[ -s $work/vmlinuz && -s $work/initrd && -n $cmdline ]] \
+    || _skip "UKI $uki has no extractable kernel/initrd/cmdline"
 
 # A stale UUID that will never appear — its non-nofail mount is what wedges
 # boot to emergency.
@@ -56,8 +71,8 @@ _boot() {
         -accel kvm -accel tcg \
         -m 4096 -smp 2 -machine q35 \
         -display none -no-reboot \
-        -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-        -drive if=pflash,format=raw,file="$vars" \
+        -kernel "$work/vmlinuz" -initrd "$work/initrd" \
+        -append "$cmdline console=ttyS0,115200 systemd.journald.forward_to_console=1" \
         -drive file="$overlay",format=qcow2,if=virtio \
         -serial "file:$log" \
         >"$work/qemu.out" 2>&1 &
@@ -83,22 +98,13 @@ _wait_for() {
     return 1
 }
 
-# --- step 1: inject console + the ghost mount; assert the guided tool ---
+# --- step 1: inject the ghost mount; assert we reach the guided tool ---
 # fstab edit, host-controlled (download → append → upload).
 guestfish --rw -a "$overlay" -i download /etc/fstab "$work/fstab" \
     || _skip "guestfish could not read the image"
 printf '%s\n' "$GHOST_LINE" >> "$work/fstab"
 guestfish --rw -a "$overlay" -i upload "$work/fstab" /etc/fstab \
     || _skip "guestfish could not write the image"
-
-# limine cmdline edit so the boot is visible on serial (quiet+splash is
-# silent). The config Limine boots from can live at the EFI/limine/ subpath
-# (primary) or an ESP root, on /boot/efi or /efi — mirror the list in
-# apply_core._ESP_LIMINE_MIRRORS. The renderer's directive is
-# `kernel_cmdline:`, which the /cmdline:/ address matches as a substring.
-guestfish --rw -a "$overlay" -i sh \
-  'for f in /boot/efi/EFI/limine/limine.conf /boot/efi/limine.conf /efi/EFI/limine/limine.conf /efi/limine.conf /boot/limine.conf; do [ -f "$f" ] && sed -i "/cmdline:/ s|\$| console=ttyS0,115200 systemd.journald.forward_to_console=1|" "$f"; done; true' \
-  || _skip "guestfish could not edit the limine config"
 
 log1=$work/boot1.log
 _boot "$log1"
