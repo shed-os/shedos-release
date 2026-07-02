@@ -49,7 +49,7 @@ qemu-img create -f qcow2 -F qcow2 -b "$base" "$overlay" >/dev/null
 # into the UKI, not limine.conf. Pull the kernel, initrd, and cmdline out of it
 # and boot them directly so we can force ttyS0.
 uki=$(guestfish --ro -a "$overlay" -i sh \
-    'sed -n "s|^ *image_path: *boot():||p" /boot/efi/EFI/limine/limine.conf | head -1' \
+    'for f in /boot/limine.conf /boot/efi/EFI/limine/limine.conf /boot/efi/limine.conf /efi/EFI/limine/limine.conf /efi/limine.conf; do [ -f "$f" ] && sed -n "s|^ *image_path: *boot():||p" "$f"; done | head -1' \
     | tr -d '\r')
 [[ -n $uki ]] || _skip "no efi_chainload image_path in limine.conf"
 guestfish --ro -a "$overlay" -i download "/boot/efi$uki" "$work/uki.efi" \
