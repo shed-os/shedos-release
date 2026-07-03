@@ -141,8 +141,11 @@ scenario_installed() {
     # the UKI, not limine.conf. Extract the kernel+initrd+cmdline and boot them
     # directly with a forced serial console (mirrors emergency-boot-assert.sh).
     local uki cmdline
-    uki=$(guestfish --ro -a "$overlay" -i sh \
-        'for f in /boot/limine.conf /boot/efi/EFI/limine/limine.conf /boot/efi/limine.conf /efi/EFI/limine/limine.conf /efi/limine.conf; do [ -f "$f" ] && sed -n "s|^ *image_path: *boot():||p" "$f"; done | head -1' | tr -d '\r')
+    if ! uki=$(guestfish --ro -a "$overlay" -i sh \
+        'for f in /boot/limine.conf /boot/efi/EFI/limine/limine.conf /boot/efi/limine.conf /efi/EFI/limine/limine.conf /efi/limine.conf; do [ -f "$f" ] && sed -n "s|^ *image_path: *boot():||p" "$f"; done | head -1'); then
+        _skip "[installed] guestfish could not open the image (appliance build failed?)"
+    fi
+    uki=$(tr -d '\r' <<<"$uki")
     [[ -n $uki ]] || _skip "[installed] no efi_chainload image_path in limine.conf"
     guestfish --ro -a "$overlay" -i download "/boot/efi$uki" "$work/uki.efi" \
         || _skip "[installed] could not read the UKI from the image"
