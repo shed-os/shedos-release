@@ -38,7 +38,7 @@ extract_depends() {
 }
 
 main() {
-    local sources missing=()
+    local sources missing=() pinned=()
     sources=$(sources_set)
 
     for pkgbuild in "$PACKAGING_DIR"/shedos-*/PKGBUILD; do
@@ -50,9 +50,13 @@ main() {
 
         while IFS= read -r dep; do
             [[ -z $dep ]] && continue
-            # Match on the bare name. A dep may pin an ABI version like
-            # hyprland=0.55.4, but coverage only needs the package in the lists.
+            # Match on the bare name for coverage checks below.
             local bare=${dep%%[<>=]*}
+            # An '=' pin on a package ShedOS does not publish wedges
+            # every update once Arch moves past it.
+            if [[ $dep == "$bare="* && $bare != shedos-* ]]; then
+                pinned+=("$pkgname  →  $dep")
+            fi
             [[ $bare == shedos-* ]] && continue
             local in_base=0
             for b in "${BASE_PROVIDED[@]}"; do
@@ -68,6 +72,17 @@ main() {
             fi
         done <<< "$deps"
     done
+
+    if (( ${#pinned[@]} > 0 )); then
+        echo "ERROR: exact-version depends on packages ShedOS does not publish:" >&2
+        echo "" >&2
+        printf '  %s\n' "${pinned[@]}" >&2
+        echo "" >&2
+        echo "Use an unversioned (or >=) dep and ship a rebuilt package in" >&2
+        echo "lockstep instead — an '=' pin on an Arch package blocks every" >&2
+        echo "update once Arch moves past the pinned version." >&2
+        exit 1
+    fi
 
     if (( ${#missing[@]} > 0 )); then
         echo "ERROR: $(printf '%s\n' "${missing[@]}" | wc -l) shedos-* depends not covered by source lists:" >&2
