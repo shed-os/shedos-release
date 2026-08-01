@@ -86,6 +86,7 @@ clang
 clang21
 cliphist
 cmake
+cmark-gfm
 code
 compiler-rt
 compiler-rt21
@@ -975,7 +976,6 @@ python-pathspec
 python-pefile
 python-pgspecial
 python-pip
-python-pkg_resources
 python-platformdirs
 python-pluggy
 python-prompt_toolkit
