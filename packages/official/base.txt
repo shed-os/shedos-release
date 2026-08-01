@@ -7,8 +7,8 @@ base-devel
 pahole
 
 # Primary kernel — Arch linux-zen (desktop-tuned scheduler/HZ). The
-# -headers package is an explicit root because nvidia-open-dkms builds
-# against it at install time.
+# -headers package is an explicit root so DKMS modules can build against
+# it — nvidia's on the boxes that keep the stack, and any user-added ones.
 linux-zen
 linux-zen-headers
 
@@ -27,7 +27,6 @@ linux-firmware-marvell
 linux-firmware-mediatek
 linux-firmware-mellanox
 linux-firmware-nfp
-linux-firmware-nvidia
 linux-firmware-other
 linux-firmware-qcom
 linux-firmware-qlogic
