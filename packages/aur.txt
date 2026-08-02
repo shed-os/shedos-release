@@ -8,8 +8,7 @@ yay
 mise-bin
 
 # Shell
-oh-my-zsh-git
-zsh-theme-powerlevel10k-git
+blesh-git
 
 # IDEs
 visual-studio-code-bin
