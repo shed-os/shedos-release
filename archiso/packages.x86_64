@@ -144,8 +144,8 @@ egl-gbm
 egl-wayland
 egl-wayland2
 egl-x11
-electron39
 electron42
+electron43
 elfutils
 ell
 enchant

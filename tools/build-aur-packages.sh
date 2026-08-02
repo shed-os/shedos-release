@@ -186,6 +186,12 @@ declare -A keep_aur=()
 for p in "${AUR_PACKAGES[@]}"; do
     keep_aur[$p]=1
 done
+# Locally-patched packages (calamares, cage) are built from packaging/
+# by build-shedos-packages.sh and live in this repo dir without being
+# in aur.txt; sweeping them turns the just-built installer into a 404.
+for d in "$PROJECT_ROOT"/packaging/*/; do
+    [[ -f "$d/PKGBUILD" ]] && keep_aur[$(basename "$d")]=1
+done
 phantom_count=0
 shopt -s nullglob
 for f in "$REPO_DIR"/*.pkg.tar.zst; do
