@@ -2,7 +2,7 @@
 # Seed the live `shedos` user's home from /etc/skel so the live ISO runs
 # the exact same Hyprland (Lua) configs an installed user gets — one
 # source of truth, no parallel stripped tree. cp -n preserves the one
-# live-only file we ship (.zprofile: autologin + installer autostart).
+# live-only file we ship (.bash_profile: autologin + installer autostart).
 # Runs during pacstrap only; zzzz99-remove-custom-hooks-from-airootfs.hook
 # strips this file (matching the marker on line 1) from the squashfs, so
 # it never runs on installed systems.

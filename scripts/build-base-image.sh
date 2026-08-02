@@ -177,9 +177,9 @@ PY
 # collide and abort under set -e. Create only if absent, then always normalise:
 # ensure wheel + zsh and set the known test password.
 if arch-chroot "$mnt" id -u "$user" >/dev/null 2>&1; then
-    arch-chroot "$mnt" usermod -aG wheel -s /usr/bin/zsh "$user"
+    arch-chroot "$mnt" usermod -aG wheel -s /usr/bin/bash "$user"
 else
-    arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/zsh "$user"
+    arch-chroot "$mnt" useradd -m -G wheel -s /usr/bin/bash "$user"
 fi
 # The live user's home lived on tmpfs, so usermod leaves the installed @home
 # empty — and without a home the autologin desktop can't write its config.

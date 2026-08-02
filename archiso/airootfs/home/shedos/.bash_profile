@@ -1,4 +1,4 @@
-# ShedOS Live Environment - Auto-start graphical installer on tty1
+# ShedOS Live Environment - Auto-start graphical installer on tty1 (bash login shell)
 
 # Only auto-start on tty1 (main console).
 if [[ $(tty) == "/dev/tty1" ]]; then
