@@ -1311,6 +1311,7 @@ zstd
 
 # --- AUR (built into archiso/shedos-repo by build-aur-packages.sh) ---
 ananicy-cpp-git
+blesh-git
 catppuccin-gtk-theme-mocha
 elephant
 elephant-archlinuxpkgs
@@ -1338,7 +1339,6 @@ libfprint-2-tod1-synatudor-git
 libfprint-tod
 mise-bin
 nautilus-open-any-terminal
-oh-my-zsh-git
 openssl-1.1
 overskride
 postman-bin
@@ -1348,7 +1348,6 @@ usql
 visual-studio-code-bin
 walker
 yay
-zsh-theme-powerlevel10k-git
 
 # --- shedos-* + calamares (built into archiso/shedos-repo) ---
 calamares
