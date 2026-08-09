@@ -14,6 +14,11 @@
 #   flatten <dir>       keep <dir> and lift its contents to the repo root
 #
 # See carve-maps/README.md for how to write one.
+#
+# Nothing is pushed until the rewritten history has been measured against the
+# maps file: a carve that kept more of the monolith than it was told to dies
+# here, where the fix is to edit the maps file and run again, rather than on
+# the remote where the only way out is a force-push.
 set -euo pipefail
 
 die() { printf 'carve: %s\n' "$*" >&2; exit 1; }
@@ -24,8 +29,11 @@ mono=$1 target=$2 maps=$3
 [[ -f $maps ]] || die "$maps does not exist"
 remote=${SHEDOS_CARVE_REMOTE:-git@github.com:shed-os/$target.git}
 
-# Each directive becomes filter-repo arguments.
+# Each directive becomes filter-repo arguments plus one src->dst prefix pair.
+# The pairs are a model of what filter-repo was asked to do, and the check
+# before the push measures the real result against them.
 args=()
+pairs=()
 lineno=0
 
 # The `|| [[ -n $kind ]]` picks up a last line with no newline after it.
@@ -45,6 +53,7 @@ while read -r kind rest || [[ -n $kind ]]; do
     case $kind in
         path)
             args+=(--path "$rest")
+            pairs+=("$rest"$'\t'"$rest")
             ;;
         rename)
             [[ ${rest//[^:]/} == ':' ]] \
@@ -59,10 +68,12 @@ while read -r kind rest || [[ -n $kind ]]; do
             # move — matching only the destination silently starts the
             # history at the rename.
             args+=(--path "$old" --path-rename "$old:$new")
+            pairs+=("$old"$'\t'"$new")
             ;;
         flatten)
             dir=${rest%/}
             args+=(--path "$dir/" --path-rename "$dir/:")
+            pairs+=("$dir/"$'\t')
             ;;
     esac
 done < "$maps"
@@ -79,7 +90,51 @@ git clone --no-local "$mono" "$work/src"
 git -C "$work/src" filter-repo "${args[@]}" --tag-rename '':'mono-'
 git -C "$work/src" tag -l 'mono-*' | xargs -r -n1 git -C "$work/src" tag -d
 
+# --- measure the result against the maps file, before anything is pushed ---
+
+# Where <src> lands once <dst> has been applied, for every monolith path on
+# stdin. filter-repo matches whole path components rather than raw string
+# prefixes — `path old` leaves `oldies/` alone — so this does too, and the
+# expectation stays exactly as tight as the filter it is checking.
+move() {
+    local src=${1%/} dst=${2%/} line rest
+    while IFS= read -r line; do
+        if [[ $line == "$src" ]]; then rest=
+        elif [[ $line == "$src"/* ]]; then rest=${line#"$src"/}
+        else continue
+        fi
+        if [[ -z $rest ]]; then printf '%s\n' "$dst"
+        elif [[ -z $dst ]]; then printf '%s\n' "$rest"
+        else printf '%s/%s\n' "$dst" "$rest"
+        fi
+    done
+}
+
+paths_of() { git -C "$1" log --format= --name-only | sed '/^$/d' | LC_ALL=C sort -u; }
+
+# A carve that matched nothing leaves the branch unborn, so rev-list has no
+# HEAD to count and its own error would be the last word instead of ours.
+commits=$(git -C "$work/src" rev-list --count HEAD 2>/dev/null) || commits=0
+(( commits > 0 )) || die "the carve of $target kept no commits — check the roots in $maps"
+
+mono_paths=$(paths_of "$mono")
+expected=$(
+    for pair in "${pairs[@]}"; do
+        move "${pair%%$'\t'*}" "${pair#*$'\t'}" <<<"$mono_paths"
+    done | LC_ALL=C sort -u
+)
+actual=$(paths_of "$work/src")
+stray=$(LC_ALL=C comm -23 <(printf '%s\n' "$actual") <(printf '%s\n' "$expected"))
+if [[ -n $stray ]]; then
+    printf 'carve: %s carried %d path(s) the maps file never asked for:\n' \
+        "$target" "$(wc -l <<<"$stray")" >&2
+    head -5 <<<"$stray" | sed 's/^/  /' >&2
+    die "refusing to push $target"
+fi
+printf 'verified %d commits and %d paths against %s\n' \
+    "$commits" "$(printf '%s\n' "$actual" | wc -l)" "$maps"
+
 git -C "$work/src" remote add origin "$remote"
 git -C "$work/src" push -u origin main
-echo "carved $target from $mono ($(git -C "$work/src" rev-list --count HEAD) commits)"
+echo "carved $target from $mono ($commits commits)"
 rm -rf "$work"
