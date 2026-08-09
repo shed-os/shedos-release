@@ -42,6 +42,15 @@ if [[ -z $GPG_FP ]]; then
     exit 1
 fi
 printf '%s\n' "$GPG_FP" > "$WORK/trusted-keys.txt"
+gpg --export "$GPG_FP" > "$WORK/keyring.gpg"
+
+# A keyring built from some other key, for the gate that has to notice.
+gpg --batch --pinentry-mode loopback --passphrase '' \
+    --quick-gen-key 'ShedOS harness decoy <decoy@shedos.invalid>' \
+    default default never >>"$WORK/gpg.log" 2>&1
+decoy_fp=$(gpg --list-keys --with-colons decoy@shedos.invalid \
+    | awk -F: '/^fpr:/ {print $10; exit}')
+gpg --export "$decoy_fp" > "$WORK/decoy-keyring.gpg"
 
 # rclone that fails only the listing, the way a bad credential or a 403 would.
 RCLONE_BIN=$(command -v rclone)
@@ -119,6 +128,7 @@ mkdir -p "$BUCKET"
 export SHEDOS_BUCKET=$BUCKET
 export SHEDOS_TRANSFER_LOG=$TRANSFER_LOG
 export SHEDOS_TRUSTED_KEYS_FILE=$WORK/trusted-keys.txt
+export SHEDOS_KEYRING_GPG_FILE=$WORK/keyring.gpg
 # Keep rclone off the developer's own remotes.
 export RCLONE_CONFIG=$WORK/rclone.conf
 : > "$RCLONE_CONFIG"
@@ -169,6 +179,11 @@ check 'the db signature verifies' gpg --batch --verify \
     "$CHANNEL/shedos.db.sig" "$CHANNEL/shedos.db"
 check 'every package uploads before the db' \
     ordered_before '^up .*\.pkg\.tar\.zst' '^up shedos\.db'
+check 'the bootstrap keyring is at the channel root' test -f "$BUCKET/staging/shedos.gpg"
+check 'the keyring is the one we were given' \
+    cmp -s "$WORK/keyring.gpg" "$BUCKET/staging/shedos.gpg"
+check 'the keyring uploads before the db' \
+    ordered_before '^up shedos\.gpg' '^up shedos\.db'
 
 # --- case 2: incremental ----------------------------------------------------
 
@@ -238,16 +253,25 @@ check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
 check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
-section 'case 8 — a channel listing that fails is not an empty channel'
+section 'case 8 — a keyring without the signing key is refused'
+run_publish "$WORK/alpha.json" "$alpha_dir" \
+    "SHEDOS_KEYRING_GPG_FILE=$WORK/decoy-keyring.gpg"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'does not hold the signing key' "$WORK/last.out"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
+
+section 'case 9 — a channel listing that fails is not an empty channel'
 run_publish "$WORK/beta.json" "$beta_dir" "PATH=$WORK/shim:$PATH"
 check 'publish fails' test "$?" -ne 0
 check 'says why' grep -q 'could not list the channel' "$WORK/last.out"
 check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
-# --- case 9: the cutover switch ---------------------------------------------
+# --- case 10: the cutover switch --------------------------------------------
 
-section 'case 9 — an empty CHANNEL_ROOT publishes to the production path'
+section 'case 10 — an empty CHANNEL_ROOT publishes to the production path'
 PROD=$WORK/prod-bucket
 mkdir -p "$PROD"
 run_publish "$WORK/alpha.json" "$alpha_dir" "SHEDOS_BUCKET=$PROD" 'CHANNEL_ROOT='
@@ -255,6 +279,7 @@ rc=$?
 check 'publish succeeds' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 check 'alpha lands under test/x86_64' test -f "$PROD/test/x86_64/$ALPHA_BASE"
+check 'the keyring lands at the bucket root' test -f "$PROD/shedos.gpg"
 check 'nothing lands under staging' test ! -d "$PROD/staging"
 
 # --- result -----------------------------------------------------------------

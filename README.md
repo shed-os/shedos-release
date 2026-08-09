@@ -19,6 +19,7 @@ that doesn't hold:
 2. every package listed is present and hashes to what the payload claims
 3. no package is on the no-republish lists, and none is a `-debug` build
 4. the imported signing key's fingerprint is one the fleet trusts
+5. the bootstrap keyring about to be published holds that same key
 
 Only then does anything get signed. Nothing already in a channel is ever
 deleted — retiring a package is a separate, deliberate act.
@@ -46,6 +47,10 @@ puts them back. Packages upload before the database, so a machine that pulls
 mid-publish never sees an entry whose file isn't up yet. The database is then
 mirrored as `shedostest.*` so a stable box can opt into the canary.
 
+The public keyring goes up beside the packages as `shedos.gpg` at the channel
+root, because a box migrating from Arch fetches it before it owns a single
+ShedOS package and has nothing else to verify the repo with.
+
 If the publisher cannot read what the channel currently holds, it stops.
 "I couldn't list it" and "there's nothing there" have to stay different
 answers, or a failed listing would look like an empty channel and the run
@@ -54,11 +59,11 @@ would write a database holding only its own packages over a live one.
 ## Staging and production
 
 `publisher/lib-channel.sh` is the only place the channel path is spelled out.
-`CHANNEL_ROOT` defaults to `staging/`, so everything published today lands
-under `staging/test/x86_64/` and the live repo is untouched. The cutover sets
-`CHANNEL_ROOT` to the empty string and the same publisher writes
-`test/x86_64/` for real. That one variable is the whole switch, and the test
-suite covers both settings.
+`CHANNEL_ROOT` defaults to `staging/`, so today the packages and database land
+under `staging/test/x86_64/`, the keyring lands at `staging/shedos.gpg`, and
+the live repo is untouched. Both paths are built from that one variable: the
+cutover sets it to the empty string and the same publisher writes
+`test/x86_64/` and `shedos.gpg` for real. The test suite covers both settings.
 
 ## Running the tests
 

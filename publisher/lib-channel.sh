@@ -7,18 +7,30 @@
 #
 # CHANNEL_ROOT is the ONLY place the channel path is spelled out. It defaults
 # to staging/ so nothing here can touch the live repo by accident; the cutover
-# sets it to the empty string and that is the whole change.
+# sets it to the empty string and that is the whole change. Two things hang
+# off it: the packages and database under test/x86_64/, and the bootstrap
+# keyring that sits at the root beside them.
 
 die() { printf 'publish: %s\n' "$*" >&2; exit 1; }
 
-channel_prefix() {
-    printf '%stest/x86_64/' "${CHANNEL_ROOT-staging/}"
+channel_root_path() {
+    printf '%s%s' "${CHANNEL_ROOT-staging/}" "$1"
+}
+
+channel_path() {
+    channel_root_path "test/x86_64/$1"
+}
+
+channel_root_target() {
+    printf '%s/%s' "${SHEDOS_BUCKET%/}" "$(channel_root_path "$1")"
 }
 
 channel_target() {
-    printf '%s/%s%s' "${SHEDOS_BUCKET%/}" "$(channel_prefix)" "$1"
+    printf '%s/%s' "${SHEDOS_BUCKET%/}" "$(channel_path "$1")"
 }
 
+# Names go into the log as the publisher addressed them: bare for the files
+# under test/x86_64/, and likewise bare for the bootstrap keyring at the root.
 channel_log() {
     [[ -n ${SHEDOS_TRANSFER_LOG:-} ]] || return 0
     printf '%s %s\n' "$1" "$2" >> "$SHEDOS_TRANSFER_LOG"
@@ -55,5 +67,10 @@ channel_get() {
 
 channel_put() {
     rclone copyto "$1" "$(channel_target "$2")"
+    channel_log up "$2"
+}
+
+channel_put_root() {
+    rclone copyto "$1" "$(channel_root_target "$2")"
     channel_log up "$2"
 }

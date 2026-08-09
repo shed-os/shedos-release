@@ -4,8 +4,8 @@
 # The single writer of the ShedOS package channels. A package repo builds and
 # asks; this is where the signing key and the bucket credentials live, so this
 # is where the asking gets checked. Nothing is signed until the request has
-# cleared the allowlist, the checksums and the trusted-key gate, and nothing
-# already in the channel is ever deleted.
+# cleared the allowlist, the checksums, the trusted-key gate and the keyring
+# gate, and nothing already in the channel is ever deleted.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -14,6 +14,7 @@ ROOT=$(cd "$HERE/.." && pwd)
 source "$HERE/lib-channel.sh"
 
 MONOLITH_TRUSTED_KEYS=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos-trusted
+MONOLITH_KEYRING=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos.gpg
 
 (( $# == 2 )) || die 'usage: publish.sh <payload.json> <artifact-dir>'
 payload=$1
@@ -87,7 +88,26 @@ fi
 uncommented "$trusted" | grep -qxF "$GPG_FP" \
     || die "signing key $GPG_FP is not on the trusted-keys list"
 
-# --- 5. sign ----------------------------------------------------------------
+# --- 5. the bootstrap keyring must hold that same key -----------------------
+
+# A box migrating from Arch fetches this keyring before it has any ShedOS
+# package, so it is the only thing standing between it and an unverifiable
+# repo. Publishing one that doesn't hold the key we are about to sign with
+# would strand exactly that box.
+if [[ -n ${SHEDOS_KEYRING_GPG_FILE:-} ]]; then
+    keyring=$SHEDOS_KEYRING_GPG_FILE
+    [[ -f $keyring ]] || die "keyring $keyring does not exist"
+else
+    echo "bootstrap: publishing the monolith's shedos.gpg"
+    keyring=$work/shedos.gpg
+    curl -fsSL "$MONOLITH_KEYRING" -o "$keyring" || die 'could not fetch the keyring'
+fi
+keyring_keys=$(gpg --show-keys --with-colons "$keyring" 2>/dev/null \
+    | awk -F: '/^fpr:/ { print $10 }') || die "could not read $keyring as a keyring"
+grep -qxF "$GPG_FP" <<<"$keyring_keys" \
+    || die "the keyring does not hold the signing key $GPG_FP"
+
+# --- 6. sign ----------------------------------------------------------------
 
 for file in "${files[@]}"; do
     echo "sign $file"
@@ -96,7 +116,7 @@ for file in "${files[@]}"; do
         -u "$GPG_FP" --output "$work/$file.sig" "$work/$file"
 done
 
-# --- 6. fold the new packages into the channel db ---------------------------
+# --- 7. fold the new packages into the channel db ---------------------------
 
 present=$(channel_list)
 in_channel() { grep -qxF "$1" <<<"$present"; }
@@ -137,7 +157,7 @@ fi
     cp shedos.files.tar.gz.sig shedos.files.sig
 )
 
-# --- 7. upload, packages first ----------------------------------------------
+# --- 8. upload, packages first ----------------------------------------------
 
 # A box that pulls the db mid-publish must never see an entry whose file
 # isn't up yet.
@@ -145,16 +165,17 @@ for file in "${files[@]}"; do
     channel_put "$work/$file" "$file"
     channel_put "$work/$file.sig" "$file.sig"
 done
+channel_put_root "$keyring" shedos.gpg
 for name in shedos.db.tar.gz shedos.db.tar.gz.sig \
             shedos.files.tar.gz shedos.files.tar.gz.sig \
             shedos.db shedos.db.sig shedos.files shedos.files.sig; do
     channel_put "$work/$name" "$name"
 done
 
-# --- 8. mirror the db as [shedostest] so stable boxes can opt into the canary ---
+# --- 9. mirror the db as [shedostest] so stable boxes can opt into the canary ---
 
 for ext in db db.sig files files.sig; do
     channel_put "$work/shedos.$ext" "shedostest.$ext"
 done
 
-echo "published ${#files[@]} package(s) from $repo to $(channel_prefix)"
+echo "published ${#files[@]} package(s) from $repo to $(channel_path '')"
