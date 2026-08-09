@@ -47,6 +47,10 @@ channel_log() {
 # status is a real failure — bad credentials, no network, a 403 — and saying
 # "empty" to any of those would let the caller build a database holding only
 # this run's packages and write it over a live one.
+#
+# Call it as a plain assignment. The die below exits the command substitution
+# and set -e carries it up; testing the call instead (if present=$(channel_list))
+# would swallow the very failure this exists to catch.
 channel_list() {
     local listing status=0 err
     err=$(mktemp)
