@@ -1,0 +1,94 @@
+name: Channel publisher
+
+on:
+  repository_dispatch:
+    types: [publish-request]
+
+# Every package repo funnels through this one group. The channel db is a
+# read-modify-write, so two publishes at once would lose one of them.
+concurrency:
+  group: repo-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: SHEDOS_ENV
+    container:
+      image: archlinux:latest
+    env:
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      R2_BUCKET: shedos-repo
+    steps:
+      # Before checkout: the action needs git in the container, or it falls
+      # back to a tarball download.
+      - name: Install the publisher toolchain
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --needed --noconfirm \
+              base-devel git curl jq gnupg rclone github-cli
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      # The artifact belongs to the repo that built it, which this job's
+      # GITHUB_TOKEN cannot read.
+      - name: Mint a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHEDOS_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SHEDOS_CI_APP_PRIVATE_KEY }}
+          owner: shed-os
+
+      # Payload fields never get spliced into a shell string: the file goes to
+      # publish.sh, which decides whether to believe any of it.
+      - name: Record the request
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: printf '%s' "$PAYLOAD" > payload.json
+
+      - name: Download the built packages
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_REPO: ${{ github.event.client_payload.repo }}
+          RUN_ID: ${{ github.event.client_payload.run_id }}
+          ARTIFACT: ${{ github.event.client_payload.artifact }}
+        run: |
+          gh run download "$RUN_ID" --repo "$SOURCE_REPO" \
+              --name "$ARTIFACT" --dir artifact
+
+      - name: Import the signing key
+        env:
+          SIGNING_KEY: ${{ secrets.SHEDOS_REPO_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SIGNING_KEY" ]]; then
+              echo "SHEDOS_REPO_SIGNING_KEY is empty or unset." >&2
+              exit 1
+          fi
+          first_line=$(printf '%s' "$SIGNING_KEY" | head -n1)
+          if [[ "$first_line" != "-----BEGIN PGP PRIVATE KEY BLOCK-----" ]]; then
+              echo "The secret is not an armored PGP private key." >&2
+              echo "Got: $first_line" >&2
+              exit 1
+          fi
+          printf '%s\n' "$SIGNING_KEY" | gpg --batch --import
+          FP=$(gpg --list-secret-keys --with-colons \
+               | awk -F: '/^fpr:/ { print $10; exit }')
+          echo "GPG_FP=$FP" >> "$GITHUB_ENV"
+
+      # Which channel this writes to lives in publisher/lib-channel.sh —
+      # CHANNEL_ROOT, staging until the cutover.
+      - name: Publish to the channel
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: ${{ env.R2_ENDPOINT }}
+          RCLONE_CONFIG_R2_REGION: auto
+          # Bucket-scoped R2 tokens have no CreateBucket, and without this
+          # rclone's bucket probe 403s.
+          RCLONE_S3_NO_CHECK_BUCKET: "true"
+          SHEDOS_BUCKET: r2:${{ env.R2_BUCKET }}
+        run: publisher/publish.sh payload.json artifact/

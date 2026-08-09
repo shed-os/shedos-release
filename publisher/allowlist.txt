@@ -1,0 +1,19 @@
+# Repositories the publisher will accept a publish request from. A dispatch
+# naming anything else is refused before a byte is signed, so this file is the
+# trust boundary between "a package repo built something" and "it goes into
+# the channel". One repo per line; '#' starts a comment.
+
+shed-os/shedman
+shed-os/shedos-system
+shed-os/shedos-ui
+shed-os/shedos-hyprland
+shed-os/shedos-theme-engine
+shed-os/shedos-theme-catppuccin
+shed-os/shedos-branding
+shed-os/shedos-nvim
+shed-os/shedos-keyring
+shed-os/shedos-migrate
+shed-os/shedos-installer
+shed-os/calamares
+shed-os/hyprspace
+shed-os/cage
