@@ -1,0 +1,19 @@
+pkgname=gamma
+pkgver=1
+pkgrel=1
+pkgdesc='Harness fixture for the equivalence check'
+arch=('any')
+license=('MIT')
+# The knobs the harness turns to build a candidate that differs from the
+# reference in exactly one way.
+depends=(${GAMMA_DEPENDS:-})
+
+package() {
+    install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/data.txt" \
+        <<<"${GAMMA_DATA:-baseline}"
+    install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/steady.txt" <<<steady
+    ln -s "${GAMMA_LINK:-data.txt}" "$pkgdir/usr/share/$pkgname/current"
+    if [[ -n ${GAMMA_EXTRA:-} ]]; then
+        install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/$GAMMA_EXTRA" <<<extra
+    fi
+}
