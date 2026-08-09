@@ -46,6 +46,11 @@ puts them back. Packages upload before the database, so a machine that pulls
 mid-publish never sees an entry whose file isn't up yet. The database is then
 mirrored as `shedostest.*` so a stable box can opt into the canary.
 
+If the publisher cannot read what the channel currently holds, it stops.
+"I couldn't list it" and "there's nothing there" have to stay different
+answers, or a failed listing would look like an empty channel and the run
+would write a database holding only its own packages over a live one.
+
 ## Staging and production
 
 `publisher/lib-channel.sh` is the only place the channel path is spelled out.

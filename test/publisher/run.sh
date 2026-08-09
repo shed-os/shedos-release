@@ -43,6 +43,19 @@ if [[ -z $GPG_FP ]]; then
 fi
 printf '%s\n' "$GPG_FP" > "$WORK/trusted-keys.txt"
 
+# rclone that fails only the listing, the way a bad credential or a 403 would.
+RCLONE_BIN=$(command -v rclone)
+mkdir -p "$WORK/shim"
+cat > "$WORK/shim/rclone" <<EOF
+#!/usr/bin/env bash
+if [[ \${1:-} == lsf ]]; then
+    echo 'simulated listing failure' >&2
+    exit 7
+fi
+exec $RCLONE_BIN "\$@"
+EOF
+chmod +x "$WORK/shim/rclone"
+
 cat > "$WORK/makepkg.conf" <<EOF
 source /etc/makepkg.conf
 PKGDEST='$WORK/pkgs'
@@ -225,9 +238,16 @@ check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
 check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
-# --- case 8: the cutover switch ---------------------------------------------
+section 'case 8 — a channel listing that fails is not an empty channel'
+run_publish "$WORK/beta.json" "$beta_dir" "PATH=$WORK/shim:$PATH"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'could not list the channel' "$WORK/last.out"
+check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
-section 'case 8 — an empty CHANNEL_ROOT publishes to the production path'
+# --- case 9: the cutover switch ---------------------------------------------
+
+section 'case 9 — an empty CHANNEL_ROOT publishes to the production path'
 PROD=$WORK/prod-bucket
 mkdir -p "$PROD"
 run_publish "$WORK/alpha.json" "$alpha_dir" "SHEDOS_BUCKET=$PROD" 'CHANNEL_ROOT='

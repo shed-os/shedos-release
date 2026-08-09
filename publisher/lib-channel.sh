@@ -9,6 +9,8 @@
 # to staging/ so nothing here can touch the live repo by accident; the cutover
 # sets it to the empty string and that is the whole change.
 
+die() { printf 'publish: %s\n' "$*" >&2; exit 1; }
+
 channel_prefix() {
     printf '%stest/x86_64/' "${CHANNEL_ROOT-staging/}"
 }
@@ -26,9 +28,24 @@ channel_log() {
 # directories, so asking rclone about a single missing key answers "empty
 # listing, no error" and looks exactly like a file that is there — asking for
 # the whole channel and looking the name up is the only form that reads the
-# same on R2 and on a local directory. An unpublished channel lists nothing.
+# same on R2 and on a local directory.
+#
+# An unpublished channel lists nothing: empty and successful on an object
+# store, exit 3 (directory not found) on a local directory. Every other exit
+# status is a real failure — bad credentials, no network, a 403 — and saying
+# "empty" to any of those would let the caller build a database holding only
+# this run's packages and write it over a live one.
 channel_list() {
-    rclone lsf "$(channel_target '')" 2>/dev/null || true
+    local listing status=0 err
+    err=$(mktemp)
+    listing=$(rclone lsf "$(channel_target '')" 2>"$err") || status=$?
+    if (( status != 0 && status != 3 )); then
+        cat "$err" >&2
+        rm -f "$err"
+        die "could not list the channel (rclone exit $status)"
+    fi
+    rm -f "$err"
+    printf '%s' "$listing"
 }
 
 channel_get() {

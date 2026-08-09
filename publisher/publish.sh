@@ -13,8 +13,6 @@ ROOT=$(cd "$HERE/.." && pwd)
 # shellcheck source=publisher/lib-channel.sh
 source "$HERE/lib-channel.sh"
 
-die() { printf 'publish: %s\n' "$*" >&2; exit 1; }
-
 MONOLITH_TRUSTED_KEYS=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos-trusted
 
 (( $# == 2 )) || die 'usage: publish.sh <payload.json> <artifact-dir>'
