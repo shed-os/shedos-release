@@ -65,13 +65,50 @@ the live repo is untouched. Both paths are built from that one variable: the
 cutover sets it to the empty string and the same publisher writes
 `test/x86_64/` and `shedos.gpg` for real. The test suite covers both settings.
 
+## Is it the same package?
+
+`tools/compare-package.sh` answers the question the cutover turns on: did the
+per-repo pipeline build the same package the monolith did?
+
+```
+tools/compare-package.sh <reference.pkg.tar.zst> <candidate.pkg.tar.zst> \
+    tools/expected-diffs/<package>.txt
+```
+
+It compares the `.PKGINFO` fields, the file manifests and then the bytes of
+every shared path, and it reports everything it found rather than stopping at
+the first thing. Exit 0 means nothing separates the two that wasn't expected
+and written down.
+
+Only content differences can be expected, one per line in the package's
+expected-diffs file:
+
+```
+content <path> — <reason>
+```
+
+A field that moved or a file that appeared is never allowlistable, because
+that is exactly the drift the check exists to catch. Every expectation that
+matched is printed, and one that has stopped matching anything fails the run,
+so an allowlist cannot outlive the difference it was written for.
+
+Two `.PKGINFO` fields are ignored — `builddate` and `packager` say when and
+where a build ran, never what it built. `size` is reported as a note rather
+than a difference: it is the sum of the installed bytes, so it moves if and
+only if some file's content moved, and the content tier already names the path
+that did.
+
 ## Running the tests
 
 ```
 bash test/publisher/run.sh
+bash test/carve/run.sh
+bash test/compare/run.sh
 ```
 
 No root, no network, no R2. The bucket is a temporary directory that rclone
 reads with its local backend, the signing key is generated and thrown away
-with it, and the two packages it publishes are built with makepkg from
-`test/publisher/fixtures/`.
+with it, and every package involved is built with makepkg from the fixtures
+beside each suite. `.github/workflows/ci.yml` runs all three on every push and
+pull request, because this repo is the only thing in the org that can write to
+a channel.

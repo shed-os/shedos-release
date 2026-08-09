@@ -1,0 +1,12 @@
+# What may differ between the monolith's cage and the one shed-os/cage builds.
+# Nothing here is a free pass: each path was opened and read before it was
+# written down, and an entry that stops matching fails the run.
+
+# Same source, different machine — 63648 bytes either way, same
+# pkgbuild_sha256sum, and only the build id moves.
+content usr/bin/cage — toolchain rebuild
+
+# scdoc writes the build date into the .TH line as it generates the page, and
+# that line is the only thing that differs once the two are decompressed. The
+# fix is a SOURCE_DATE_EPOCH in the build, not an entry here.
+content usr/share/man/man1/cage.1.gz — the generated man page is stamped with the build date
