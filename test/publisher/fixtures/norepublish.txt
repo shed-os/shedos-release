@@ -1,0 +1,4 @@
+# Stands in for packages/aur-norepublish.txt when the harness checks that a
+# listed package is refused.
+
+alpha

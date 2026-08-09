@@ -1,0 +1,4 @@
+# A trusted-keys list that deliberately does not hold the harness key, so the
+# fingerprint gate has something to refuse.
+
+0000000000000000000000000000000000000000
