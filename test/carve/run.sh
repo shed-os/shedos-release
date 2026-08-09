@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+# Carve harness. Real git, real filter-repo, real pushes — the monolith is a
+# fixture repo built here and every remote is a bare repo in the temp dir.
+# Nothing reaches GitHub.
+set -uo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$HERE/../.." && pwd)
+CARVE=$ROOT/tools/carve.sh
+
+if ! git filter-repo --version >/dev/null 2>&1; then
+    echo "git-filter-repo is not installed; carve.sh cannot be exercised" >&2
+    echo "install it with: pacman -S git-filter-repo" >&2
+    exit 1
+fi
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+pass=0
+fail=0
+
+ok()  { printf '  ok   %s\n' "$1"; pass=$((pass + 1)); }
+bad() { printf '  FAIL %s\n' "$1"; fail=$((fail + 1)); }
+
+check() {
+    local desc=$1
+    shift
+    if "$@"; then ok "$desc"; else bad "$desc"; fi
+}
+
+section() { printf '\n── %s\n' "$1"; }
+
+# --- fixture monolith -------------------------------------------------------
+#
+# Small, but it carries every shape the carve has to get right: a package
+# directory to flatten, a second tree that belongs to the same package, a file
+# that moved between directories, a sibling whose name starts with the same
+# letters as that move's source, release tags, and something that must never
+# come along.
+
+MONO=$WORK/mono
+git init -q -b main "$MONO"
+git -C "$MONO" config user.email harness@shedos.invalid
+git -C "$MONO" config user.name 'carve harness'
+
+mono_commit() { git -C "$MONO" add -A && git -C "$MONO" commit -q -m "$1"; }
+
+mkdir -p "$MONO"/{packaging/cage,unrelated,old,oldies}
+echo pkgbuild > "$MONO/packaging/cage/PKGBUILD"
+echo junk > "$MONO/unrelated/junk"
+mono_commit 'add cage and something unrelated'
+
+echo v1 > "$MONO/old/lib.sh"
+echo sibling > "$MONO/oldies/note"
+mono_commit 'add lib while it still lives in old'
+
+echo v2 >> "$MONO/old/lib.sh"
+mono_commit 'edit lib in place'
+
+git -C "$MONO" tag -a v2026.01.01 -m 'a monolith release'
+
+mkdir -p "$MONO/new"
+git -C "$MONO" mv old/lib.sh new/lib.sh
+mono_commit 'move lib from old to new'
+
+echo v3 >> "$MONO/new/lib.sh"
+mono_commit 'edit lib after the move'
+
+mkdir -p "$MONO/test/cage"
+echo patch > "$MONO/packaging/cage/0001.patch"
+echo suite > "$MONO/test/cage/run.sh"
+echo more >> "$MONO/unrelated/junk"
+mono_commit 'add the cage patch and its out-of-tree suite'
+
+git -C "$MONO" tag -a v2026.02.02 -m 'another monolith release'
+
+# --- helpers ----------------------------------------------------------------
+
+maps() { printf '%s' "$2" > "$WORK/$1.paths"; printf '%s' "$WORK/$1.paths"; }
+
+bare_of() { printf '%s' "$WORK/remotes/$1.git"; }
+
+# Carve into a bare repo of its own. Output lands in $WORK/<target>.out.
+carve() {
+    local target=$1 mapfile=$2 mono=${3:-$MONO}
+    local bare
+    bare=$(bare_of "$target")
+    rm -rf "$bare"
+    git init -q --bare "$bare"
+    SHEDOS_CARVE_REMOTE=$bare bash "$CARVE" "$mono" "$target" "$mapfile" \
+        > "$WORK/$target.out" 2>&1
+}
+
+pushed_paths() {
+    git -C "$(bare_of "$1")" log --format= --name-only main 2>/dev/null \
+        | sed '/^$/d' | LC_ALL=C sort -u | tr '\n' ' '
+}
+pushed_commits() { git -C "$(bare_of "$1")" rev-list --count main 2>/dev/null; }
+pushed_tags()    { git -C "$(bare_of "$1")" tag -l | wc -l; }
+pushed_refs()    { git -C "$(bare_of "$1")" for-each-ref --format='%(refname)' | wc -l; }
+subjects()       { git -C "$(bare_of "$1")" log --format='%s' main 2>/dev/null; }
+
+# A maps file that must be refused: refused for the stated reason, and before
+# anything is pushed. Matching the reason keeps a case from passing because
+# the carve fell over somewhere else entirely.
+refuses() {
+    local desc=$1 target=$2 content=$3 want=$4 mono=${5:-$MONO}
+    if carve "$target" "$(maps "$target" "$content")" "$mono"; then
+        bad "$desc — the carve succeeded"
+        return
+    fi
+    if (( $(pushed_refs "$target") != 0 )); then
+        bad "$desc — died but had already pushed"
+        return
+    fi
+    if ! grep -qF "$want" "$WORK/$target.out"; then
+        bad "$desc — died on something else: $(tail -1 "$WORK/$target.out")"
+        return
+    fi
+    ok "$desc"
+}
+
+# --- maps files that must never carve ---------------------------------------
+
+section 'maps validation'
+
+refuses 'unknown directive'          bad-directive $'bogus packaging/cage\n' \
+        "unknown directive 'bogus' on line 1"
+refuses 'path with no value'         bad-path      $'path\n' \
+        'path on line 1 of'
+refuses 'path with only whitespace'  bad-path-ws   $'path   \n' \
+        'path on line 1 of'
+refuses 'flatten with no value'      bad-flatten   $'flatten\n' \
+        'flatten on line 1 of'
+refuses 'rename with no value'       bad-rename    $'rename\n' \
+        'rename on line 1 of'
+refuses 'rename with no colon'       bad-nocolon   $'rename old\n' \
+        "needs exactly one colon: 'old'"
+refuses 'rename with two colons'     bad-twocolon  $'rename old:new:extra\n' \
+        "needs exactly one colon: 'old:new:extra'"
+refuses 'rename with no source'      bad-nosource  $'rename :new\n' \
+        "has no source: ':new'"
+refuses 'maps that selects nothing'  bad-empty     $'# only a comment\n' \
+        'selects nothing'
+refuses 'roots that match nothing'   bad-roots     $'path nowhere/\n' \
+        'kept no commits'
+refuses 'a monolith that is not one' bad-mono      $'path packaging/cage/\n' \
+        'is not a git repository' "$WORK/not-a-repo"
+
+# --- the carves -------------------------------------------------------------
+
+section 'flatten (the shape cage uses)'
+
+if carve cage "$(maps cage $'flatten packaging/cage\n')"; then
+    ok 'carve succeeded'
+    check 'PKGBUILD and patch sit at the root' \
+        [ "$(pushed_paths cage)" = '0001.patch PKGBUILD ' ]
+    check 'only the commits that touched cage survive' \
+        [ "$(pushed_commits cage)" = 2 ]
+    check 'the monolith release tags are gone' \
+        [ "$(pushed_tags cage)" = 0 ]
+    check 'the pre-push check reported what it measured' \
+        grep -qx 'verified 2 commits and 2 paths against .*/cage.paths' "$WORK/cage.out"
+    check 'nothing unrelated came along' \
+        grep -qv unrelated <<<"$(pushed_paths cage)"
+else
+    bad 'carve succeeded'
+    cat "$WORK/cage.out"
+fi
+
+section 'flatten composes with a second tree'
+
+if carve cage2 "$(maps cage2 $'flatten packaging/cage\npath test/cage/\n')"; then
+    ok 'carve succeeded'
+    check 'the flattened package and the untouched suite are both there' \
+        [ "$(pushed_paths cage2)" = '0001.patch PKGBUILD test/cage/run.sh ' ]
+else
+    bad 'carve succeeded'
+    cat "$WORK/cage2.out"
+fi
+
+section 'rename'
+
+# A rename on its own is a filter, not just a move: naming only the rename
+# would keep the entire monolith.
+if carve lib-rename "$(maps lib-rename $'rename old:new\n')"; then
+    ok 'carve succeeded'
+    check 'only the renamed tree is carved' \
+        [ "$(pushed_paths lib-rename)" = 'new/lib.sh ' ]
+    check 'the sibling that merely starts the same is left behind' \
+        grep -qv oldies <<<"$(pushed_paths lib-rename)"
+    check 'the commits from before the move came too' \
+        grep -qx 'add lib while it still lives in old' <<<"$(subjects lib-rename)"
+    check 'and the edit made while it still lived at the old path' \
+        grep -qx 'edit lib in place' <<<"$(subjects lib-rename)"
+else
+    bad 'carve succeeded'
+    cat "$WORK/lib-rename.out"
+fi
+
+# The form the maps files actually use: the destination as a path, the move as
+# a rename beside it.
+if carve lib-both "$(maps lib-both $'path new/\nrename old:new\n')"; then
+    ok 'carve succeeded'
+    check 'declaring the destination too changes nothing' \
+        [ "$(pushed_paths lib-both)" = "$(pushed_paths lib-rename)" ]
+    check 'blame still reaches the first commit' \
+        grep -qx 'add lib while it still lives in old' <<<"$(subjects lib-both)"
+else
+    bad 'carve succeeded'
+    cat "$WORK/lib-both.out"
+fi
+
+section 'the pre-push check catches a carve that overreaches'
+
+# Nothing a maps file can say gets past the argument builder, so the only way
+# to see the net work is to break the builder on purpose. This is the bug the
+# net exists for: a rename that renames without also filtering, which keeps
+# the entire monolith.
+BROKEN=$WORK/carve-broken.sh
+# shellcheck disable=SC2016  # matching carve.sh's text, not expanding it
+sed 's|args+=(--path "$old" --path-rename "$old:$new")|args+=(--path-rename "$old:$new")|' \
+    "$CARVE" > "$BROKEN"
+# shellcheck disable=SC2016
+if grep -q -- '--path "$old"' "$BROKEN"; then
+    bad 'fault injection did not take — the harness is not testing what it thinks'
+else
+    ok 'fault injection took'
+    rm -rf "$(bare_of overreach)"
+    git init -q --bare "$(bare_of overreach)"
+    SHEDOS_CARVE_REMOTE=$(bare_of overreach) bash "$BROKEN" "$MONO" overreach \
+        "$(maps overreach $'rename old:new\n')" > "$WORK/overreach.out" 2>&1
+    broken_rc=$?
+    check 'the broken carve is refused' [ "$broken_rc" -ne 0 ]
+    check 'it names the paths it was never asked for' \
+        grep -q 'carried 5 path(s) the maps file never asked for' "$WORK/overreach.out"
+    check 'it refuses by name' \
+        grep -q 'refusing to push overreach' "$WORK/overreach.out"
+    check 'and nothing reached the remote' [ "$(pushed_refs overreach)" = 0 ]
+fi
+
+section 'a maps file with no trailing newline'
+
+if carve nonl "$(maps nonl 'flatten packaging/cage')"; then
+    ok 'carve succeeded'
+    check 'the last directive was still read' \
+        [ "$(pushed_paths nonl)" = '0001.patch PKGBUILD ' ]
+else
+    bad 'carve succeeded'
+    cat "$WORK/nonl.out"
+fi
+
+# --- summary ----------------------------------------------------------------
+
+printf '\n%d passed, %d failed\n' "$pass" "$fail"
+(( fail == 0 ))
