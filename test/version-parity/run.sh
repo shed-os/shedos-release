@@ -378,7 +378,7 @@ shopt -u nullglob
 check 'it compared one pair per carve map' \
     grep -qx "all ${#declared[@]} carved package(s) are at the monolith version" \
     "$WORK/last.out"
-check 'and no carve map has gone missing' test "${#declared[@]}" -ge 6
+check 'and no carve map has gone missing' test "${#declared[@]}" -ge 7
 
 # --- result -----------------------------------------------------------------
 

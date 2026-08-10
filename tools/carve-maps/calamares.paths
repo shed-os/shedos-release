@@ -1,0 +1,5 @@
+# The fork's own history holds the root of this repo, so the package build
+# moves into a subdirectory rather than flattening. The path line is what the
+# version check reads to pair the repo with the monolith directory.
+path packaging/calamares/
+rename packaging/calamares:packaging
