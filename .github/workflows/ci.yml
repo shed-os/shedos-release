@@ -18,7 +18,8 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --needed --noconfirm \
-              base-devel git sudo jq rclone gnupg python python-yaml git-filter-repo
+              base-devel git sudo jq rclone gnupg python python-yaml git-filter-repo \
+              curl
           # archlinux:latest ships an empty keyring; populate it for makepkg.
           pacman-key --init
           pacman-key --populate archlinux
