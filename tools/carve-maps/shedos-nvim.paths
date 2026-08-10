@@ -1,3 +1,2 @@
 flatten packaging/shedos-nvim
 path test/nvim/
-rename test/nvim:test/nvim
