@@ -75,6 +75,13 @@ mono_commit 'add the cage patch and its out-of-tree suite'
 
 git -C "$MONO" tag -a v2026.02.02 -m 'another monolith release'
 
+# The monolith is a clone of something, the way the real one is, so a carve can
+# ask whether it is still level with it.
+MONO_ORIGIN=$WORK/mono-origin.git
+git init -q --bare -b main "$MONO_ORIGIN"
+git -C "$MONO" remote add origin "$MONO_ORIGIN"
+git -C "$MONO" push -q origin main
+
 # --- helpers ----------------------------------------------------------------
 
 maps() { printf '%s' "$2" > "$WORK/$1.paths"; printf '%s' "$WORK/$1.paths"; }
@@ -248,6 +255,72 @@ if carve nonl "$(maps nonl 'flatten packaging/cage')"; then
 else
     bad 'carve succeeded'
     cat "$WORK/nonl.out"
+fi
+
+section 'a source tree that is not level with its origin'
+
+# Refused before the clone, so filter-repo never runs and the remote is never
+# touched. carve.sh says "carving <target> in <dir>" the moment it starts, so
+# the absence of that line is what proves nothing began.
+refuses_stale() {
+    local desc=$1 target=$2 mono=$3 want=$4
+    if carve "$target" "$(maps "$target" $'flatten packaging/cage\n')" "$mono"; then
+        bad "$desc — the carve succeeded"
+        return
+    fi
+    if ! grep -qF "$want" "$WORK/$target.out"; then
+        bad "$desc — died on something else: $(tail -1 "$WORK/$target.out")"
+        return
+    fi
+    if grep -q '^carving ' "$WORK/$target.out"; then
+        bad "$desc — refused only after it had started carving"
+        return
+    fi
+    if (( $(pushed_refs "$target") != 0 )); then
+        bad "$desc — died but had already pushed"
+        return
+    fi
+    ok "$desc"
+}
+
+BEHIND=$WORK/mono-behind
+git clone -q "$MONO_ORIGIN" "$BEHIND"
+git -C "$MONO" commit -q --allow-empty -m 'a release the carve should not miss'
+git -C "$MONO" push -q origin main
+behind_head=$(git -C "$BEHIND" rev-parse HEAD)
+origin_head=$(git -C "$MONO" rev-parse HEAD)
+
+check 'the fixture really is one commit behind' \
+    [ "$behind_head" != "$origin_head" ]
+refuses_stale 'a source tree behind its origin is refused' \
+    stale-behind "$BEHIND" "$behind_head"
+check 'the refusal names the origin commit too' \
+    grep -qF "$origin_head" "$WORK/stale-behind.out"
+
+AHEAD=$WORK/mono-ahead
+git clone -q "$MONO_ORIGIN" "$AHEAD"
+git -C "$AHEAD" config user.email harness@shedos.invalid
+git -C "$AHEAD" config user.name 'carve harness'
+git -C "$AHEAD" commit -q --allow-empty -m 'a commit the origin has never seen'
+refuses_stale 'a source tree ahead of its origin is refused' \
+    stale-ahead "$AHEAD" "$(git -C "$AHEAD" rev-parse HEAD)"
+
+NOREMOTE=$WORK/mono-noremote
+git clone -q "$MONO_ORIGIN" "$NOREMOTE"
+git -C "$NOREMOTE" remote remove origin
+refuses_stale 'a source tree with no origin is refused' \
+    stale-noremote "$NOREMOTE" 'no origin'
+
+# The happy path is still a carve: $MONO was pushed to its origin above, so it
+# is level and the check has to let it through.
+git -C "$MONO" push -q origin main
+if carve level "$(maps level $'flatten packaging/cage\n')"; then
+    ok 'a source tree level with its origin still carves'
+    check 'and it carved the same thing as before' \
+        [ "$(pushed_paths level)" = '0001.patch PKGBUILD ' ]
+else
+    bad 'a source tree level with its origin still carves'
+    cat "$WORK/level.out"
 fi
 
 # --- summary ----------------------------------------------------------------

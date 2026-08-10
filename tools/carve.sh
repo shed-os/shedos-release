@@ -80,6 +80,20 @@ done < "$maps"
 
 (( ${#args[@]} > 0 )) || die "$maps selects nothing"
 
+# The carve is a copy of this tree's history, so it has to be exactly where its
+# own origin is. Behind carves a package the release has already moved past and
+# every later check agrees with it, because they all read the same stale tree.
+# Ahead is the same problem from the other side: commits nobody else has.
+source_url=$(git -C "$mono" config --get remote.origin.url) \
+    || die "$mono has no origin to check its history against"
+remote_head=$(git -C "$mono" ls-remote "$source_url" HEAD) \
+    || die "could not reach $mono's origin at $source_url"
+remote_head=${remote_head%%[[:space:]]*}
+[[ -n $remote_head ]] || die "$mono's origin at $source_url names no HEAD"
+local_head=$(git -C "$mono" rev-parse HEAD)
+[[ $local_head == "$remote_head" ]] \
+    || die "$mono is at $local_head and its origin is at $remote_head"
+
 work=$(mktemp -d)
 echo "carving $target in $work"
 git clone --no-local "$mono" "$work/src"
