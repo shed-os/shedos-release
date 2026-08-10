@@ -9,11 +9,31 @@ license=('MIT')
 depends=(${GAMMA_DEPENDS:-})
 
 package() {
-    install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/data.txt" \
-        <<<"${GAMMA_DATA:-baseline}"
-    install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/steady.txt" <<<steady
-    ln -s "${GAMMA_LINK:-data.txt}" "$pkgdir/usr/share/$pkgname/current"
+    local share="$pkgdir/usr/share/$pkgname"
+    install -Dm644 /dev/stdin "$share/data.txt" <<<"${GAMMA_DATA:-baseline}"
+    install -Dm644 /dev/stdin "$share/steady.txt" <<<steady
+    ln -s "${GAMMA_LINK:-data.txt}" "$share/current"
+
+    # Mode lives only in .MTREE: the bytes and the manifest are untouched.
+    chmod "${GAMMA_MODE:-644}" "$share/steady.txt"
+
+    # An empty directory and a symlink land on the same manifest entry once
+    # the trailing slash is normalised away.
+    case ${GAMMA_SHAPE:-dir} in
+        dir)  mkdir -p "$share/spot" ;;
+        link) ln -s data.txt "$share/spot" ;;
+    esac
+
+    # Same bytes and same manifest either way. Only the inode count moves,
+    # and makepkg counts a hardlinked file once. This pair keeps its own
+    # content so that turning the content knob cannot disturb it.
+    install -Dm644 /dev/stdin "$share/pair-a.txt" <<<pair
+    case ${GAMMA_TWIN:-copy} in
+        hard) ln "$share/pair-a.txt" "$share/pair-b.txt" ;;
+        copy) cp "$share/pair-a.txt" "$share/pair-b.txt" ;;
+    esac
+
     if [[ -n ${GAMMA_EXTRA:-} ]]; then
-        install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/$GAMMA_EXTRA" <<<extra
+        install -Dm644 /dev/stdin "$share/$GAMMA_EXTRA" <<<extra
     fi
 }

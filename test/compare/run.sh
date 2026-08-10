@@ -68,6 +68,9 @@ build changed   GAMMA_DATA=altered
 build extra     GAMMA_EXTRA=bonus.txt
 build depended  GAMMA_DEPENDS=bash
 build relinked  GAMMA_LINK=steady.txt
+build shaped    GAMMA_SHAPE=link
+build twinned   GAMMA_TWIN=hard
+build setuid    GAMMA_MODE=4755
 
 # --- helpers ----------------------------------------------------------------
 
@@ -78,21 +81,29 @@ diffs() {
     printf '%s' "$WORK/$name.diffs"
 }
 
-# Compare <candidate> against the reference. Output lands in $WORK/<name>.out.
-# With no expected-diffs file of its own a case gets an empty one, so the
-# default is an allowlist that permits nothing.
-compare() {
-    local name=$1 candidate=$2
-    local expected=${3:-}
+# Compare two builds. Output lands in $WORK/<name>.out. With no expected-diffs
+# file of its own a case gets an empty one, so the default is an allowlist
+# that permits nothing.
+compare_pair() {
+    local name=$1 reference=$2 candidate=$3
+    local expected=${4:-}
     [[ -n $expected ]] || expected=$(diffs "$name-empty" '')
-    bash "$COMPARE" "$WORK/reference.pkg.tar.zst" "$WORK/$candidate.pkg.tar.zst" \
+    bash "$COMPARE" "$WORK/$reference.pkg.tar.zst" "$WORK/$candidate.pkg.tar.zst" \
         "$expected" > "$WORK/$name.out" 2>&1
 }
 
-# The lines that are findings, as opposed to the header, the matched
-# expectations, the notes and the summary.
+# The common shape: <candidate> against the reference build.
+compare() { compare_pair "$1" reference "$2" "${3:-}"; }
+
+# The sha256 of one path inside one build, which is what an expectation pins.
+sha_in() {
+    bsdtar -xOf "$WORK/$1.pkg.tar.zst" "$2" | sha256sum | cut -d' ' -f1
+}
+
+# The lines that are findings, as opposed to the matched expectations, the
+# notes and the summary.
 findings() {
-    grep -E '^(pkginfo |manifest only-in-|content: |stale expectation: )' \
+    grep -E '^(pkginfo |manifest only-in-|content: |mtree |stale expectation: )' \
         "$WORK/$1.out"
 }
 
@@ -205,6 +216,116 @@ compare link relinked
 check 'compare fails' test "$?" -ne 0
 check 'the symlink is reported' \
     test "$(findings link)" = 'content: usr/share/gamma/current'
+
+# --- case 8: a directory that becomes a symlink -----------------------------
+#
+# An empty directory and a symlink land on the same manifest entry once the
+# trailing slash is normalised away, so nothing above the content tier can
+# see this. Deciding what to skip by the reference side alone used to let it
+# through as equivalent.
+
+section 'case 8 — an empty directory that becomes a symlink is reported'
+check 'the two builds really do have identical manifests' \
+    cmp -s <(bsdtar -tf "$WORK/reference.pkg.tar.zst" | sed -e 's|/$||' | sort) \
+           <(bsdtar -tf "$WORK/shaped.pkg.tar.zst" | sed -e 's|/$||' | sort)
+compare shape shaped
+check 'compare fails' test "$?" -ne 0
+check 'the path is reported' says shape 'content: usr/share/gamma/spot'
+
+section 'case 8b — and so is a symlink that becomes an empty directory'
+compare_pair shape-back shaped reference
+check 'compare fails' test "$?" -ne 0
+check 'the path is reported' says shape-back 'content: usr/share/gamma/spot'
+
+# --- case 9: size that the content tier cannot explain ----------------------
+#
+# makepkg counts a hardlinked file once, so replacing a hardlink with a copy
+# moves the installed size while the manifest and every hash stay put.
+
+section 'case 9 — a size the content findings do not explain is reported'
+check 'the two builds really do have identical manifests' \
+    cmp -s <(bsdtar -tf "$WORK/reference.pkg.tar.zst" | sort) \
+           <(bsdtar -tf "$WORK/twinned.pkg.tar.zst" | sort)
+compare twin twinned
+check 'compare fails' test "$?" -ne 0
+check 'no content difference was found at all' \
+    not grep -q '^content: ' "$WORK/twin.out"
+check 'the size is reported against what content predicted' \
+    grep -q '^pkginfo size: observed .* != predicted 0 from the content findings' \
+        "$WORK/twin.out"
+
+section 'case 9b — that size finding cannot be allowlisted'
+compare twin-allowed twinned \
+    "$(diffs twin-allowed $'content usr/share/gamma/pair-b.txt — try to wave it through\n')"
+check 'compare still fails' test "$?" -ne 0
+check 'the size is still reported' says twin-allowed 'pkginfo size: observed'
+
+section 'case 9c — a size that the content findings do explain is only a note'
+compare size-note changed \
+    "$(diffs size-note $'content usr/share/gamma/data.txt — harness rewrote it\n')"
+check 'compare succeeds' test "$?" -eq 0
+check 'nothing is reported' test "$(finding_count size-note)" -eq 0
+check 'the size move is noted rather than gated' \
+    grep -q '^note: size .* accounted for by the content findings' \
+        "$WORK/size-note.out"
+
+# --- case 10: expectations pinned to one exact difference -------------------
+
+section 'case 10 — a pinned expectation matches only that difference'
+pin=$(sha_in reference usr/share/gamma/data.txt)..$(sha_in changed usr/share/gamma/data.txt)
+compare pinned changed \
+    "$(diffs pinned "content usr/share/gamma/data.txt $pin — harness rewrote it")"
+check 'compare succeeds' test "$?" -eq 0
+check 'nothing is reported' test "$(finding_count pinned)" -eq 0
+check 'the expectation is credited' \
+    says pinned 'expected: usr/share/gamma/data.txt (harness rewrote it)'
+check 'a pinned entry is not called unpinned' \
+    not grep -q 'unpinned expectation' "$WORK/pinned.out"
+[[ $(finding_count pinned) -eq 0 ]] || cat "$WORK/pinned.out"
+
+section 'case 10b — a pin stops matching once the difference changes'
+# The same path differing in a different way: the pin was written for the
+# reference-to-changed pair, and this run compares reference to relinked.
+compare pin-moved relinked \
+    "$(diffs pin-moved "content usr/share/gamma/current $pin — pinned to the wrong pair")"
+check 'compare fails' test "$?" -ne 0
+check 'the difference is unexplained' says pin-moved 'content: usr/share/gamma/current'
+check 'and the pin that no longer describes it is stale' \
+    says pin-moved 'stale expectation: usr/share/gamma/current'
+
+section 'case 10c — an unpinned expectation says that it is unpinned'
+compare unpinned changed \
+    "$(diffs unpinned $'content usr/share/gamma/data.txt — harness rewrote it\n')"
+check 'compare succeeds' test "$?" -eq 0
+check 'the entry is credited' says unpinned 'expected: usr/share/gamma/data.txt'
+check 'and flagged as unpinned' \
+    says unpinned 'note: unpinned expectation usr/share/gamma/data.txt'
+
+section 'case 10d — an entry with no reason is refused'
+compare reasonless changed \
+    "$(diffs reasonless $'content usr/share/gamma/data.txt\n')"
+check 'compare fails' test "$?" -ne 0
+check 'it says what the format is' says reasonless '<reason>'
+
+# --- case 11: mode, owner and type ------------------------------------------
+#
+# .MTREE is the only trustworthy record of these: the tool extracts
+# unprivileged, so a setuid bit would not survive into the extracted tree.
+
+section 'case 11 — a setuid bit set in the candidate is reported'
+check 'the bytes are identical on both sides' \
+    test "$(sha_in reference usr/share/gamma/steady.txt)" \
+       = "$(sha_in setuid usr/share/gamma/steady.txt)"
+compare mode setuid
+check 'compare fails' test "$?" -ne 0
+check 'the mode change is reported' \
+    test "$(findings mode)" = 'mtree usr/share/gamma/steady.txt: mode 644 != 4755'
+
+section 'case 11b — a mode difference cannot be allowlisted'
+compare mode-allowed setuid \
+    "$(diffs mode-allowed $'content usr/share/gamma/steady.txt — try to wave it through\n')"
+check 'compare still fails' test "$?" -ne 0
+check 'the mode change is still reported' says mode-allowed 'mtree usr/share/gamma/steady.txt: mode'
 
 # --- usage ------------------------------------------------------------------
 
