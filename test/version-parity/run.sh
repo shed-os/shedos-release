@@ -6,9 +6,20 @@
 # check builds its reference from the same stale tree the candidate came from,
 # so the two agree about the wrong version. This is what notices.
 #
-# SHEDOS_PARITY_PAIRS, SHEDOS_PARITY_CARVED_DIR and SHEDOS_PARITY_MONOLITH_DIR
-# replace the list and the two fetches, which is how the cases below run offline.
+# What to compare is not written down twice: the carve maps are the list. A
+# maps file names the packaging directory it carves and is named for the repo
+# it carves into, so a carve that forgot to add itself here cannot happen — the
+# maps file it must already write is the entry. The whole thing goes at cutover,
+# when the monolith stops holding packaging at all.
+#
+# SHEDOS_PARITY_MAPS_DIR, SHEDOS_PARITY_CARVED_DIR and SHEDOS_PARITY_MONOLITH_DIR
+# replace the maps directory and the two fetches, which is how the cases below
+# run offline.
 set -uo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$HERE/../.." && pwd)
+MAPS_DIR=$ROOT/tools/carve-maps
 
 MONOLITH_RAW=https://raw.githubusercontent.com/Theshedman/shedos/main
 CARVED_RAW=https://raw.githubusercontent.com/shed-os
@@ -16,12 +27,10 @@ CARVED_RAW=https://raw.githubusercontent.com/shed-os
 # and a GitHub runner is a datacenter address.
 USER_AGENT='shedos-release (+https://shedos.org)'
 
-# Each carved repo and the directory it came out of. One more line per carve,
-# and the whole list goes at cutover when the monolith stops holding packaging.
-PAIRS='cage packaging/cage
-shedos-nvim packaging/shedos-nvim
-shedos-migrate packaging/shedos-migrate-to-packaged
-shedos-keyring packaging/shedos-keyring'
+# Maps files that carve something other than a package, one name per line. A
+# maps file naming no packaging directory has to be listed here; the check
+# refuses to guess which it is. Empty today — all four carves are packages.
+NOT_PACKAGES=''
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -53,6 +62,41 @@ pkgbuild_field() {
     printf '%s\n' "$value"
 }
 
+# One "<repo> <packaging dir>" line per carve map, written to $1. The repo is
+# the maps file's name and the packaging dir is whichever directive names one.
+# A rename contributes its destination, because that is where the monolith
+# holds the package now — and because the clearer form writes `path new` beside
+# it, which would otherwise read as two packaging directories rather than one.
+derive_pairs() {
+    local out=$1 dir file repo roots count
+    dir=${SHEDOS_PARITY_MAPS_DIR:-$MAPS_DIR}
+
+    shopt -s nullglob
+    local maps=("$dir"/*.paths)
+    shopt -u nullglob
+    (( ${#maps[@]} > 0 )) || { echo "no carve maps in $dir"; return 2; }
+
+    for file in "${maps[@]}"; do
+        repo=$(basename "$file" .paths)
+        roots=$(awk '$1 == "path" || $1 == "flatten" { print $2 }
+                     $1 == "rename" { sub(/.*:/, "", $2); print $2 }' "$file" \
+                | sed 's:/*$::' | grep '^packaging/' | LC_ALL=C sort -u)
+        count=0
+        [[ -z $roots ]] || count=$(grep -c . <<<"$roots")
+
+        if (( count == 0 )); then
+            grep -qxF "$repo" <<<"$NOT_PACKAGES" && continue
+            echo "$repo.paths carves no packaging directory and is not listed as exempt"
+            return 2
+        fi
+        if (( count > 1 )); then
+            echo "$repo.paths carves $count packaging directories and one has to be the package"
+            return 2
+        fi
+        printf '%s %s\n' "$repo" "$roots" >> "$out"
+    done
+}
+
 read_pkgbuild() {
     local dir=$1 key=$2 url=$3 out=$4
     if [[ -n $dir ]]; then
@@ -68,7 +112,9 @@ parity_check() {
     local seen=0 diverged=0
     carved=$WORK/carved.PKGBUILD
     monolith=$WORK/monolith.PKGBUILD
-    pairs=${SHEDOS_PARITY_PAIRS:-$PAIRS}
+    pairs=$WORK/pairs
+    : > "$pairs"
+    derive_pairs "$pairs" || return 2
 
     while read -r repo path; do
         [[ -n ${repo//[[:space:]]/} ]] || continue
@@ -101,7 +147,7 @@ parity_check() {
             echo "$repo is at $cver-$crel behind $path at $mver-$mrel"
             diverged=1
         fi
-    done <<<"$pairs"
+    done < "$pairs"
 
     (( seen > 0 )) || { echo 'no carved repositories to compare'; return 2; }
     (( diverged == 0 )) || return 1
@@ -110,7 +156,7 @@ parity_check() {
 
 run_check() {
     (
-        unset SHEDOS_PARITY_PAIRS SHEDOS_PARITY_CARVED_DIR SHEDOS_PARITY_MONOLITH_DIR
+        unset SHEDOS_PARITY_MAPS_DIR SHEDOS_PARITY_CARVED_DIR SHEDOS_PARITY_MONOLITH_DIR
         while (( $# )); do export "${1?}"; shift; done
         parity_check
     ) >"$WORK/last.out" 2>&1
@@ -118,10 +164,9 @@ run_check() {
 
 # --- fixtures ---------------------------------------------------------------
 
+MAPS=$WORK/fixture/maps
 CARVED=$WORK/fixture/carved
 MONO=$WORK/fixture/monolith
-TWO='alpha packaging/alpha
-beta packaging/beta'
 
 write_pkgbuild() {
     local out=$1/PKGBUILD
@@ -134,18 +179,27 @@ write_pkgbuild() {
     } > "$out"
 }
 
+write_maps() {
+    mkdir -p "$MAPS"
+    printf '%s\n' "$2" > "$MAPS/$1.paths"
+}
+
 set_pair() {
     write_pkgbuild "$CARVED/$1" "$3" "$4"
     write_pkgbuild "$MONO/$2" "$5" "$6"
 }
 
 with_fixtures() {
-    run_check "SHEDOS_PARITY_PAIRS=$TWO" \
+    run_check "SHEDOS_PARITY_MAPS_DIR=$MAPS" \
         "SHEDOS_PARITY_CARVED_DIR=$CARVED" "SHEDOS_PARITY_MONOLITH_DIR=$MONO"
 }
 
+# alpha is the bare shape, beta the one a real package uses: the packaging
+# directory flattened and an out-of-tree suite kept where it sits.
 reset_fixtures() {
     rm -rf "$WORK/fixture"
+    write_maps alpha 'flatten packaging/alpha'
+    write_maps beta $'flatten packaging/beta\npath test/beta/'
     set_pair alpha packaging/alpha 1.0 1 1.0 1
     set_pair beta packaging/beta 2026.08.09 1 2026.08.09 1
 }
@@ -212,9 +266,65 @@ with_fixtures
 check 'the check fails' test "$?" -eq 2
 check 'it says the version is not there' grep -qx 'beta names no pkgver or pkgrel' "$WORK/last.out"
 
-# --- case 7: the carves as they stand ---------------------------------------
+# --- case 7: where the pairs come from --------------------------------------
 
-section 'case 7 — every carved repository matches the monolith it came from'
+section 'case 7 — the pairs are the carve maps'
+reset_fixtures
+write_maps gamma $'flatten packaging/gamma\npath test/gamma/'
+set_pair gamma packaging/gamma 3.0 1 3.0 1
+with_fixtures
+rc=$?
+check 'a new carve map is a new pair with nothing else edited' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'and it is counted' \
+    grep -qx 'all 3 carved package(s) are at the monolith version' "$WORK/last.out"
+
+section 'case 8 — a renamed package is looked up where the monolith holds it now'
+reset_fixtures
+write_maps beta 'rename packaging/beta-was:packaging/beta'
+with_fixtures
+rc=$?
+check 'the destination is the pair and the check passes' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+
+section 'case 9 — a rename beside the destination it declares is one pair'
+reset_fixtures
+write_maps beta $'path packaging/beta/\nrename packaging/beta-was:packaging/beta'
+with_fixtures
+rc=$?
+check 'the clearer form is not read as two packages' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'and it is still counted once' \
+    grep -qx 'all 2 carved package(s) are at the monolith version' "$WORK/last.out"
+
+section 'case 10 — a map carving no packaging directory has to be declared'
+reset_fixtures
+write_maps docs 'path documentation/'
+with_fixtures
+check 'the check fails' test "$?" -eq 2
+check 'it names the map it will not guess at' \
+    grep -qx 'docs.paths carves no packaging directory and is not listed as exempt' \
+    "$WORK/last.out"
+
+section 'case 11 — a map carving two packaging directories is ambiguous'
+reset_fixtures
+write_maps beta $'flatten packaging/beta\npath packaging/beta-extras/'
+with_fixtures
+check 'the check fails' test "$?" -eq 2
+check 'it says how many it found' \
+    grep -qx 'beta.paths carves 2 packaging directories and one has to be the package' \
+    "$WORK/last.out"
+
+section 'case 12 — a maps directory with nothing in it is not a pass'
+reset_fixtures
+rm -f "$MAPS"/*.paths
+with_fixtures
+check 'the check fails' test "$?" -eq 2
+check 'it says there is nothing to compare' grep -q 'no carve maps in' "$WORK/last.out"
+
+# --- case 13: the carves as they stand --------------------------------------
+
+section 'case 13 — every carved repository matches the monolith it came from'
 run_check
 rc=$?
 check 'the check passes' test "$rc" -eq 0
