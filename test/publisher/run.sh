@@ -91,11 +91,40 @@ build_fixture() {
     fi
 }
 
+# A keyring package the way the channel serves one, holding whichever key it
+# is handed.
+build_keyring_fixture() {
+    local pkgver=$1 key=$2
+    local dir=$WORK/fixture/keyring-$pkgver
+    mkdir -p "$dir/tree"
+    cp "$HERE/fixtures/keyring/PKGBUILD" "$dir/PKGBUILD"
+    sed -i "s/^pkgver=.*/pkgver=$pkgver/" "$dir/PKGBUILD"
+    printf '%s\n' "$key" > "$dir/tree/shedos-trusted"
+    # Both keys, so the packaged shedos.gpg cannot be confused with the one
+    # the override points at.
+    gpg --export "$GPG_FP" "$decoy_fp" > "$dir/tree/shedos.gpg"
+    if ! (cd "$dir" && makepkg --config "$WORK/makepkg.conf" --nodeps --force) \
+            >>"$WORK/makepkg.log" 2>&1; then
+        echo "could not build the keyring fixture:" >&2
+        tail -20 "$WORK/makepkg.log" >&2
+        exit 1
+    fi
+}
+
 build_fixture alpha
 build_fixture beta
 build_fixture delta 1
 build_fixture delta 2
 build_fixture delta 3
+build_keyring_fixture 1 "$GPG_FP"
+build_keyring_fixture 2 "$decoy_fp"
+build_keyring_fixture 3 "$GPG_FP"
+KEYRING=$WORK/pkgs/shedos-keyring-1-1-any.pkg.tar.zst
+DECOY_KEYRING=$WORK/pkgs/shedos-keyring-2-1-any.pkg.tar.zst
+# A keyring that passes every other gate, for the one that has to notice the
+# channel is serving a package its database never recorded.
+SWAPPED_KEYRING=$WORK/pkgs/shedos-keyring-3-1-any.pkg.tar.zst
+KEYRING_BASE=$(basename "$KEYRING")
 ALPHA=$(echo "$WORK/pkgs"/alpha-*.pkg.tar.zst)
 BETA=$(echo "$WORK/pkgs"/beta-*.pkg.tar.zst)
 ALPHA_BASE=$(basename "$ALPHA")
@@ -258,7 +287,7 @@ run_publish "$WORK/alpha.json" "$alpha_dir" \
 check 'publish fails' test "$?" -ne 0
 check 'says why' grep -q 'trusted' "$WORK/last.out"
 check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
-check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
 section 'case 8 — a keyring without the signing key is refused'
@@ -267,7 +296,7 @@ run_publish "$WORK/alpha.json" "$alpha_dir" \
 check 'publish fails' test "$?" -ne 0
 check 'says why' grep -q 'does not hold the signing key' "$WORK/last.out"
 check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
-check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
 section 'case 9 — a channel listing that fails is not an empty channel'
@@ -340,6 +369,83 @@ check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$corrupt"
 # Hand the channel back intact, so whatever gets appended below starts where
 # case 12 left off rather than on a database this case broke.
 cp "$WORK/good.db.tar.gz" "$CHANNEL/shedos.db.tar.gz"
+
+# --- where the trust comes from ---------------------------------------------
+
+# Both overrides empty, so the publisher has to find the keyring itself —
+# the production path.
+NO_SEAMS=(SHEDOS_TRUSTED_KEYS_FILE= SHEDOS_KEYRING_GPG_FILE=)
+bsdtar -xOqf "$KEYRING" usr/share/pacman/keyrings/shedos.gpg > "$WORK/packaged.gpg"
+
+section 'case 14 — the first publish trusts the keyring it is carrying'
+FRESH=$WORK/fresh-bucket
+mkdir -p "$FRESH"
+keyring_dir=$(stage_artifact keyring "$KEYRING")
+make_payload "$WORK/keyring.json" shed-os/shedos-keyring "$keyring_dir"
+run_publish "$WORK/keyring.json" "$keyring_dir" "${NO_SEAMS[@]}" "SHEDOS_BUCKET=$FRESH"
+rc=$?
+check 'publish succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'it names the trust source' \
+    grep -qx 'trust source: shedos-keyring 1-1 from this request' "$WORK/last.out"
+check 'the channel root keyring is the packaged one' \
+    cmp -s "$WORK/packaged.gpg" "$FRESH/staging/shedos.gpg"
+check 'it is not the file the override names' \
+    not cmp -s "$WORK/keyring.gpg" "$FRESH/staging/shedos.gpg"
+
+section 'case 15 — the next publish trusts the keyring the channel holds'
+run_publish "$WORK/alpha.json" "$alpha_dir" "${NO_SEAMS[@]}" "SHEDOS_BUCKET=$FRESH"
+rc=$?
+check 'publish succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'it names the trust source' \
+    grep -qx 'trust source: shedos-keyring 1-1 from the channel' "$WORK/last.out"
+check 'it announces no other source' not grep -qi 'bootstrap' "$WORK/last.out"
+check 'the channel root keyring is still the packaged one' \
+    cmp -s "$WORK/packaged.gpg" "$FRESH/staging/shedos.gpg"
+
+section 'case 16 — the fingerprint gate reads the channel keyring, not a local file'
+DECOYED=$WORK/decoy-bucket
+mkdir -p "$DECOYED"
+decoy_dir=$(stage_artifact decoy-keyring "$DECOY_KEYRING")
+make_payload "$WORK/decoy.json" shed-os/shedos-keyring "$decoy_dir"
+run_publish "$WORK/decoy.json" "$decoy_dir" "SHEDOS_BUCKET=$DECOYED"
+rc=$?
+check 'the publish that seeds the channel succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+
+seeded=$(bucket_digest "$DECOYED")
+run_publish "$WORK/alpha.json" "$alpha_dir" "${NO_SEAMS[@]}" "SHEDOS_BUCKET=$DECOYED"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'is not on the trusted-keys list' "$WORK/last.out"
+check 'the local trusted-keys file would have passed' \
+    grep -qxF "$GPG_FP" "$WORK/trusted-keys.txt"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$DECOYED")" = "$seeded"
+
+section 'case 17 — a channel keyring the database does not vouch for is refused'
+fresh_channel=$FRESH/staging/test/x86_64
+cp "$fresh_channel/$KEYRING_BASE" "$WORK/good-keyring.pkg"
+cp "$SWAPPED_KEYRING" "$fresh_channel/$KEYRING_BASE"
+tampered=$(bucket_digest "$FRESH")
+run_publish "$WORK/alpha.json" "$alpha_dir" "${NO_SEAMS[@]}" "SHEDOS_BUCKET=$FRESH"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'does not match the sha256' "$WORK/last.out"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$FRESH")" = "$tampered"
+cp "$WORK/good-keyring.pkg" "$fresh_channel/$KEYRING_BASE"
+
+section 'case 18 — an empty channel with no keyring in the request is refused'
+EMPTY=$WORK/empty-bucket
+mkdir -p "$EMPTY"
+run_publish "$WORK/alpha.json" "$alpha_dir" "${NO_SEAMS[@]}" "SHEDOS_BUCKET=$EMPTY"
+check 'publish fails' test "$?" -ne 0
+check 'says why' \
+    grep -q 'holds no shedos-keyring and this request brings none' "$WORK/last.out"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
 
 # --- result -----------------------------------------------------------------
 

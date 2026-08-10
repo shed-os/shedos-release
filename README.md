@@ -20,6 +20,13 @@ that doesn't hold:
 3. no package is on the no-republish lists, and none is a `-debug` build
 4. the imported signing key's fingerprint is one the fleet trusts
 5. the bootstrap keyring about to be published holds that same key
+6. no package is older than the version the channel already serves
+
+Both lists behind 4 and 5 are read out of the `shedos-keyring` package the
+channel serves, checked against the sha256 its database records, so the
+publisher and the fleet trust the same file. A first publish into an empty
+channel has no such package to read and takes them from the keyring in the
+request; a request that brings none is refused.
 
 Only then does anything get signed. Nothing already in a channel is ever
 deleted — retiring a package is a separate, deliberate act.

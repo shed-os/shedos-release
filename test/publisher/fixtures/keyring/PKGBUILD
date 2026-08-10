@@ -1,0 +1,16 @@
+# Stands in for shedos-keyring. The two files the publisher reads its trust
+# from land on the paths the real package installs them to, because the
+# publisher addresses them by path inside the package.
+pkgname=shedos-keyring
+pkgver=1
+pkgrel=1
+pkgdesc='Harness fixture for the channel publisher'
+arch=('any')
+license=('MIT')
+
+package() {
+    install -Dm644 "$startdir/tree/shedos-trusted" \
+        "$pkgdir/usr/share/pacman/keyrings/shedos-trusted"
+    install -Dm644 "$startdir/tree/shedos.gpg" \
+        "$pkgdir/usr/share/pacman/keyrings/shedos.gpg"
+}

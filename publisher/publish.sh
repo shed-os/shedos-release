@@ -13,13 +13,8 @@ ROOT=$(cd "$HERE/.." && pwd)
 # shellcheck source=publisher/lib-channel.sh
 source "$HERE/lib-channel.sh"
 
-MONOLITH_TRUSTED_KEYS=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos-trusted
-MONOLITH_KEYRING=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos.gpg
-# Cloudflare's managed rules drop datacenter traffic that does not name itself,
-# and a GitHub runner is a datacenter address. GitHub does not care today, but
-# these fetches move to repo.shedos.org, which does — and a UA added after the
-# move is a UA added after a 403.
-USER_AGENT='shedos-release (+https://shedos.org)'
+KEYRING_PKG=shedos-keyring
+KEYRING_DIR=usr/share/pacman/keyrings
 
 (( $# == 2 )) || die 'usage: publish.sh <payload.json> <artifact-dir>'
 payload=$1
@@ -79,41 +74,22 @@ for file in "${files[@]}"; do
     done
 done
 
-# --- 4. the key doing the signing must be one the fleet trusts --------------
+# --- 4. what the incoming packages call themselves --------------------------
 
-if [[ -n ${SHEDOS_TRUSTED_KEYS_FILE:-} ]]; then
-    trusted=$SHEDOS_TRUSTED_KEYS_FILE
-    [[ -f $trusted ]] || die "trusted-keys file $trusted does not exist"
-else
-    echo "bootstrap: trusting the monolith's shedos-trusted"
-    trusted=$work/shedos-trusted
-    curl -fsSL -A "$USER_AGENT" "$MONOLITH_TRUSTED_KEYS" -o "$trusted" \
-        || die 'could not fetch the trusted-keys list'
-fi
-uncommented "$trusted" | grep -qxF "$GPG_FP" \
-    || die "signing key $GPG_FP is not on the trusted-keys list"
+# Read once, from the package rather than the file name: the keyring lookup
+# and the version gate both need it, and this is what repo-add will record.
+incoming=$(
+    for file in "${files[@]}"; do
+        info=$(bsdtar -xOqf "$artifact/$file" .PKGINFO) \
+            || die "could not read the package metadata in $file"
+        awk -F' = ' -v f="$file" \
+            '$1 == "pkgname" { n = $2 } $1 == "pkgver" { v = $2 }
+             END { if (n == "" || v == "") exit 1; print f "\t" n "\t" v }' \
+            <<<"$info" || die "$file names no package or version"
+    done
+)
 
-# --- 5. the bootstrap keyring must hold that same key -----------------------
-
-# A box migrating from Arch fetches this keyring before it has any ShedOS
-# package, so it is the only thing standing between it and an unverifiable
-# repo. Publishing one that doesn't hold the key we are about to sign with
-# would strand exactly that box.
-if [[ -n ${SHEDOS_KEYRING_GPG_FILE:-} ]]; then
-    keyring=$SHEDOS_KEYRING_GPG_FILE
-    [[ -f $keyring ]] || die "keyring $keyring does not exist"
-else
-    echo "bootstrap: publishing the monolith's shedos.gpg"
-    keyring=$work/shedos.gpg
-    curl -fsSL -A "$USER_AGENT" "$MONOLITH_KEYRING" -o "$keyring" \
-        || die 'could not fetch the keyring'
-fi
-keyring_keys=$(gpg --show-keys --with-colons "$keyring" 2>/dev/null \
-    | awk -F: '/^fpr:/ { print $10 }') || die "could not read $keyring as a keyring"
-grep -qxF "$GPG_FP" <<<"$keyring_keys" \
-    || die "the keyring does not hold the signing key $GPG_FP"
-
-# --- 6. pull the channel db -------------------------------------------------
+# --- 5. pull the channel db -------------------------------------------------
 
 present=$(channel_list)
 in_channel() { grep -qxF "$1" <<<"$present"; }
@@ -140,33 +116,108 @@ else
     echo 'no db in the channel yet; starting a fresh one'
 fi
 
-# --- 7. a published package may not go backwards ----------------------------
+# One record per line: name, version, file, sha256. Unpacked to a directory
+# rather than read as a stream so a record ends where its file does.
+published=
+if [[ -f $work/shedos.db.tar.gz ]]; then
+    mkdir "$work/db"
+    bsdtar -xf "$work/shedos.db.tar.gz" -C "$work/db" \
+        || die 'could not read the channel database'
+    shopt -s nullglob
+    descs=("$work"/db/*/desc)
+    shopt -u nullglob
+    if (( ${#descs[@]} )); then
+        published=$(awk '
+            FNR == 1 && NR > 1 { print n "\t" v "\t" f "\t" s; n=""; v=""; f=""; s="" }
+            /^%NAME%$/      { getline n }
+            /^%VERSION%$/   { getline v }
+            /^%FILENAME%$/  { getline f }
+            /^%SHA256SUM%$/ { getline s }
+            END { if (NR) print n "\t" v "\t" f "\t" s }
+        ' "${descs[@]}")
+    fi
+fi
+
+# --- 6. the trust files come out of the published keyring -------------------
+
+# The fingerprint list this gate reads and the shedos.gpg republished at the
+# channel root are the same two files the fleet installs from shedos-keyring,
+# taken from the channel's own copy of that package. Trusting a key the fleet
+# does not is then not a thing the publisher can do. The overrides stay for
+# the harness and for a channel whose keyring has to be worked around.
+if [[ -n ${SHEDOS_TRUSTED_KEYS_FILE:-} ]]; then
+    trusted=$SHEDOS_TRUSTED_KEYS_FILE
+    [[ -f $trusted ]] || die "trusted-keys file $trusted does not exist"
+fi
+if [[ -n ${SHEDOS_KEYRING_GPG_FILE:-} ]]; then
+    keyring=$SHEDOS_KEYRING_GPG_FILE
+    [[ -f $keyring ]] || die "keyring $keyring does not exist"
+fi
+
+if [[ -z ${trusted:-} || -z ${keyring:-} ]]; then
+    entry=$(awk -F'\t' -v n="$KEYRING_PKG" '$1 == n { print; exit }' <<<"$published")
+    if [[ -n $entry ]]; then
+        IFS=$'\t' read -r _ version file sum <<<"$entry"
+        mkdir "$work/channel"
+        channel_get "$file" "$work/channel/$file"
+        got=$(sha256sum "$work/channel/$file" | cut -d' ' -f1)
+        [[ $got == "$sum" ]] \
+            || die "the channel's $file does not match the sha256 its database records"
+        pkg=$work/channel/$file
+        origin='from the channel'
+    else
+        # The first publish into an empty channel has no keyring to read, so
+        # it may only come from the request that is bringing one.
+        entry=$(awk -F'\t' -v n="$KEYRING_PKG" '$2 == n { print; exit }' <<<"$incoming")
+        [[ -n $entry ]] \
+            || die "the channel holds no $KEYRING_PKG and this request brings none"
+        IFS=$'\t' read -r file _ version <<<"$entry"
+        pkg=$artifact/$file
+        origin='from this request'
+    fi
+    echo "trust source: $KEYRING_PKG $version $origin"
+    mkdir "$work/keys"
+    for name in shedos-trusted shedos.gpg; do
+        bsdtar -xOqf "$pkg" "$KEYRING_DIR/$name" > "$work/keys/$name" \
+            || die "the $KEYRING_PKG package holds no $name"
+    done
+    trusted=${trusted:-$work/keys/shedos-trusted}
+    keyring=${keyring:-$work/keys/shedos.gpg}
+fi
+
+# --- 7. the key doing the signing must be one the fleet trusts --------------
+
+uncommented "$trusted" | grep -qxF "$GPG_FP" \
+    || die "signing key $GPG_FP is not on the trusted-keys list"
+
+# --- 8. the bootstrap keyring must hold that same key -----------------------
+
+# A box migrating from Arch fetches this keyring before it has any ShedOS
+# package, so it is the only thing standing between it and an unverifiable
+# repo. Publishing one that doesn't hold the key we are about to sign with
+# would strand exactly that box.
+keyring_keys=$(gpg --show-keys --with-colons "$keyring" 2>/dev/null \
+    | awk -F: '/^fpr:/ { print $10 }') || die "could not read $keyring as a keyring"
+grep -qxF "$GPG_FP" <<<"$keyring_keys" \
+    || die "the keyring does not hold the signing key $GPG_FP"
+
+# --- 9. a published package may not go backwards ----------------------------
 
 # repo-add writes whatever it is handed, in either direction, so rerunning an
 # old build would walk the channel back a version and every box that already
 # took the newer one would be offered a downgrade. Republishing the same
 # version is still fine; that is a rebuild of what is already there.
-if [[ -f $work/shedos.db.tar.gz ]]; then
-    published=$(bsdtar -xOf "$work/shedos.db.tar.gz" '*/desc' 2>/dev/null \
-        | awk '/^%NAME%$/ { getline n } /^%VERSION%$/ { getline v; print n "\t" v }') \
-        || die "could not read the channel database"
-    for file in "${files[@]}"; do
-        # Straight from the package, because that is what repo-add will record.
-        info=$(bsdtar -xOqf "$artifact/$file" .PKGINFO) \
-            || die "could not read the package metadata in $file"
-        read -r name version < <(awk -F' = ' \
-            '$1 == "pkgname" { n = $2 } $1 == "pkgver" { v = $2 } END { print n, v }' \
-            <<<"$info")
-        [[ -n $name && -n $version ]] || die "$file names no package or version"
+if [[ -n $published ]]; then
+    while IFS=$'\t' read -r _ name version; do
         have=$(awk -F'\t' -v n="$name" '$1 == n { print $2; exit }' <<<"$published")
         [[ -n $have ]] || continue
         if [[ $(vercmp "$version" "$have") -lt 0 ]]; then
             die "$name $version is older than the published $have"
         fi
-    done
+    done <<<"$incoming"
 fi
 
-# --- 8. sign ----------------------------------------------------------------
+# --- 10. sign ---------------------------------------------------------------
 
 for file in "${files[@]}"; do
     echo "sign $file"
