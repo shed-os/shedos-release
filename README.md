@@ -75,28 +75,43 @@ tools/compare-package.sh <reference.pkg.tar.zst> <candidate.pkg.tar.zst> \
     tools/expected-diffs/<package>.txt
 ```
 
-It compares the `.PKGINFO` fields, the file manifests and then the bytes of
-every shared path, and it reports everything it found rather than stopping at
-the first thing. Exit 0 means nothing separates the two that wasn't expected
-and written down.
+It compares the `.PKGINFO` fields, the file manifests, the bytes of every
+shared path, and the mode, owner and type `.MTREE` recorded at build time. It
+reports everything it found rather than stopping at the first thing. Exit 0
+means nothing separates the two that wasn't expected and written down.
 
 Only content differences can be expected, one per line in the package's
-expected-diffs file:
+expected-diffs file, in either form:
 
 ```
 content <path> — <reason>
+content <path> <ref-sha256>..<cand-sha256> — <reason>
 ```
 
-A field that moved or a file that appeared is never allowlistable, because
-that is exactly the drift the check exists to catch. Every expectation that
-matched is printed, and one that has stopped matching anything fails the run,
-so an allowlist cannot outlive the difference it was written for.
+The second pins the entry to one exact difference: if either side's bytes
+change again the entry stops matching and the new difference is unexplained.
+The first still works and is still credited, but the tool notes it as unpinned,
+because an unpinned entry keeps forgiving that path whatever later happens to
+it. Prefer the pinned form.
 
-Two `.PKGINFO` fields are ignored — `builddate` and `packager` say when and
-where a build ran, never what it built. `size` is reported as a note rather
-than a difference: it is the sum of the installed bytes, so it moves if and
-only if some file's content moved, and the content tier already names the path
-that did.
+A field that moved, a file that appeared or a mode that changed is never
+allowlistable, because that is exactly the drift the check exists to catch.
+Every expectation that matched is printed, and one that has stopped matching
+anything fails the run, so an allowlist cannot outlive the difference it was
+written for.
+
+`builddate` and `packager` are ignored — they say when and where a build ran,
+never what it built. `size` is reconciled rather than ignored: the tool adds up
+the lengths the content findings account for and compares that against the
+size the two packages claim. When the two agree it is only a note. When they
+don't, it is a finding, because makepkg counts a hardlinked file once — two
+packages can carry identical manifests and identical bytes and still install
+different amounts.
+
+Mode and ownership come from `.MTREE` rather than from the extracted files:
+the tool unpacks unprivileged, so a setuid bit would not survive into the
+extracted tree, and that is the difference most worth catching. Timestamps are
+the one column left out — they are why `.MTREE` can't be compared whole.
 
 ## Running the tests
 

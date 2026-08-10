@@ -3,10 +3,16 @@
 # written down, and an entry that stops matching fails the run.
 
 # Same source, different machine — 63648 bytes either way, same
-# pkgbuild_sha256sum, and only the build id moves.
-content usr/bin/cage — toolchain rebuild
+# pkgbuild_sha256sum, and only the build id moves. Pinned to that one pair of
+# binaries, so the next time this file differs it has to be looked at again.
+content usr/bin/cage c2c795445793f74d9922fa9deb3c870754fcb246c2228941e20634efebd6be18..db55ddeebea0a84ecc51227c676e9e09b72231c1c5a46499a4cdbc7ff5d4910c — toolchain rebuild
 
 # scdoc writes the build date into the .TH line as it generates the page, and
-# that line is the only thing that differs once the two are decompressed. The
-# fix is a SOURCE_DATE_EPOCH in the build, not an entry here.
+# that line is the only thing that differs once the two are decompressed.
+#
+# Deliberately left unpinned: the date moves on every rebuild, so a pin would
+# go stale the next time either side is built and turn the gate red for a
+# difference already understood. The cost is that this entry forgives anything
+# else that happens to the page, and the way to close it is SOURCE_DATE_EPOCH
+# in the build rather than a pin here.
 content usr/share/man/man1/cage.1.gz — the generated man page is stamped with the build date
