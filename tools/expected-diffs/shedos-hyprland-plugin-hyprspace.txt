@@ -1,0 +1,33 @@
+# What may differ between the monolith's shedos-hyprland-plugin-hyprspace and the one
+# shed-os/hyprspace builds. Nothing here is a free pass: each path was opened and read
+# before it was written down, and an entry that stops matching fails the run.
+
+# Reference: built from packaging/shedos-hyprland-plugin-hyprspace at monolith commit
+# 93d7442b, which was origin/main at the time, under a scratch MAKEPKG_CONF carrying the
+# same BUILDENV and OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel
+# came from that PKGBUILD unmodified and matched the published 2026.07.03-1, so nothing
+# was patched to make the two agree. Candidate: the artifact the staging database
+# records.
+
+# The plugin is one shared library and the two builds of it are not the same bytes. The
+# cause was chased down rather than assumed, and it is not the toolchain: the two builds
+# ran on the same gcc, the same hyprland and the same versions of every package the
+# other one had installed — .BUILDINFO puts 280 packages on both sides with no version
+# apart.
+#
+# The Makefile compiles $(wildcard src/*.cpp) in one command, and that list arrives in
+# the builder's collation order. The pipeline's container runs in the C locale, where
+# main.cpp sorts after Render.cpp; a desktop running a UTF-8 locale sorts it between
+# Layout.cpp and Overview.cpp. Same sources, different order on the command line,
+# different code layout — .text 39 bytes shorter one way and .rodata 12 longer the
+# other. Rebuilding the reference here with LC_ALL=C reproduces the published artifact
+# to within its 20-byte build ID, which is what proves the reading.
+#
+# Left unpinned, for the same reason cage's man page is: the difference regenerates. The
+# GNU build ID alone changes on every build — two runs on one machine with everything
+# else equal differ in those 20 bytes and nothing more — so a pinned pair would name a
+# reference that cannot be built twice, and the next person to reproduce this compare
+# would get a failure that means nothing. The way to close the entry is to sort the
+# wildcard in the plugin's Makefile and to give the build a fixed build ID, and then to
+# move the pinned commit so a build actually picks the change up.
+content usr/lib/hyprland/Hyprspace.so — the source file order follows the builder's locale, and the build ID is fresh on every build
