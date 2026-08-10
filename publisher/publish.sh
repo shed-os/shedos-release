@@ -148,7 +148,8 @@ fi
 # version is still fine; that is a rebuild of what is already there.
 if [[ -f $work/shedos.db.tar.gz ]]; then
     published=$(bsdtar -xOf "$work/shedos.db.tar.gz" '*/desc' 2>/dev/null \
-        | awk '/^%NAME%$/ { getline n } /^%VERSION%$/ { getline v; print n "\t" v }')
+        | awk '/^%NAME%$/ { getline n } /^%VERSION%$/ { getline v; print n "\t" v }') \
+        || die "could not read the channel database"
     for file in "${files[@]}"; do
         # Straight from the package, because that is what repo-add will record.
         info=$(bsdtar -xOqf "$artifact/$file" .PKGINFO) \

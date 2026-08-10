@@ -325,6 +325,22 @@ check 'alpha lands under test/x86_64' test -f "$PROD/test/x86_64/$ALPHA_BASE"
 check 'the keyring lands at the bucket root' test -f "$PROD/shedos.gpg"
 check 'nothing lands under staging' test ! -d "$PROD/staging"
 
+# --- case 13: a database that cannot be read --------------------------------
+
+section 'case 13 — a channel database that will not open is refused'
+cp "$CHANNEL/shedos.db.tar.gz" "$WORK/good.db.tar.gz"
+head -c 512 /dev/urandom > "$CHANNEL/shedos.db.tar.gz"
+corrupt=$(bucket_digest "$BUCKET")
+run_publish "$WORK/alpha.json" "$alpha_dir"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'could not read the channel database' "$WORK/last.out"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$corrupt"
+# Hand the channel back intact, so whatever gets appended below starts where
+# case 12 left off rather than on a database this case broke.
+cp "$WORK/good.db.tar.gz" "$CHANNEL/shedos.db.tar.gz"
+
 # --- result -----------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
