@@ -58,8 +58,8 @@ overreaches dies locally, where the fix is to edit the maps file and run again.
 Getting that wrong on the remote instead would leave a force-push as the only
 way out.
 
-`test/carve/run.sh` covers this, including a deliberately broken copy of
-`carve.sh` to prove the check actually fires.
+`test/carve/run.sh` covers this, including a broken copy of `carve.sh`, so the
+check is proven to fire.
 
 ## Running one
 

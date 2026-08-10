@@ -29,7 +29,7 @@
 # The first still works, and says so, because an unpinned entry keeps
 # forgiving that path whatever happens to it.
 #
-# Metadata, manifest and mtree findings are deliberately not allowlistable.
+# Metadata, manifest and mtree findings are not allowlistable.
 # The whole point of the check is that the cutover cannot paper over a drift
 # in what the package claims to be, what it carries, or how it is installed.
 #

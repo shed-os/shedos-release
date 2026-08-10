@@ -29,8 +29,8 @@ artifact=$2
 : "${SHEDOS_BUCKET:?SHEDOS_BUCKET is not set}"
 : "${GPG_FP:?GPG_FP is not set}"
 
-# The exclusion lists are overridable so the harness can exercise a refusal
-# without editing the shipped lists. The allowlist deliberately is not.
+# The exclusion lists are overridable so a suite can exercise a refusal without
+# editing the shipped lists. The allowlist is not.
 ALLOWLIST=$HERE/allowlist.txt
 NOREPUBLISH=${SHEDOS_NOREPUBLISH_FILE:-$ROOT/packages/aur-norepublish.txt}
 INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$ROOT/packages/installer-only.txt}

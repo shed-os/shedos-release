@@ -37,9 +37,9 @@ jobs:
               echo "$f parses"
           done
 
-      # Every suite runs even when an earlier one fails, because one red
-      # harness hiding the state of the others is how a second defect gets to
-      # ride out on the fix for the first.
+      # Every suite runs even when an earlier one fails: a red suite hiding
+      # the state of the others lets a second defect ride out on the fix for
+      # the first.
       - name: Run the harnesses
         run: |
           chown -R tester:tester .

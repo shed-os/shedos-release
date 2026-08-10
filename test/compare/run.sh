@@ -230,12 +230,9 @@ check 'the two builds really do have identical manifests' \
            <(bsdtar -tf "$WORK/shaped.pkg.tar.zst" | sed -e 's|/$||' | sort)
 compare shape shaped
 check 'compare fails' test "$?" -ne 0
-# Two detectors fire here and they are not redundant. The mtree tier sees the
-# type change on its own, so a run would still fail without the content tier
-# ever looking — which is how this got through the first time. The content
-# line is the one under test, so it is asserted by name rather than through
-# the exit status, and the mtree line is checked separately to keep anyone
-# from later deciding the two are the same assertion.
+# The mtree tier sees the type change on its own, so a run would still fail
+# without the content tier ever looking. The content line is the one under
+# test, so it is asserted by name rather than through the exit status.
 check 'the content tier reports it' says shape 'content: usr/share/gamma/spot'
 check 'and the mtree tier corroborates independently' \
     says shape 'mtree usr/share/gamma/spot: type dir != link'

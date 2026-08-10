@@ -214,10 +214,9 @@ fi
 
 section 'the pre-push check catches a carve that overreaches'
 
-# Nothing a maps file can say gets past the argument builder, so the only way
-# to see the net work is to break the builder on purpose. This is the bug the
-# net exists for: a rename that renames without also filtering, which keeps
-# the entire monolith.
+# Nothing a maps file can say gets past the argument builder, so the builder
+# is broken here instead: a rename that renames without also filtering, which
+# keeps the entire monolith.
 BROKEN=$WORK/carve-broken.sh
 # shellcheck disable=SC2016  # matching carve.sh's text, not expanding it
 sed 's|args+=(--path "$old" --path-rename "$old:$new")|args+=(--path-rename "$old:$new")|' \
