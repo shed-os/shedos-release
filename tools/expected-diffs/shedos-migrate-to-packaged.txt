@@ -1,0 +1,12 @@
+# What may differ between the monolith's shedos-migrate-to-packaged and the one
+# shed-os/shedos-migrate builds. Nothing here is a free pass: each path was opened and
+# read before it was written down, and an entry that stops matching fails the run.
+
+# Nothing differs, and there is no reason for anything to. The reference was built from
+# the monolith's packaging/shedos-migrate-to-packaged at the pkgrel the carved repo
+# published, under a scratch MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the
+# pipeline writes beside its own config. The package is arch=any and its package()
+# installs two scripts out of tree/ — it compiles nothing and downloads nothing, so a
+# second build has nothing to move.
+#
+# An entry appearing here later is a real difference, not a build that drifted.
