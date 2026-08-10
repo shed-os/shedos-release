@@ -10,6 +10,13 @@ concurrency:
   group: repo-publish
   cancel-in-progress: false
 
+# The artifact comes down on the minted App token and the channel is written
+# with the R2 credentials, so the job's own token only ever has to read this
+# checkout. The most privileged workflow in the org is the last one that should
+# be running on whatever the default happens to be.
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
