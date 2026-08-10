@@ -20,7 +20,10 @@
 #                        from the environment, and Qt's resource compiler stamps it into
 #                        .rodata as a millisecond timestamp
 #   the build directory  /__w/calamares/calamares/packaging, where the runner checks the
-#                        repository out
+#                        repository out — a workstation cannot create that path without
+#                        root, so bind it there instead: bwrap --tmpfs / with /usr /etc
+#                        /var /home /tmp /run /dev dev-bound, the usual /bin /lib /sbin
+#                        symlinks, and --bind <reference tree> /__w
 #
 # The directory is the surprising one. Two things here follow its text and its length:
 # src/libcalamaresui/viewpages/QmlViewStep.cpp reaches a Qt logging macro that bakes
