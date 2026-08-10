@@ -15,6 +15,11 @@ source "$HERE/lib-channel.sh"
 
 MONOLITH_TRUSTED_KEYS=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos-trusted
 MONOLITH_KEYRING=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos.gpg
+# Cloudflare's managed rules drop datacenter traffic that does not name itself,
+# and a GitHub runner is a datacenter address. GitHub does not care today, but
+# these fetches move to repo.shedos.org, which does — and a UA added after the
+# move is a UA added after a 403.
+USER_AGENT='shedos-release (+https://shedos.org)'
 
 (( $# == 2 )) || die 'usage: publish.sh <payload.json> <artifact-dir>'
 payload=$1
@@ -82,7 +87,7 @@ if [[ -n ${SHEDOS_TRUSTED_KEYS_FILE:-} ]]; then
 else
     echo "bootstrap: trusting the monolith's shedos-trusted"
     trusted=$work/shedos-trusted
-    curl -fsSL "$MONOLITH_TRUSTED_KEYS" -o "$trusted" \
+    curl -fsSL -A "$USER_AGENT" "$MONOLITH_TRUSTED_KEYS" -o "$trusted" \
         || die 'could not fetch the trusted-keys list'
 fi
 uncommented "$trusted" | grep -qxF "$GPG_FP" \
@@ -100,7 +105,8 @@ if [[ -n ${SHEDOS_KEYRING_GPG_FILE:-} ]]; then
 else
     echo "bootstrap: publishing the monolith's shedos.gpg"
     keyring=$work/shedos.gpg
-    curl -fsSL "$MONOLITH_KEYRING" -o "$keyring" || die 'could not fetch the keyring'
+    curl -fsSL -A "$USER_AGENT" "$MONOLITH_KEYRING" -o "$keyring" \
+        || die 'could not fetch the keyring'
 fi
 keyring_keys=$(gpg --show-keys --with-colons "$keyring" 2>/dev/null \
     | awk -F: '/^fpr:/ { print $10 }') || die "could not read $keyring as a keyring"

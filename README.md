@@ -51,6 +51,14 @@ The public keyring goes up beside the packages as `shedos.gpg` at the channel
 root, because a box migrating from Arch fetches it before it owns a single
 ShedOS package and has nothing else to verify the repo with.
 
+Until this repo owns the keyring, the trusted-keys list and that `shedos.gpg`
+are fetched from the monolith on every publish, and both fetches send a
+descriptive User-Agent. Any fetch this repo later makes from `repo.shedos.org`
+has to send one too. Cloudflare's managed rules drop datacenter traffic that
+does not name itself, and a GitHub runner is a datacenter address: a bare
+`curl` gets 403 from CI while working perfectly from a desk, which is the
+worst shape a failure can take.
+
 If the publisher cannot read what the channel currently holds, it stops.
 "I couldn't list it" and "there's nothing there" have to stay different
 answers, or a failed listing would look like an empty channel and the run
