@@ -1,0 +1,10 @@
+pkgname=delta
+pkgver=1
+pkgrel=1
+pkgdesc='Harness fixture for the channel publisher'
+arch=('any')
+license=('MIT')
+
+package() {
+    install -Dm644 /dev/stdin "$pkgdir/usr/share/$pkgname/marker" <<<"$pkgname $pkgver"
+}

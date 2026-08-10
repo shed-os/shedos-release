@@ -78,10 +78,11 @@ EOF
 mkdir -p "$WORK/pkgs" "$WORK/src" "$WORK/srcpkg" "$WORK/build"
 
 build_fixture() {
-    local name=$1
-    local dir=$WORK/fixture/$name
+    local name=$1 pkgver=${2:-}
+    local dir=$WORK/fixture/$name${pkgver:+-$pkgver}
     mkdir -p "$dir"
     cp "$HERE/fixtures/$name/PKGBUILD" "$dir/PKGBUILD"
+    [[ -z $pkgver ]] || sed -i "s/^pkgver=.*/pkgver=$pkgver/" "$dir/PKGBUILD"
     if ! (cd "$dir" && makepkg --config "$WORK/makepkg.conf" --nodeps --force) \
             >>"$WORK/makepkg.log" 2>&1; then
         echo "could not build the $name fixture:" >&2
@@ -92,10 +93,17 @@ build_fixture() {
 
 build_fixture alpha
 build_fixture beta
+build_fixture delta 1
+build_fixture delta 2
+build_fixture delta 3
 ALPHA=$(echo "$WORK/pkgs"/alpha-*.pkg.tar.zst)
 BETA=$(echo "$WORK/pkgs"/beta-*.pkg.tar.zst)
 ALPHA_BASE=$(basename "$ALPHA")
 BETA_BASE=$(basename "$BETA")
+DELTA1=$WORK/pkgs/delta-1-1-any.pkg.tar.zst
+DELTA2=$WORK/pkgs/delta-2-1-any.pkg.tar.zst
+DELTA3=$WORK/pkgs/delta-3-1-any.pkg.tar.zst
+DELTA2_BASE=$(basename "$DELTA2")
 
 stage_artifact() {
     local name=$1
@@ -269,9 +277,44 @@ check 'says why' grep -q 'could not list the channel' "$WORK/last.out"
 check 'nothing was transferred' test ! -s "$TRANSFER_LOG"
 check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$before"
 
-# --- case 10: the cutover switch --------------------------------------------
+# --- version monotonicity ---------------------------------------------------
 
-section 'case 10 — an empty CHANNEL_ROOT publishes to the production path'
+section 'case 10 — a version older than the channel holds is refused'
+delta2_dir=$(stage_artifact delta2 "$DELTA2")
+make_payload "$WORK/delta2.json" shed-os/shedman "$delta2_dir"
+run_publish "$WORK/delta2.json" "$delta2_dir"
+rc=$?
+check 'the publish that sets the baseline succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'db holds delta 2-1' grep -qxF delta-2-1 <<<"$(db_entries "$CHANNEL/shedos.db")"
+
+baseline=$(bucket_digest "$BUCKET")
+delta1_dir=$(stage_artifact delta1 "$DELTA1")
+make_payload "$WORK/delta1.json" shed-os/shedman "$delta1_dir"
+run_publish "$WORK/delta1.json" "$delta1_dir"
+check 'publish fails' test "$?" -ne 0
+check 'says why' grep -q 'older than the published' "$WORK/last.out"
+check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
+check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
+check 'bucket is unchanged' test "$(bucket_digest "$BUCKET")" = "$baseline"
+
+section 'case 11 — a newer version is accepted'
+delta3_dir=$(stage_artifact delta3 "$DELTA3")
+make_payload "$WORK/delta3.json" shed-os/shedman "$delta3_dir"
+run_publish "$WORK/delta3.json" "$delta3_dir"
+rc=$?
+check 'publish succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'db holds delta 3-1' grep -qxF delta-3-1 <<<"$(db_entries "$CHANNEL/shedos.db")"
+check 'the superseded entry is gone from the db' \
+    not grep -qxF delta-2-1 <<<"$(db_entries "$CHANNEL/shedos.db")"
+check 'the superseded package is still in the channel' test -f "$CHANNEL/$DELTA2_BASE"
+run_publish "$WORK/delta3.json" "$delta3_dir"
+check 'the same version again is still allowed' test "$?" -eq 0
+
+# --- case 12: the cutover switch --------------------------------------------
+
+section 'case 12 — an empty CHANNEL_ROOT publishes to the production path'
 PROD=$WORK/prod-bucket
 mkdir -p "$PROD"
 run_publish "$WORK/alpha.json" "$alpha_dir" "SHEDOS_BUCKET=$PROD" 'CHANNEL_ROOT='

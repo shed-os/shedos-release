@@ -4,8 +4,8 @@
 # The single writer of the ShedOS package channels. A package repo builds and
 # asks; this is where the signing key and the bucket credentials live, so this
 # is where the asking gets checked. Nothing is signed until the request has
-# cleared the allowlist, the checksums, the trusted-key gate and the keyring
-# gate, and nothing already in the channel is ever deleted.
+# cleared the allowlist, the checksums, the trusted-key gate, the keyring gate
+# and the version gate, and nothing already in the channel is ever deleted.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -113,16 +113,7 @@ keyring_keys=$(gpg --show-keys --with-colons "$keyring" 2>/dev/null \
 grep -qxF "$GPG_FP" <<<"$keyring_keys" \
     || die "the keyring does not hold the signing key $GPG_FP"
 
-# --- 6. sign ----------------------------------------------------------------
-
-for file in "${files[@]}"; do
-    echo "sign $file"
-    cp "$artifact/$file" "$work/$file"
-    gpg --batch --yes --detach-sign --use-agent --no-armor \
-        -u "$GPG_FP" --output "$work/$file.sig" "$work/$file"
-done
-
-# --- 7. fold the new packages into the channel db ---------------------------
+# --- 6. pull the channel db -------------------------------------------------
 
 present=$(channel_list)
 in_channel() { grep -qxF "$1" <<<"$present"; }
@@ -149,6 +140,42 @@ else
     echo 'no db in the channel yet; starting a fresh one'
 fi
 
+# --- 7. a published package may not go backwards ----------------------------
+
+# repo-add writes whatever it is handed, in either direction, so rerunning an
+# old build would walk the channel back a version and every box that already
+# took the newer one would be offered a downgrade. Republishing the same
+# version is still fine; that is a rebuild of what is already there.
+if [[ -f $work/shedos.db.tar.gz ]]; then
+    published=$(bsdtar -xOf "$work/shedos.db.tar.gz" '*/desc' 2>/dev/null \
+        | awk '/^%NAME%$/ { getline n } /^%VERSION%$/ { getline v; print n "\t" v }')
+    for file in "${files[@]}"; do
+        # Straight from the package, because that is what repo-add will record.
+        info=$(bsdtar -xOqf "$artifact/$file" .PKGINFO) \
+            || die "could not read the package metadata in $file"
+        read -r name version < <(awk -F' = ' \
+            '$1 == "pkgname" { n = $2 } $1 == "pkgver" { v = $2 } END { print n, v }' \
+            <<<"$info")
+        [[ -n $name && -n $version ]] || die "$file names no package or version"
+        have=$(awk -F'\t' -v n="$name" '$1 == n { print $2; exit }' <<<"$published")
+        [[ -n $have ]] || continue
+        if [[ $(vercmp "$version" "$have") -lt 0 ]]; then
+            die "$name $version is older than the published $have"
+        fi
+    done
+fi
+
+# --- 8. sign ----------------------------------------------------------------
+
+for file in "${files[@]}"; do
+    echo "sign $file"
+    cp "$artifact/$file" "$work/$file"
+    gpg --batch --yes --detach-sign --use-agent --no-armor \
+        -u "$GPG_FP" --output "$work/$file.sig" "$work/$file"
+done
+
+# --- 9. fold the new packages into the channel db ---------------------------
+
 (
     cd "$work"
     repo-add --sign --key "$GPG_FP" shedos.db.tar.gz "${files[@]}"
@@ -163,7 +190,7 @@ fi
     cp shedos.files.tar.gz.sig shedos.files.sig
 )
 
-# --- 8. upload, packages first ----------------------------------------------
+# --- 10. upload, packages first ----------------------------------------------
 
 # A box that pulls the db mid-publish must never see an entry whose file
 # isn't up yet.
@@ -178,7 +205,7 @@ for name in shedos.db.tar.gz shedos.db.tar.gz.sig \
     channel_put "$work/$name" "$name"
 done
 
-# --- 9. mirror the db as [shedostest] so stable boxes can opt into the canary ---
+# --- 11. mirror the db as [shedostest] so stable boxes can opt into the canary ---
 
 for ext in db db.sig files files.sig; do
     channel_put "$work/shedos.$ext" "shedostest.$ext"
