@@ -1,0 +1,14 @@
+# What may differ between the monolith's shedos-keyring and the one
+# shed-os/shedos-keyring builds. Nothing here is a free pass: each path was opened and
+# read before it was written down, and an entry that stops matching fails the run.
+
+# Nothing differs, and on this package nothing may. The reference was built from the
+# monolith's packaging/shedos-keyring at the pkgrel the carved repo published, under a
+# scratch MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the pipeline writes beside
+# its own config. The package is arch=any and its package() installs the keyring, the
+# two fingerprint lists, a script and a unit straight out of tree/ — it compiles nothing
+# and downloads nothing, so a second build has nothing to move.
+#
+# This is the trust anchor, so the bar is higher than elsewhere: a content finding on
+# shedos.gpg, shedos-trusted or shedos-retired is the two repositories disagreeing about
+# what the fleet trusts, and it is never to be allowlisted. Fix the divergence.
