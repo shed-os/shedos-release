@@ -1,0 +1,20 @@
+# What may differ between the monolith's shedos-branding and the one
+# shed-os/shedos-branding builds. Nothing here is a free pass: each path was opened and
+# read before it was written down, and an entry that stops matching fails the run.
+
+# Reference: built from packaging/shedos-branding at monolith commit 02b34be9, which was
+# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
+# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
+# PKGBUILD unmodified and matched the published 2026.07.03-1, so nothing was patched to
+# make the two agree. Candidate: the artifact the staging database records.
+
+# Nothing differs, and on this package there is nothing that could. It is arch=any and
+# its package() copies images, a font, two scripts and a text file out of tree/ — it
+# compiles nothing, downloads nothing and generates nothing, so a second build has no
+# room to move. This repository was imported rather than carved, and the import took the
+# monolith's tracked tree unmodified, so both sides build the same bytes from the same
+# PKGBUILD.
+#
+# A content finding here is therefore not a build difference to be forgiven. It means the
+# two trees have drifted apart, and the answer is to converge them rather than to add a
+# line to this file.
