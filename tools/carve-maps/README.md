@@ -26,6 +26,16 @@ The suite then has to be re-rooted in the carved repo: every carve so far
 reached its package through the `packaging/<name>/` prefix that `flatten` has
 just removed, and a suite still spelling it out dies before its first fixture.
 
+## A map with no carve behind it
+
+`shedos-branding` was imported rather than carved: the package is mostly
+wallpapers that have been redrawn many times, and nobody needed that history in
+every clone, so no rewrite ever ran against the monolith for it. Its maps file
+is here anyway, because the version check derives its pairs from this
+directory — a package with no maps file is a package nothing compares against
+the monolith. Such a file says at the top that there was no carve, and is
+otherwise an ordinary maps file that `carve.sh` has never been pointed at.
+
 ## Renames
 
 `rename old:new` is for a directory that moved inside the monolith. It keeps
@@ -45,6 +55,22 @@ Two forms look right and are not:
 Writing `path new` next to `rename old:new` is fine and is the clearer form —
 it says what the repo ends up holding. It changes nothing, because the rename
 already declares both ends.
+
+A rename also carves a package into a subdirectory, which is what a repo that
+already has a history of its own needs:
+
+```
+path packaging/shedos-hyprland-plugin-hyprspace/
+rename packaging/shedos-hyprland-plugin-hyprspace:packaging
+```
+
+The fork's own source keeps the root and the package build lands under
+`packaging/`, where the pipeline's `packages: ["packaging"]` looks for it. The
+`path` line is not redundant here: the version check pairs a repo with the
+monolith directory a directive names, and after the rename the only monolith
+path left in the file would be the destination. Named this way, the check also
+reads the destination as where the carved PKGBUILD ended up, so it compares
+`packaging/PKGBUILD` rather than the root.
 
 ## Matching
 

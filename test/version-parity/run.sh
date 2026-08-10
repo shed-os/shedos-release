@@ -29,7 +29,7 @@ USER_AGENT='shedos-release (+https://shedos.org)'
 
 # Maps files that carve something other than a package, one name per line. A
 # maps file naming no packaging directory has to be listed here; the check
-# refuses to guess which it is. Empty today — all four carves are packages.
+# refuses to guess which it is. Empty today — every map carves a package.
 NOT_PACKAGES=''
 
 WORK=$(mktemp -d)
@@ -62,13 +62,18 @@ pkgbuild_field() {
     printf '%s\n' "$value"
 }
 
-# One "<repo> <packaging dir>" line per carve map, written to $1. The repo is
-# the maps file's name and the packaging dir is whichever directive names one.
-# A rename contributes its destination, because that is where the monolith
-# holds the package now — and because the clearer form writes `path new` beside
-# it, which would otherwise read as two packaging directories rather than one.
+# One "<repo> <packaging dir> [subdir]" line per carve map, written to $1. The
+# repo is the maps file's name and the packaging dir is whichever directive
+# names one. A rename contributes its destination, because that is where the
+# monolith holds the package now — and because the clearer form writes
+# `path new` beside it, which would otherwise read as two packaging directories
+# rather than one.
+#
+# The subdirectory is where the carved repo keeps the PKGBUILD, empty for the
+# root. A rename out of the package's own directory is what says so: a repo
+# whose own source holds the root takes the package build one level down.
 derive_pairs() {
-    local out=$1 dir file repo roots count
+    local out=$1 dir file repo roots count subdir
     dir=${SHEDOS_PARITY_MAPS_DIR:-$MAPS_DIR}
 
     shopt -s nullglob
@@ -93,7 +98,14 @@ derive_pairs() {
             echo "$repo.paths carves $count packaging directories and one has to be the package"
             return 2
         fi
-        printf '%s %s\n' "$repo" "$roots" >> "$out"
+        subdir=$(awk -v root="$roots" '$1 == "rename" {
+                     colon = index($2, ":")
+                     src = substr($2, 1, colon - 1)
+                     dst = substr($2, colon + 1)
+                     sub(/\/+$/, "", src); sub(/\/+$/, "", dst)
+                     if (src == root) print dst
+                 }' "$file" | head -1)
+        printf '%s %s %s\n' "$repo" "$roots" "$subdir" >> "$out"
     done
 }
 
@@ -108,7 +120,7 @@ read_pkgbuild() {
 
 # 0 every pair agrees, 1 one of them has diverged, 2 a PKGBUILD could not be read.
 parity_check() {
-    local pairs repo path carved monolith cver crel mver mrel
+    local pairs repo path subdir carved monolith cver crel mver mrel
     local seen=0 diverged=0
     carved=$WORK/carved.PKGBUILD
     monolith=$WORK/monolith.PKGBUILD
@@ -116,12 +128,12 @@ parity_check() {
     : > "$pairs"
     derive_pairs "$pairs" || return 2
 
-    while read -r repo path; do
+    while read -r repo path subdir; do
         [[ -n ${repo//[[:space:]]/} ]] || continue
         seen=$((seen + 1))
 
-        read_pkgbuild "${SHEDOS_PARITY_CARVED_DIR:-}" "$repo" \
-            "$CARVED_RAW/$repo/main/PKGBUILD" "$carved" \
+        read_pkgbuild "${SHEDOS_PARITY_CARVED_DIR:-}" "$repo${subdir:+/$subdir}" \
+            "$CARVED_RAW/$repo/main/${subdir:+$subdir/}PKGBUILD" "$carved" \
             || { echo "could not read the PKGBUILD in $repo"; return 2; }
         read_pkgbuild "${SHEDOS_PARITY_MONOLITH_DIR:-}" "$path" \
             "$MONOLITH_RAW/$path/PKGBUILD" "$monolith" \
@@ -322,9 +334,33 @@ with_fixtures
 check 'the check fails' test "$?" -eq 2
 check 'it says there is nothing to compare' grep -q 'no carve maps in' "$WORK/last.out"
 
-# --- case 13: the carves as they stand --------------------------------------
+section 'case 13 — a package carved into a subdirectory is read from there'
+reset_fixtures
+write_maps delta $'path packaging/delta/\nrename packaging/delta:packaging'
+# The version at the root is the one it must not read. A repo whose own source
+# holds the root keeps the package build below it, and reading the root there
+# compares the wrong file or nothing at all.
+write_pkgbuild "$CARVED/delta" 9.9 1
+write_pkgbuild "$CARVED/delta/packaging" 4.0 1
+write_pkgbuild "$MONO/packaging/delta" 4.0 1
+with_fixtures
+rc=$?
+check 'the rename destination says where the PKGBUILD is' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'and it is one more pair' \
+    grep -qx 'all 3 carved package(s) are at the monolith version' "$WORK/last.out"
 
-section 'case 13 — every carved repository matches the monolith it came from'
+section 'case 14 — a package carved to the root is still read from the root'
+reset_fixtures
+write_pkgbuild "$CARVED/beta/packaging" 9.9 1
+with_fixtures
+rc=$?
+check 'a subdirectory no map declared is not looked in' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+
+# --- case 15: the carves as they stand --------------------------------------
+
+section 'case 15 — every carved repository matches the monolith it came from'
 run_check
 rc=$?
 check 'the check passes' test "$rc" -eq 0
