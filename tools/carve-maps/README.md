@@ -22,6 +22,10 @@ That carves `packaging/shedos-ui/*` to the repo root, where the pipeline's
 `packages: ["."]` expects the PKGBUILD, and leaves `test/shedos-ui/` where it
 is, where the pipeline's `test/*/run.sh` expects it.
 
+The suite then has to be re-rooted in the carved repo: every carve so far
+reached its package through the `packaging/<name>/` prefix that `flatten` has
+just removed, and a suite still spelling it out dies before its first fixture.
+
 ## Renames
 
 `rename old:new` is for a directory that moved inside the monolith. It keeps
