@@ -2,10 +2,14 @@
 # Nothing here is a free pass: each path was opened and read before it was
 # written down, and an entry that stops matching fails the run.
 
-# Same source, different machine — 63648 bytes either way, same
-# pkgbuild_sha256sum, and only the build id moves. Pinned to that one pair of
-# binaries, so the next time this file differs it has to be looked at again.
-content usr/bin/cage c2c795445793f74d9922fa9deb3c870754fcb246c2228941e20634efebd6be18..db55ddeebea0a84ecc51227c676e9e09b72231c1c5a46499a4cdbc7ff5d4910c — toolchain rebuild
+# The two were not built the same way. .BUILDINFO records the monolith's cage
+# built with debug and check off and this one with them on, and a debug build
+# leaves different bytes in the binary. Pinned to that one pair, so the next
+# time this file differs it has to be looked at again.
+#
+# The entry retires the next time cage is really rebuilt, since that build gets
+# the same options as the monolith's.
+content usr/bin/cage c2c795445793f74d9922fa9deb3c870754fcb246c2228941e20634efebd6be18..db55ddeebea0a84ecc51227c676e9e09b72231c1c5a46499a4cdbc7ff5d4910c — built with debug and check on where the monolith had them off
 
 # scdoc writes the build date into the .TH line as it generates the page, and
 # that line is the only thing that differs once the two are decompressed.
