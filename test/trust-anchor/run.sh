@@ -12,7 +12,12 @@
 set -uo pipefail
 
 MIGRATE_URL=https://raw.githubusercontent.com/shed-os/shedos-migrate/main/tree/usr/libexec/shedman/migrate
-KEYRING_URL=https://raw.githubusercontent.com/Theshedman/shedos/main/packaging/shedos-keyring/tree/shedos-trusted
+# The keyring side is read from the package the channel serves rather than
+# from a source tree, because that package is what a box actually installs
+# and what the publisher takes its own trust from. This path has to move when
+# CHANNEL_ROOT does, or the check reads a channel nothing publishes to.
+CHANNEL_URL=https://repo.shedos.org/staging/test/x86_64
+TRUSTED_PATH=usr/share/pacman/keyrings/shedos-trusted
 # Cloudflare's managed rules drop datacenter traffic that does not name itself,
 # and a GitHub runner is a datacenter address.
 USER_AGENT='shedos-release (+https://shedos.org)'
@@ -48,13 +53,42 @@ migrate_fingerprints() {
 
 keyring_fingerprints() { fingerprints < "$1"; }
 
-read_source() {
-    local override=$1 url=$2 out=$3
-    if [[ -n $override ]]; then
-        cp -- "$override" "$out"
+fetch() { curl -sSfL --max-time 60 -A "$USER_AGENT" -o "$2" "$1"; }
+
+read_migrate() {
+    local out=$1
+    if [[ -n ${SHEDOS_TRUST_MIGRATE_FILE:-} ]]; then
+        cp -- "$SHEDOS_TRUST_MIGRATE_FILE" "$out"
     else
-        curl -sSfL --max-time 60 -A "$USER_AGENT" -o "$out" "$url"
+        fetch "$MIGRATE_URL" "$out"
     fi
+}
+
+# The database names the keyring package, the package holds the list. The
+# override returns before either fetch, which is what keeps the cases below
+# off the network.
+read_keyring() {
+    local out=$1 db=$WORK/channel.db.tar.gz pkg=$WORK/keyring.pkg.tar.zst file
+    if [[ -n ${SHEDOS_TRUST_KEYRING_FILE:-} ]]; then
+        cp -- "$SHEDOS_TRUST_KEYRING_FILE" "$out"
+        return
+    fi
+    fetch "$CHANNEL_URL/shedos.db.tar.gz" "$db" || return 1
+    rm -rf "$WORK/db" && mkdir "$WORK/db"
+    bsdtar -xf "$db" -C "$WORK/db" || return 1
+    # By %NAME%, the way the publisher resolves it: a package sharing the
+    # keyring's prefix would otherwise answer for it.
+    local desc
+    for desc in "$WORK"/db/*/desc; do
+        [[ -f $desc ]] || continue
+        [[ $(awk '/^%NAME%$/ { getline; print; exit }' "$desc") == shedos-keyring ]] \
+            || continue
+        file=$(awk '/^%FILENAME%$/ { getline; print; exit }' "$desc")
+        break
+    done
+    [[ -n ${file:-} ]] || return 1
+    fetch "$CHANNEL_URL/$file" "$pkg" || return 1
+    bsdtar -xOqf "$pkg" "$TRUSTED_PATH" > "$out"
 }
 
 # 0 the two agree, 1 they have drifted, 2 one of them could not be read.
@@ -62,9 +96,9 @@ drift_check() {
     local migrate=$WORK/migrate keyring=$WORK/trusted
     local mine theirs fpr drifted=0
 
-    read_source "${SHEDOS_TRUST_MIGRATE_FILE:-}" "$MIGRATE_URL" "$migrate" \
+    read_migrate "$migrate" \
         || { echo 'could not read the migrate verb'; return 2; }
-    read_source "${SHEDOS_TRUST_KEYRING_FILE:-}" "$KEYRING_URL" "$keyring" \
+    read_keyring "$keyring" \
         || { echo 'could not read the trusted-keys list'; return 2; }
 
     mine=$(migrate_fingerprints "$migrate")
@@ -176,7 +210,7 @@ check 'it says which side' grep -q 'could not read the migrate verb' "$WORK/last
 
 # --- case 6: the anchors as they are shipped --------------------------------
 
-section 'case 6 — the shipped migrate verb and trusted-keys list agree'
+section 'case 6 — the shipped migrate verb and the published keyring agree'
 run_check
 rc=$?
 check 'the check passes' test "$rc" -eq 0
