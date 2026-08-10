@@ -1,0 +1,31 @@
+# What may differ between the monolith's calamares and the one shed-os/calamares builds.
+# Nothing here is a free pass: each path was opened and read before it was written down,
+# and an entry that stops matching fails the run.
+
+# Reference: built from packaging/calamares at monolith commit 93d7442b, which was
+# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
+# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
+# PKGBUILD unmodified and matched the published 3.4.2-4, so nothing was patched to make
+# the two agree. Candidate: the artifact the staging database records.
+
+# Nothing differs. All 587 paths are byte-identical, build IDs included, so there is
+# nothing to allow and an entry appearing here later is a real difference.
+#
+# Reproducing that takes three properties of the build environment, and a reference that
+# skips any of them reports differences that belong to the builder rather than to the
+# package:
+#
+#   LC_ALL=C             the locale the pipeline's container runs in
+#   SOURCE_DATE_EPOCH    set to the candidate's .BUILDINFO builddate — makepkg takes it
+#                        from the environment, and Qt's resource compiler stamps it into
+#                        .rodata as a millisecond timestamp
+#   the build directory  /__w/calamares/calamares/packaging, where the runner checks the
+#                        repository out
+#
+# The directory is the surprising one. Two things here follow its text and its length:
+# src/libcalamaresui/viewpages/QmlViewStep.cpp reaches a Qt logging macro that bakes
+# __FILE__ into libcalamaresui, and CMake blanks the build-tree RPATH at install time
+# without shrinking .dynstr, which leaves every binary carrying one spare NUL for every
+# character of the build path. Neither changes what the package does, and both would
+# report as a content difference on every ELF file in it if the reference were built
+# anywhere else.
