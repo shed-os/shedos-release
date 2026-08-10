@@ -366,6 +366,20 @@ rc=$?
 check 'the check passes' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
+# Passing says the pairs it compared agree. It does not say it compared all of
+# them, and a pair that stops being derived is a package nothing guards. So the
+# count is read back two ways: against the directory, which catches a map the
+# derivation drops, and against the number the wave carved, which catches the
+# map going missing along with the pair it declared. The floor only moves up
+# while the monolith still holds packaging.
+shopt -s nullglob
+declared=("$MAPS_DIR"/*.paths)
+shopt -u nullglob
+check 'it compared one pair per carve map' \
+    grep -qx "all ${#declared[@]} carved package(s) are at the monolith version" \
+    "$WORK/last.out"
+check 'and no carve map has gone missing' test "${#declared[@]}" -ge 6
+
 # --- result -----------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
