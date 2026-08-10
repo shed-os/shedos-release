@@ -65,6 +65,17 @@ way out.
 `test/carve/run.sh` covers this, including a broken copy of `carve.sh`, so the
 check is proven to fire.
 
+## Before a carve or a compare
+
+Both read the monolith, so the clone has to be level with `origin/main` before
+either runs — fetch, check, and write the commit down beside whatever the run
+produces. A clone one commit behind carves the version from before the last
+release, and the channel then serves what reads as a downgrade. The compare
+carries that requirement plus one of its own: the reference's `pkgver` and
+`pkgrel` come from the monolith's PKGBUILD, never from the version the
+candidate's channel happens to hold. Taking them from the channel compares the
+carved repo against itself, and passes whatever the carve got wrong.
+
 ## Running one
 
 ```
