@@ -1,0 +1,4 @@
+# Fresh import rather than a carve — this repository starts at the current
+# assets and no history rewrite ever ran against the monolith. The map is here
+# so the version check still pairs the package with the directory it came from.
+flatten packaging/shedos-branding
