@@ -128,6 +128,27 @@ the tool unpacks unprivileged, so a setuid bit would not survive into the
 extracted tree, and that is the difference most worth catching. Timestamps are
 the one column left out — they are why `.MTREE` can't be compared whole.
 
+### Building the reference
+
+The reference is the monolith's build of the same source, and it has to sit
+close enough to the pipeline's that whatever is left over belongs to the
+package rather than to the builder. What that takes:
+
+- the build job itself rather than something like it: an `archlinux` container
+  with the ShedOS channels enabled, the build run as `builder` — a Rust binary
+  records the registry paths under that account's home — and the drop-in
+  `BUILDENV` and `OPTIONS` the pipeline writes beside its makepkg config
+- `LC_ALL=C`, and `SOURCE_DATE_EPOCH` set to the candidate's `builddate`
+- the packages the candidate's `.BUILDINFO` names, at the versions it names.
+  The repos move within the day and `archive.archlinux.org` is where the ones
+  that moved come back from. Building every package of a multi-package repo in
+  one container in the pipeline's order reproduces the rest, since each build
+  there sees whatever the builds before it installed
+- the tree where the pipeline's checkout puts it. Cargo builds a package id out
+  of the absolute path, so the same crate built elsewhere differs in `.text`
+- `git archive`, never the working tree: the monolith's packaging directories
+  hold build output and old artifacts that the commit does not.
+
 ## Running the tests
 
 ```

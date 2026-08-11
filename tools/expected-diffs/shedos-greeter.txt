@@ -1,0 +1,44 @@
+# What may differ between the monolith's shedos-greeter and the one shed-os/shedos-ui
+# builds. Nothing here is a free pass: each path was opened and read before it was
+# written down, and an entry that stops matching fails the run.
+
+# Reference: built from packaging/shedos-greeter at monolith commit 03404a92, then
+# origin/main, with pkgrel raised from 1 to the published 2 — the carve republished
+# without a monolith release behind it, and pkgrel is a .PKGINFO field.
+# Candidate: the artifact the staging database records. The build followed the recipe in
+# the README, and the two .BUILDINFO package lists came out equal in both directions.
+
+# One path differs and it is the binary. The monolith builds this crate on its own and
+# the workspace builds its members from the root, so a source path this build records as
+#
+#     src/render.rs
+#
+# the candidate records as
+#
+#     shedos-greeter/src/render.rs
+#
+# and the crate the two packages share is an absolute path here against a
+# workspace-relative one there. That is the whole difference, read rather than assumed:
+#
+#   307 source paths in each binary and 294 of them identical — the 13 that
+#   differ are this package's own files and the shared crate's, nothing else
+#
+#   every section the same size but .rodata, which carries those strings and is 512
+#   bytes longer here
+#
+#   620,051 instructions on both sides once addresses are masked: the same code,
+#   reaching constants that are laid out in a different order
+#
+# Making the strings match does not close it. A reference built with
+# --remap-path-prefix — through a rustc shim, so the flag stays out of what cargo hashes
+# into a package's metadata — comes out with every section exactly the candidate's size
+# and its source paths identical, and still differs, with constants that are not paths
+# moving too. What that measures is that the names rustc records and the order the
+# constants land in are coupled; which mechanism couples them was not isolated. No
+# reference-side flag makes these two builds the same bytes.
+#
+# Pinned, because both sides reproduce: two runs of this recipe produced the same package
+# sha256, build ID included. The pin is against that recipe, the archive.archlinux.org
+# versions in it included, and a recipe whose package set has drifted has to have this
+# entry rebuilt against it rather than widened to the unpinned form.
+content usr/bin/shedos-greeter 7296a980feca6658147f4851ea1a2aba82606896e0889f30c2ac0a576352099b..50643cdf5020a626633cd14268f7d53fd22f94fc4d5ac0724997fc36d0b629fa — the workspace records its members' source paths with the member directory in front
