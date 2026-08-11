@@ -23,9 +23,10 @@
 #   221 source paths in each binary and 217 of them identical — the 4 that
 #   differ are this package's own files and the shared crate's, nothing else
 #
-#   every section the same size but two: .rodata, which carries those strings
-#   and is 64 bytes longer here, and .text, which differs by one sixteen-byte run of
-#   int3 padding
+#   every section the same size but three: .rodata, which carries those strings
+#   and is 64 bytes longer here; .text, which differs by one sixteen-byte run of int3
+#   padding; and .relro_padding, 48 bytes shorter — the linker pads the segment back to
+#   the size it was
 #
 #   437,000 instructions here against 437,016 there once addresses are masked, that
 #   padding the only thing the two lists do not share: the same code, reaching
