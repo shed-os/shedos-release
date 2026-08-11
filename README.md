@@ -144,8 +144,17 @@ package rather than to the builder. What that takes:
   that moved come back from. Building every package of a multi-package repo in
   one container in the pipeline's order reproduces the rest, since each build
   there sees whatever the builds before it installed
+- every crate the package's `Cargo.toml` reaches by `path`, laid out around it
+  the way the carved repo lays them out. The five UI crates each declare
+  `shedos-prompt-ui = { path = "../shedos-prompt-ui" }`, so that directory has
+  to sit beside the one being built or `build()` stops at a `Cargo.toml` it
+  cannot read
 - the tree where the pipeline's checkout puts it. Cargo builds a package id out
-  of the absolute path, so the same crate built elsewhere differs in `.text`
+  of the absolute path, so the same crate built elsewhere differs in `.text`.
+  The path is `.BUILDINFO`'s `builddir` plus wherever the carved PKGBUILD `cd`s
+  to under `$srcdir` — for the shedos-ui packages, which clone themselves,
+  that is `/__w/shedos-ui/shedos-ui/<pkg>/src/shedos-ui/<pkg>`, with
+  `shedos-prompt-ui` beside it
 - `git archive`, never the working tree: the monolith's packaging directories
   hold build output and old artifacts that the commit does not.
 
