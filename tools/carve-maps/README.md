@@ -72,6 +72,22 @@ path left in the file would be the destination. Named this way, the check also
 reads the destination as where the carved PKGBUILD ended up, so it compares
 `packaging/PKGBUILD` rather than the root.
 
+## Several packages in one repo
+
+Packages that share a dependency graph carve together rather than one repo
+each. Every package keeps its own directory, so the crate paths between them
+still resolve and each PKGBUILD stays beside the crate it builds:
+
+```
+path packaging/shedos-greeter/
+rename packaging/shedos-greeter:shedos-greeter
+```
+
+one pair per package, six of them for `shedos-ui`. The version check reads a
+single PKGBUILD per repo and cannot pair a repo holding several, so such a repo
+is named in the suite's `MULTI_PACKAGE` list and is compared against nothing
+until the check can read all of them.
+
 ## Matching
 
 `path` and `rename` match whole path components, the way filter-repo does:
@@ -129,9 +145,9 @@ that is where makepkg extracts sources, and then exempts five packages whose
 !packaging/shedos-switcher/src/
 ```
 
-Those five carve to repos where the PKGBUILD sits at the root, so a plain
+Those five carve together into `shedos-ui`, one directory each, so a plain
 `src/` line — which is right for every other package — would untrack the crate.
-Their repos must not ignore `src/` at all. Nothing warns you: the files just
+That repo must not ignore `src/` at all. Nothing warns you: the files just
 stop being tracked on the next commit.
 
 **The keyring repo.** The monolith guards against committing private key

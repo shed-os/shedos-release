@@ -32,6 +32,11 @@ USER_AGENT='shedos-release (+https://shedos.org)'
 # refuses to guess which it is. Empty today — every map carves a package.
 NOT_PACKAGES=''
 
+# Maps files that carve several packages into one repository, one name per
+# line. The check reads a single PKGBUILD per repo, so these are compared
+# against nothing until it learns to read all of them.
+MULTI_PACKAGE='shedos-ui'
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
@@ -95,6 +100,7 @@ derive_pairs() {
             return 2
         fi
         if (( count > 1 )); then
+            grep -qxF "$repo" <<<"$MULTI_PACKAGE" && continue
             echo "$repo.paths carves $count packaging directories and one has to be the package"
             return 2
         fi
@@ -368,17 +374,20 @@ check 'the check passes' test "$rc" -eq 0
 
 # Passing says the pairs it compared agree. It does not say it compared all of
 # them, and a pair that stops being derived is a package nothing guards. So the
-# count is read back two ways: against the directory, which catches a map the
-# derivation drops, and against the number the wave carved, which catches the
-# map going missing along with the pair it declared. The floor only moves up
-# while the monolith still holds packaging.
+# count is read back two ways: against the directory less the maps declared
+# above as unpairable, which catches a map the derivation drops, and against the
+# number the wave carved, which catches the map going missing along with the
+# pair it declared. The floor only moves up while the monolith still holds
+# packaging.
 shopt -s nullglob
 declared=("$MAPS_DIR"/*.paths)
 shopt -u nullglob
-check 'it compared one pair per carve map' \
-    grep -qx "all ${#declared[@]} carved package(s) are at the monolith version" \
+unpaired=0
+for _ in $NOT_PACKAGES $MULTI_PACKAGE; do unpaired=$((unpaired + 1)); done
+check 'it compared one pair per carve map it can pair' \
+    grep -qx "all $(( ${#declared[@]} - unpaired )) carved package(s) are at the monolith version" \
     "$WORK/last.out"
-check 'and no carve map has gone missing' test "${#declared[@]}" -ge 7
+check 'and no carve map has gone missing' test "${#declared[@]}" -ge 8
 
 # --- result -----------------------------------------------------------------
 

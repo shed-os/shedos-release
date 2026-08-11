@@ -1,0 +1,15 @@
+# One repository holds six crates that share a dependency graph, so they carve
+# together into a Rust workspace rather than one repo each. Each package keeps
+# its own directory, which is where the workspace members and the PKGBUILDs sit.
+path packaging/shedos-prompt-ui/
+path packaging/shedos-greeter/
+path packaging/shedos-power/
+path packaging/shedos-switcher/
+path packaging/shedos-tour/
+path packaging/shedos-screensaver/
+rename packaging/shedos-prompt-ui:shedos-prompt-ui
+rename packaging/shedos-greeter:shedos-greeter
+rename packaging/shedos-power:shedos-power
+rename packaging/shedos-switcher:shedos-switcher
+rename packaging/shedos-tour:shedos-tour
+rename packaging/shedos-screensaver:shedos-screensaver
