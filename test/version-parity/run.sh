@@ -32,11 +32,6 @@ USER_AGENT='shedos-release (+https://shedos.org)'
 # refuses to guess which it is. Empty today — every map carves a package.
 NOT_PACKAGES=''
 
-# Maps files that carve several packages into one repository, one name per
-# line. The check reads a single PKGBUILD per repo, so these are compared
-# against nothing until it learns to read all of them.
-MULTI_PACKAGE='shedos-ui'
-
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
@@ -67,7 +62,18 @@ pkgbuild_field() {
     printf '%s\n' "$value"
 }
 
-# One "<repo> <packaging dir> [subdir]" line per carve map, written to $1. The
+# Where a maps file moves a directory to, empty when nothing moves it.
+rename_dest() {
+    awk -v root="$2" '$1 == "rename" {
+        colon = index($2, ":")
+        src = substr($2, 1, colon - 1)
+        dst = substr($2, colon + 1)
+        sub(/\/+$/, "", src); sub(/\/+$/, "", dst)
+        if (src == root) print dst
+    }' "$1" | head -1
+}
+
+# One "<repo> <packaging dir> [subdir]" line per package, written to $1. The
 # repo is the maps file's name and the packaging dir is whichever directive
 # names one. A rename contributes its destination, because that is where the
 # monolith holds the package now — and because the clearer form writes
@@ -77,8 +83,12 @@ pkgbuild_field() {
 # The subdirectory is where the carved repo keeps the PKGBUILD, empty for the
 # root. A rename out of the package's own directory is what says so: a repo
 # whose own source holds the root takes the package build one level down.
+#
+# Several packaging directories is one pair each, and every one of them has to
+# name a destination of its own. That is what separates packages sharing a repo
+# from a map that is ambiguous about which of two directories the package is.
 derive_pairs() {
-    local out=$1 dir file repo roots count subdir
+    local out=$1 dir file repo roots count root subdir taken
     dir=${SHEDOS_PARITY_MAPS_DIR:-$MAPS_DIR}
 
     shopt -s nullglob
@@ -99,29 +109,35 @@ derive_pairs() {
             echo "$repo.paths carves no packaging directory and is not listed as exempt"
             return 2
         fi
-        if (( count > 1 )); then
-            grep -qxF "$repo" <<<"$MULTI_PACKAGE" && continue
-            echo "$repo.paths carves $count packaging directories and one has to be the package"
-            return 2
-        fi
-        subdir=$(awk -v root="$roots" '$1 == "rename" {
-                     colon = index($2, ":")
-                     src = substr($2, 1, colon - 1)
-                     dst = substr($2, colon + 1)
-                     sub(/\/+$/, "", src); sub(/\/+$/, "", dst)
-                     if (src == root) print dst
-                 }' "$file" | head -1)
-        printf '%s %s %s\n' "$repo" "$roots" "$subdir" >> "$out"
+
+        taken=''
+        for root in $roots; do
+            subdir=$(rename_dest "$file" "$root")
+            if (( count > 1 )) &&
+                    { [[ -z $subdir ]] || grep -qxF "$subdir" <<<"$taken"; }; then
+                echo "$repo.paths carves $count packaging directories and one has to be the package"
+                return 2
+            fi
+            taken+=$'\n'$subdir
+            printf '%s %s %s\n' "$repo" "$root" "$subdir" >> "$out"
+        done
     done
 }
 
+# 0 it is there, 3 there is no PKGBUILD at that path, 1 it could not be read.
+# A directory holding no package and a fetch that failed have to stay different
+# answers, or the check goes blind exactly where it should stop.
 read_pkgbuild() {
-    local dir=$1 key=$2 url=$3 out=$4
+    local dir=$1 key=$2 url=$3 out=$4 code
     if [[ -n $dir ]]; then
-        cp -- "$dir/$key/PKGBUILD" "$out" 2>/dev/null
-    else
-        curl -sSfL --max-time 60 -A "$USER_AGENT" -o "$out" "$url"
+        [[ -f $dir/$key/PKGBUILD ]] || return 3
+        cp -- "$dir/$key/PKGBUILD" "$out" 2>/dev/null || return 1
+        return 0
     fi
+    code=$(curl -sSL --max-time 60 -A "$USER_AGENT" -o "$out" -w '%{http_code}' "$url") \
+        || return 1
+    [[ $code == 404 ]] && return 3
+    [[ $code == 2?? ]]
 }
 
 # 0 every pair agrees, 1 one of them has diverged, 2 a PKGBUILD could not be read.
@@ -136,18 +152,27 @@ parity_check() {
 
     while read -r repo path subdir; do
         [[ -n ${repo//[[:space:]]/} ]] || continue
+
+        # The monolith decides what is a package, so it is read first. A repo
+        # carving a dependency graph takes the libraries along with the
+        # packages, and a library is skipped by name rather than compared,
+        # failed on, or dropped from the list without saying so.
+        read_pkgbuild "${SHEDOS_PARITY_MONOLITH_DIR:-}" "$path" \
+            "$MONOLITH_RAW/$path/PKGBUILD" "$monolith"
+        case $? in
+            0) ;;
+            3) echo "$path holds no PKGBUILD and is not a package"; continue ;;
+            *) echo "could not read the PKGBUILD in $path"; return 2 ;;
+        esac
         seen=$((seen + 1))
 
         read_pkgbuild "${SHEDOS_PARITY_CARVED_DIR:-}" "$repo${subdir:+/$subdir}" \
             "$CARVED_RAW/$repo/main/${subdir:+$subdir/}PKGBUILD" "$carved" \
-            || { echo "could not read the PKGBUILD in $repo"; return 2; }
-        read_pkgbuild "${SHEDOS_PARITY_MONOLITH_DIR:-}" "$path" \
-            "$MONOLITH_RAW/$path/PKGBUILD" "$monolith" \
-            || { echo "could not read the PKGBUILD in $path"; return 2; }
+            || { echo "could not read the PKGBUILD in $repo${subdir:+/$subdir}"; return 2; }
 
         if ! cver=$(pkgbuild_field "$carved" pkgver) ||
                 ! crel=$(pkgbuild_field "$carved" pkgrel); then
-            echo "$repo names no pkgver or pkgrel"
+            echo "$repo${subdir:+/$subdir} names no pkgver or pkgrel"
             return 2
         fi
         if ! mver=$(pkgbuild_field "$monolith" pkgver) ||
@@ -159,10 +184,10 @@ parity_check() {
         # pkgver has to match. pkgrel may run ahead, because the pipeline bumps it
         # past whatever the channel already carries every time it republishes.
         if [[ $cver != "$mver" ]]; then
-            echo "$repo is at $cver-$crel and $path is at $mver-$mrel"
+            echo "$repo${subdir:+/$subdir} is at $cver-$crel and $path is at $mver-$mrel"
             diverged=1
         elif (( $(vercmp "$crel" "$mrel") < 0 )); then
-            echo "$repo is at $cver-$crel behind $path at $mver-$mrel"
+            echo "$repo${subdir:+/$subdir} is at $cver-$crel behind $path at $mver-$mrel"
             diverged=1
         fi
     done < "$pairs"
@@ -333,6 +358,16 @@ check 'it says how many it found' \
     grep -qx 'beta.paths carves 2 packaging directories and one has to be the package' \
     "$WORK/last.out"
 
+# Both packages land in one directory and both sides of both pairs are there,
+# so the destinations colliding is the only thing left to notice.
+reset_fixtures
+write_maps beta $'path packaging/beta/\nrename packaging/beta:beta
+path packaging/beta-extras/\nrename packaging/beta-extras:beta'
+set_pair beta/beta packaging/beta 2026.08.09 1 2026.08.09 1
+write_pkgbuild "$MONO/packaging/beta-extras" 2026.08.09 1
+with_fixtures
+check 'two of them carved to one directory is the same answer' test "$?" -eq 2
+
 section 'case 12 — a maps directory with nothing in it is not a pass'
 reset_fixtures
 rm -f "$MAPS"/*.paths
@@ -364,9 +399,48 @@ rc=$?
 check 'a subdirectory no map declared is not looked in' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
-# --- case 15: the carves as they stand --------------------------------------
+# One repository, a directory per crate, and lib is the library the other two
+# are built against — carried along by the graph, a package on neither side.
+multi_map() {
+    write_maps multi $'path packaging/one/\nrename packaging/one:one
+path packaging/two/\nrename packaging/two:two
+path packaging/lib/\nrename packaging/lib:lib'
+    set_pair multi/one packaging/one 5.0 1 5.0 1
+    set_pair multi/two packaging/two 5.0 1 5.0 1
+}
 
-section 'case 15 — every carved repository matches the monolith it came from'
+section 'case 15 — a repository holding several packages is one pair per package'
+reset_fixtures
+multi_map
+with_fixtures
+rc=$?
+check 'the check passes' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'both of them are counted' \
+    grep -qx 'all 4 carved package(s) are at the monolith version' "$WORK/last.out"
+
+section 'case 16 — a member the monolith builds no package from is named and skipped'
+reset_fixtures
+multi_map
+with_fixtures
+check 'it says which directory and why' \
+    grep -qx 'packaging/lib holds no PKGBUILD and is not a package' "$WORK/last.out"
+set_pair multi/two packaging/two 4.0 1 5.0 1
+with_fixtures
+check 'and the members beside it are still compared' test "$?" -eq 1
+
+section 'case 17 — a package the carve dropped is not read as a skip'
+reset_fixtures
+multi_map
+rm -rf "$CARVED/multi/two"
+with_fixtures
+check 'the check fails' test "$?" -eq 2
+check 'it names the member that is missing' \
+    grep -qx 'could not read the PKGBUILD in multi/two' "$WORK/last.out"
+
+# --- case 18: the carves as they stand --------------------------------------
+
+section 'case 18 — every carved repository matches the monolith it came from'
 run_check
 rc=$?
 check 'the check passes' test "$rc" -eq 0
@@ -374,20 +448,24 @@ check 'the check passes' test "$rc" -eq 0
 
 # Passing says the pairs it compared agree. It does not say it compared all of
 # them, and a pair that stops being derived is a package nothing guards. So the
-# count is read back two ways: against the directory less the maps declared
-# above as unpairable, which catches a map the derivation drops, and against the
-# number the wave carved, which catches the map going missing along with the
-# pair it declared. The floor only moves up while the monolith still holds
-# packaging.
+# count is read back two ways: against every packaging directory the maps name,
+# less the ones the run reported as holding no package, which catches a pair the
+# derivation drops; and against the number the waves have carved, which catches
+# a map going missing along with every pair it declared. The floor only moves up
+# while the monolith still holds packaging.
 shopt -s nullglob
 declared=("$MAPS_DIR"/*.paths)
 shopt -u nullglob
-unpaired=0
-for _ in $NOT_PACKAGES $MULTI_PACKAGE; do unpaired=$((unpaired + 1)); done
-check 'it compared one pair per carve map it can pair' \
-    grep -qx "all $(( ${#declared[@]} - unpaired )) carved package(s) are at the monolith version" \
-    "$WORK/last.out"
-check 'and no carve map has gone missing' test "${#declared[@]}" -ge 8
+packages=0
+for file in "${declared[@]}"; do
+    packages=$((packages + $(awk '$1 == "path" || $1 == "flatten" { print $2 }
+                                  $1 == "rename" { sub(/.*:/, "", $2); print $2 }' "$file" \
+                             | sed 's:/*$::' | LC_ALL=C sort -u | grep -c '^packaging/')))
+done
+paired=$(( packages - $(grep -c 'holds no PKGBUILD and is not a package' "$WORK/last.out") ))
+check 'it compared one pair per package the carve maps name' \
+    grep -qx "all $paired carved package(s) are at the monolith version" "$WORK/last.out"
+check 'and no carve map has gone missing' test "$paired" -ge 12
 
 # --- result -----------------------------------------------------------------
 

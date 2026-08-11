@@ -83,10 +83,18 @@ path packaging/shedos-greeter/
 rename packaging/shedos-greeter:shedos-greeter
 ```
 
-one pair per package, six of them for `shedos-ui`. The version check reads a
-single PKGBUILD per repo and cannot pair a repo holding several, so such a repo
-is named in the suite's `MULTI_PACKAGE` list and is compared against nothing
-until the check can read all of them.
+one pair per package, six of them for `shedos-ui`. The version check reads the
+PKGBUILD each rename destination holds, so every packaging directory in such a
+map has to name a destination of its own: two of them carved to the same place
+is the same ambiguity as a map naming two packaging directories and no
+destination at all.
+
+A directory the monolith builds no package from is skipped by name rather than
+counted. `shedos-prompt-ui` is the library the other five link against and it
+carves along with them because the dependency graph needs it. The monolith is
+what decides that — the check reads its PKGBUILD first — and a directory the
+monolith does build a package from is still an error when the carved repo has
+no PKGBUILD for it.
 
 ## Matching
 
