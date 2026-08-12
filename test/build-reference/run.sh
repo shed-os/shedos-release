@@ -336,7 +336,8 @@ write_candidate "$WORK/gone.pkg.tar.zst" alpha 1.0-2 /__w/demo/demo/alpha \
     glibc-2.44-1-x86_64 binutils-2.46-3-x86_64
 plan "$MONO" "$WORK/gone.pkg.tar.zst"
 check 'a version nothing serves is refused' test "$?" -eq 2
-check 'it names the package and the version' says 'binutils-2.46-3-x86_64'
+check 'it names the package and the version' \
+    says 'binutils-2.46-3-x86_64 is on no mirror and not on the archive'
 
 # --- case 7: the pkgrel the candidate carries -------------------------------
 
@@ -371,9 +372,14 @@ PIN_COMMIT=$(sed -n 's/.*at monolith commit \([0-9a-f]\{8\}\).*/\1/p' "$PIN_FILE
 PIN_SHA=$(sed -n "s|^content usr/bin/$PIN_PACKAGE \([0-9a-f]\{64\}\)\.\..*|\1|p" "$PIN_FILE")
 CANDIDATE_URL=https://repo.shedos.org/staging/test/x86_64
 
+# Read out of the repository rather than out of the environment, so losing it
+# is a failure and never a skip: it is the only acceptance proof there is.
+check 'the expectation file still names the commit and the sha it was pinned against' \
+    test -n "$PIN_COMMIT" -a -n "$PIN_SHA"
+
 skip_reason=
 [[ -n $PIN_COMMIT && -n $PIN_SHA ]] \
-    || skip_reason="$PIN_FILE names no monolith commit and no reference sha"
+    || skip_reason="$PIN_FILE no longer names them"
 [[ -n $skip_reason || -n ${SHEDOS_REFERENCE_MONOLITH:-} ]] \
     || skip_reason='SHEDOS_REFERENCE_MONOLITH does not name a monolith clone'
 [[ -n $skip_reason ]] || command -v docker > /dev/null \
@@ -382,8 +388,9 @@ skip_reason=
 if [[ -n $skip_reason ]]; then
     printf '  skip %s\n' "the end-to-end reference build — $skip_reason"
 else
-    version=$(sed -n 's/^pkgver=//p' \
-        "$SHEDOS_REFERENCE_MONOLITH/packaging/$PIN_PACKAGE/PKGBUILD" | tr -d "\"'")
+    version=$(git -C "$SHEDOS_REFERENCE_MONOLITH" show \
+        "$PIN_COMMIT:packaging/$PIN_PACKAGE/PKGBUILD" \
+        | sed -n 's/^pkgver=//p' | tr -d "\"'")
     candidate=$WORK/$PIN_PACKAGE.pkg.tar.zst
     file=$(curl -sSL -A 'shedos-release (+https://shedos.org)' \
         "$CANDIDATE_URL/shedos.db.tar.gz" | bsdtar -xOf - --include '*/desc' \
