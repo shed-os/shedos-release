@@ -130,33 +130,55 @@ the one column left out — they are why `.MTREE` can't be compared whole.
 
 ### Building the reference
 
-The reference is the monolith's build of the same source, and it has to sit
-close enough to the pipeline's that whatever is left over belongs to the
-package rather than to the builder. What that takes:
+The reference is the monolith's build of the same source, and
+`tools/build-reference.sh` is what builds it:
 
-- the build job itself rather than something like it: an `archlinux` container
-  with the ShedOS channels enabled, the build run as `builder` — a Rust binary
-  records the registry paths under that account's home — and the drop-in
-  `BUILDENV` and `OPTIONS` the pipeline writes beside its makepkg config
-- `LC_ALL=C`, and `SOURCE_DATE_EPOCH` set to the candidate's `builddate`
-- the packages the candidate's `.BUILDINFO` names, at the versions it names.
-  The repos move within the day and `archive.archlinux.org` is where the ones
-  that moved come back from. Building every package of a multi-package repo in
-  one container in the pipeline's order reproduces the rest, since each build
-  there sees whatever the builds before it installed
+```
+tools/build-reference.sh --compare /path/to/shedos \
+    <candidate.pkg.tar.zst> [<commit>]
+```
+
+It reads the candidate's `.PKGINFO` and `.BUILDINFO`, takes the monolith
+directory the carve maps say the package comes from, lays that source out in an
+`archlinux` container the way the pipeline's checkout does, builds it there and
+prints where it landed; `--compare` hands both packages to the tool above and
+exits with what that says. Docker is all it needs on the machine running it.
+The commit defaults to the clone's HEAD, and an expectation written against an
+older one names the commit to pass here.
+
+The reference has to sit close enough to the pipeline's build that whatever is
+left over belongs to the package rather than to the builder, which is why the
+script insists on every one of these:
+
+- the environment the candidate recorded rather than today's. The repositories
+  move within the day, so every package its `.BUILDINFO` names at a version
+  this build would otherwise get wrong comes back from
+  `archive.archlinux.org`, and one that is on neither is a hard error naming
+  the package — a reference built on a different compiler answers a question
+  nobody asked
+- the tree where the pipeline's checkout puts it. Cargo builds a package id out
+  of the absolute path, so the same crate built elsewhere differs in `.text`.
+  The path is `.BUILDINFO`'s `builddir` plus wherever the carved PKGBUILD `cd`s
+  to under `$srcdir` — for the shedos-ui packages, which clone themselves,
+  `/__w/shedos-ui/shedos-ui/<pkg>/src/shedos-ui/<pkg>`
 - every crate the package's `Cargo.toml` reaches by `path`, laid out around it
   the way the carved repo lays them out. The five UI crates each declare
   `shedos-prompt-ui = { path = "../shedos-prompt-ui" }`, so that directory has
   to sit beside the one being built or `build()` stops at a `Cargo.toml` it
   cannot read
-- the tree where the pipeline's checkout puts it. Cargo builds a package id out
-  of the absolute path, so the same crate built elsewhere differs in `.text`.
-  The path is `.BUILDINFO`'s `builddir` plus wherever the carved PKGBUILD `cd`s
-  to under `$srcdir` — for the shedos-ui packages, which clone themselves,
-  that is `/__w/shedos-ui/shedos-ui/<pkg>/src/shedos-ui/<pkg>`, with
-  `shedos-prompt-ui` beside it
 - `git archive`, never the working tree: the monolith's packaging directories
-  hold build output and old artifacts that the commit does not.
+  hold build output and old artifacts that the commit does not
+- the build job itself rather than something like it: the ShedOS channels
+  enabled with the pipeline's own script, the build run as `builder` — a Rust
+  binary records the registry paths under that account's home — `LC_ALL=C`,
+  `SOURCE_DATE_EPOCH` from the candidate's `builddate`, and the `BUILDENV` and
+  `OPTIONS` read back out of the candidate rather than copied from the pipeline
+  and left to drift apart from it.
+
+`pkgver` comes from the monolith and a candidate that disagrees is refused,
+because taking it from the channel compares the carved repo against itself.
+`pkgrel` is patched to the candidate's, because the carve republishes past the
+monolith without a release behind it and `pkgrel` is a `.PKGINFO` field.
 
 ## Running the tests
 
@@ -164,11 +186,19 @@ package rather than to the builder. What that takes:
 bash test/publisher/run.sh
 bash test/carve/run.sh
 bash test/compare/run.sh
+bash test/version-parity/run.sh
+bash test/build-reference/run.sh
 ```
 
-No root, no network, no R2. The bucket is a temporary directory that rclone
-reads with its local backend, the signing key is generated and thrown away
-with it, and every package involved is built with makepkg from the fixtures
-beside each suite. `.github/workflows/ci.yml` runs all three on every push and
-pull request, because this repo is the only thing in the org that can write to
-a channel.
+The first three take no root, no network and no R2. The bucket is a temporary
+directory that rclone reads with its local backend, the signing key is
+generated and thrown away with it, and every package involved is built with
+makepkg from the fixtures beside each suite. The version check reads the
+PKGBUILDs it compares over HTTP. The reference suite plans real builds against
+fixtures of its own and stops short of the container; its end-to-end case
+rebuilds a published package and checks it against the sha its expectation
+pins, which needs docker and a monolith clone, and it names whichever is
+missing when it skips.
+
+`.github/workflows/ci.yml` runs every suite on every push and pull request,
+because this repo is the only thing in the org that can write to a channel.
