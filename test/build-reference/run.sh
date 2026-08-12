@@ -355,6 +355,12 @@ plan --compare "$MONO" "$WORK/alpha.pkg.tar.zst"
 check 'a package with no expectation file is refused' test "$?" -eq 2
 check 'it names the file it looked for' says 'expected-diffs/alpha.txt'
 
+reset_fixtures
+plan --network bridge "$MONO" "$WORK/alpha.pkg.tar.zst"
+rc=$?
+check 'the container network can be named' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/out"
+
 # --- case 9: the reference of a published package ---------------------------
 
 section 'case 9 — a published package rebuilds to the sha its expectation pins'

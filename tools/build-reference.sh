@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-reference.sh [--compare] <monolith> <candidate.pkg.tar.zst> [<commit>]
+# build-reference.sh [--compare] [--network <net>] <monolith> <candidate.pkg.tar.zst> [<commit>]
 #
 # Build the monolith's version of a package the way the pipeline built the
 # candidate, so that compare-package.sh has something to compare against.
@@ -15,6 +15,9 @@
 # With --compare the reference goes straight into compare-package.sh against
 # the candidate, with the package's own expectation file, and this exits with
 # whatever that says.
+#
+# The container runs on docker's `host` network unless --network says otherwise,
+# because bridge networking is not available everywhere.
 #
 # The README's "Building the reference" says why each of these matters.
 #
@@ -36,16 +39,19 @@ CHANNELS=$CARVED_RAW/shedos-ci/main/scripts/enable-shedos-channels.sh
 die() { printf 'reference: %s\n' "$*" >&2; exit 2; }
 
 compare=
+network=host
 while (( $# )); do
     case $1 in
         --compare) compare=yes; shift ;;
+        --network) [[ -n ${2:-} ]] || die 'usage: --network <docker network>'
+                   network=$2; shift 2 ;;
         --*) die "unknown option $1" ;;
         *) break ;;
     esac
 done
 
 (( $# == 2 || $# == 3 )) \
-    || die 'usage: build-reference.sh [--compare] <monolith> <candidate> [<commit>]'
+    || die 'usage: build-reference.sh [--compare] [--network <net>] <monolith> <candidate> [<commit>]'
 mono=$1 candidate=$2
 [[ -f $candidate ]] || die "$candidate does not exist"
 [[ -d $mono/.git ]] || die "$mono is not a git repository"
@@ -207,7 +213,7 @@ sed -i -E "s/^pkgrel=.*/pkgrel=$pkgrel/" "$work/tree/${crate##*/}/PKGBUILD"
 
 image=
 in_container() {
-    docker run --rm --network host \
+    docker run --rm --network "$network" \
         -v "$work:/work" -v "$work/pkgcache:/var/cache/pacman/pkg" \
         -v "$ROOT/tools/build-reference-container.sh:/steps.sh:ro" \
         -e "REFERENCE_CRATE=$crate" -e "REFERENCE_EPOCH=$epoch" \
@@ -232,7 +238,7 @@ RUN touch /.shedos-build-environment && \
 EOF
     image=shedos-reference:$(cat "$work/image"/* | sha256sum | cut -c1-12)
     if docker image inspect "$image" > /dev/null 2>&1; then return 0; fi
-    docker build --network host -t "$image" "$work/image" || die "could not build $image"
+    docker build --network "$network" -t "$image" "$work/image" || die "could not build $image"
 }
 
 # --- the environment the candidate recorded ---------------------------------
