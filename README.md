@@ -178,6 +178,14 @@ script insists on every one of these:
   `OPTIONS` read back out of the candidate rather than copied from the pipeline
   and left to drift apart from it.
 
+The run ends by naming the packages the two `.BUILDINFO`s do not share, and
+there is one rule for reading that. Packages the candidate has and the
+reference does not are the pipeline's own: it builds every package of a
+multi-package repo in one container in its order, so each build sees whatever
+the ones before it installed, and that residue changes nothing about what
+compiled this one. A package either side holds at a *different version* is the
+opposite — it says a pin did not take, and the reference is not one.
+
 `pkgver` comes from the monolith and a candidate that disagrees is refused,
 because taking it from the channel compares the carved repo against itself.
 `pkgrel` is patched to the candidate's, because the carve republishes past the
@@ -189,6 +197,7 @@ monolith without a release behind it and `pkgrel` is a `.PKGINFO` field.
 bash test/publisher/run.sh
 bash test/carve/run.sh
 bash test/compare/run.sh
+bash test/trust-anchor/run.sh
 bash test/version-parity/run.sh
 bash test/build-reference/run.sh
 ```
@@ -196,10 +205,10 @@ bash test/build-reference/run.sh
 The first three take no root, no network and no R2. The bucket is a temporary
 directory that rclone reads with its local backend, the signing key is
 generated and thrown away with it, and every package involved is built with
-makepkg from the fixtures beside each suite. The version check reads the
-PKGBUILDs it compares over HTTP. The reference suite plans real builds against
-fixtures of its own and stops short of the container; its end-to-end case
-rebuilds a published package and checks it against the sha its expectation
+makepkg from the fixtures beside each suite. The trust anchor and version
+checks read what they compare over HTTP. The reference suite plans real builds
+against fixtures of its own and stops short of the container; its end-to-end
+case rebuilds a published package and checks it against the sha its expectation
 pins, which needs docker and a monolith clone, and it names whichever is
 missing when it skips.
 
