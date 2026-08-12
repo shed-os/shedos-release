@@ -11,7 +11,8 @@
 
 # --- (a) where the content came from ----------------------------------------------
 #
-# Source package: shedos-system, at monolith commit 03404a92 (origin/main at carve time).
+# Source package: shedos-system. The carve was taken at monolith commit 03404a92; the
+# comparison below is against 2c377ee7, which is where the monolith stands now.
 # Carve map: tools/carve-maps/shedman.paths. 42 files, named one at a time because the
 # packaging directory they sit in belongs to two repositories from here on:
 #
@@ -37,7 +38,7 @@
 # their man pages, the /usr/bin/shedos-* back-compat shims, shedos-dock.5 and
 # shedos-review-exclude.5, and everything under /usr/lib/shedos except apply_core.py.
 
-# --- (b) the 15 transformed package files ------------------------------------------
+# --- (b) the 5 transformed package files -------------------------------------------
 #
 # §5.1, the config layer. tree/etc/shedman/shedman.toml is new and in backup=(). It
 # carries the libexec path, the package `shedman version` reports, and the directory verb
@@ -59,30 +60,12 @@ content tree/usr/share/zsh/site-functions/_shedman d7f34a482d2588266b2b37819f834
 content tree/usr/share/fish/vendor_completions.d/shedman.fish ac6310124db7bddbf5e03e288fb26dd86d49738b..b3676b97fe5803a2975c55017b973441a1fefb4e — §5.1: the same, and its hardcoded list of completable subcommands is now the declarations
 content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf..d8525777c3a9b6be163fae46de6eb258f1090ccb — §5.1: gains the audit that names an executable no declaration claims
 #
-# NO SPEC SECTION — docs currency, a judgement call recorded as one. Ten man pages gained
-# the *shedman*(1) cross-reference every other subcommand page already had. The monolith's
-# man suite checked a hand-picked eleven pages and these ten were not among them; deriving
-# the list from the tree is what found them. §11 assigns man cross-references a
-# release-time link checker and sanctions no edit here, so these ten stand on the docs
-# rules alone.
-#
-# PENDING CONVERGENCE: the monolith has an owner rider fixing the same thirteen pages
-# (2e0665c8, the ten here plus kernel.1, lock.1 and theme.1, which carve in Tasks 2 and 3)
-# committed but not yet on origin/main, which is still 03404a92. All ten of these entries
-# are expected to disappear when it lands — the carved text is already byte-identical to
-# the rider's for all ten, upgrade-history included since its cross-reference line was
-# rewrapped to match. Re-run the instrument against the monolith commit of the day and
-# drop whichever entries have converged.
-content man/shedman-conflicts.1.scd 10318992269ea1714c0ed8ab4baf58ffa87ab812..bddd51fb40e8fe56d357ce012cf88c679e76dbb2 — SEE ALSO gained *shedman*(1)
-content man/shedman-datetime.1.scd fabb99f8cd5ea53ae29141c4fc32633b494ad0e8..b6f81c2d1f76fbb1718200211fca345c1ee69b71 — SEE ALSO gained *shedman*(1)
-content man/shedman-db.1.scd 959591debb459c757357463b0d3704e555786f74..3c92a9f5d772d897f120595b9818a103bea5fbae — SEE ALSO gained *shedman*(1)
-content man/shedman-health.1.scd 825df9c8da3009be1cdc3b640a0c12d148a17d5a..8ae370f9b20e85e30202bb8e3fe93376e145cf73 — SEE ALSO gained *shedman*(1)
-content man/shedman-install.1.scd 9469f8d7edb6cc98b62894c03af8b7393adf996d..26de6a1383196395778c895adae49b126c539ca4 — SEE ALSO gained *shedman*(1)
-content man/shedman-logs.1.scd 7c3f6b96ec502efc73577e7975f622c194047510..96e8b45048ae409fe8becbcc2528ce01afac4975 — SEE ALSO gained *shedman*(1)
-content man/shedman-services.1.scd b1346f8f4bdb514a675f635ee5c3742d497ef8db..584b6271662709e3f483bd2235a7cc7d9da1240a — SEE ALSO gained *shedman*(1)
-content man/shedman-snapshot.1.scd fddff2bad77ad9e5d804809699316eaafee8a436..8ba5d832c03e598b7d8b6bf013388366d705863b — SEE ALSO gained *shedman*(1)
-content man/shedman-updates.1.scd 3a423f48aefc38e31cdc1776ec5f527bff5af9ab..0d078cfad2a956a8ad89ccf1720e5b527e48a0f4 — SEE ALSO gained *shedman*(1)
-content man/shedman-upgrade-history.1.scd f6a6d1ba567d6467075ea16797004cea7dda475b..a33c8364eaf16cfb0c43c255a62b40918a0eb465 — SEE ALSO gained *shedman*(1)
+# Ten man pages were transformed here too, gaining the *shedman*(1) cross-reference every
+# other subcommand page already had — deriving the man suite's page list from the tree is
+# what found them. They are no longer differences: the monolith has since made the same
+# fix to those ten pages and three more (2e0665c8), and all ten are byte-identical to it.
+# The three that are not shedman's — kernel.1, lock.1 and theme.1 — carve with the splits
+# that take those verbs.
 
 # --- (b2) the 24 files with no monolith counterpart --------------------------------
 #
@@ -105,16 +88,17 @@ content man/shedman-upgrade-history.1.scd f6a6d1ba567d6467075ea16797004cea7dda47
 #
 # Every package file (tree/ and man/) not named in (b) or (b2) is byte-for-byte the
 # monolith's. Measured by comparing `git rev-parse` on each carved path against the
-# monolith blob at 03404a92, over the whole carved tree at HEAD:
+# monolith blob at 2c377ee7, over the whole carved tree at HEAD:
 #
-#   package tree (tree/ + man/): 27 identical, 15 transformed
+#   package tree (tree/ + man/): 37 identical, 5 transformed
 #   test tree:                   479 identical, 12 transformed  (see (d))
 #   no monolith counterpart:     24                             (see (b2))
 #
-# The carve itself is the same claim with nothing transformed yet: at the carve root
-# eb06271, 42 of 42 package files and 491 of 491 test files identical, and 158 commits
-# matching the monolith's log for those paths line for line, plus the two merge commits
-# filter-repo keeps and `git log -- <paths>` prunes.
+# The carve itself is the same claim with nothing transformed yet, measured against the
+# commit it was taken at: at the carve root eb06271 against 03404a92, 42 of 42 package
+# files and 491 of 491 test files identical, and 158 commits matching the monolith's log
+# for those paths line for line, plus the two merge commits filter-repo keeps and
+# `git log -- <paths>` prunes.
 #
 # One limit is worth writing down. Fourteen of the verbs were once /usr/bin/shedos-*
 # tools, and those paths are still live back-compat shims shedos-system ships. A carve
