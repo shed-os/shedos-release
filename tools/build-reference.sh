@@ -145,7 +145,8 @@ normalise() {
     for part in "${parts[@]}"; do
         case $part in
             '' | .) ;;
-            ..) unset 'out[-1]' ;;
+            ..) (( ${#out[@]} > 0 )) || return 1
+                unset 'out[-1]' ;;
             *) out+=("$part") ;;
         esac
     done
@@ -157,15 +158,18 @@ normalise() {
 # carved repo lays them out, or the build stops at a Cargo.toml it cannot read.
 declare -A destination=()
 collect() {
-    local dir=$1 dest=$2 rel target toml
+    local dir=$1 dest=$2 rel target beside toml
     [[ -z ${destination[$dir]:-} ]] || return 0
     destination[$dir]=$dest
     toml=$(git -C "$mono" show "$commit:$dir/Cargo.toml" 2>/dev/null) || return 0
     while IFS= read -r rel; do
         [[ -n $rel ]] || continue
-        target=$(normalise "$dir/$rel")
+        target=$(normalise "$dir/$rel") \
+            || die "the path dependency $rel in $dir/Cargo.toml climbs out of the monolith"
         if [[ $target != "$dir" && $target != "$dir"/* ]]; then
-            collect "$target" "$(normalise "$dest/$rel")"
+            beside=$(normalise "$dest/$rel") \
+                || die "the path dependency $rel in $dir/Cargo.toml climbs out of the monolith"
+            collect "$target" "$beside"
         fi
     done < <(grep -oE 'path[[:space:]]*=[[:space:]]*"[^"]+"' <<<"$toml" \
         | sed 's/.*"\(.*\)"/\1/')

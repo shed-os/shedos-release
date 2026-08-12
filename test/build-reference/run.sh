@@ -131,8 +131,12 @@ package() {
 EOF
 
     git -C "$MONO" init -q -b main
+    commit_monolith 'the fixture'
+}
+
+commit_monolith() {
     git -C "$MONO" -c user.email=t@t -c user.name=t add -A
-    git -C "$MONO" -c user.email=t@t -c user.name=t commit -qm 'the fixture'
+    git -C "$MONO" -c user.email=t@t -c user.name=t commit -qm "$1"
 }
 
 # The carved repo the candidate came from: it fetches its own source, so where
@@ -300,6 +304,16 @@ check 'a dev-dependency is one too' \
     says 'beside   packaging/alphatest at /__w/demo/demo/alpha/src/demo/alphatest'
 check 'a path dependency inside the package is not' not says 'beside   packaging/alpha/inner'
 
+reset_fixtures
+printf '[package]\nname = "alpha"\n\n[dependencies]\nout = { path = "../../../outside" }\n' \
+    > "$MONO/packaging/alpha/Cargo.toml"
+commit_monolith 'reach outside'
+plan "$MONO" "$WORK/alpha.pkg.tar.zst"
+check 'a path dependency that climbs out of the monolith is refused' test "$?" -eq 2
+check 'it names the dependency' says 'the path dependency ../../../outside'
+
+reset_fixtures
+plan "$MONO" "$WORK/alpha.pkg.tar.zst"
 check 'the tree comes from the commit and not the working tree' \
     test "$(cat "$RUN/tree/alpha/src/main.rs")" = committed
 printf 'uncommitted\n' > "$MONO/packaging/alpha/src/main.rs"
