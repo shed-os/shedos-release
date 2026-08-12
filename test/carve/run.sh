@@ -258,7 +258,7 @@ if carve cage-part "$(maps cage-part \
         grep -qx 'add the cage patch and its out-of-tree suite' \
             <<<"$(subjects cage-part)"
     check 'the pre-push check counted the paths that are left' \
-        grep -qx 'verified 3 commits and 2 paths against .*/cage-part.paths' \
+        grep -qx 'verified 2 commits and 2 paths against .*/cage-part.paths' \
             "$WORK/cage-part.out"
 else
     bad 'carve succeeded'

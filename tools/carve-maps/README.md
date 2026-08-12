@@ -8,6 +8,7 @@ ignored. Every directive needs a value.
 path <dir>              keep <dir> where it sits
 rename <old>:<new>      keep <old> too and move it to <new>
 flatten <dir>           keep <dir> and lift its contents to the repo root
+except <path>           leave <path> behind, whatever else asked for it
 new-package <name>      <name> is a package the monolith does not build
 ```
 
@@ -42,6 +43,31 @@ directory belongs to two repos now. Note that a `rename` whose source still
 exists in the monolith brings that file's later commits along to the
 destination, so a path the monolith still uses for something else cannot be
 chased back through.
+
+## Leaving part of a directory behind
+
+A package that splits across several repositories has one directory and
+several destinations, and only one of them can take it whole. `except` is the
+other side of that: `flatten packaging/shedos-system` takes the package, and
+an `except` line per file the split gives away takes those back out. Written
+that way the map says what the package is — everything it always had, less the
+named handful — instead of relisting a hundred and fifty files that did not
+move.
+
+`except` names monolith paths, like every other directive, and matches whole
+path components, so it takes a directory as readily as a file. It runs before
+anything else, which is what lets a `rename` beside it still replay from the
+source path the monolith used. That ordering has one consequence worth
+knowing: a file that moved inside the monolith has two paths, and excepting
+only the newer one leaves the older one to be picked up again by whatever
+selects it. Except both, or except the directory they are both under.
+
+An `except` matching nothing in the monolith is refused rather than ignored: a
+typo would otherwise read exactly like a subtraction that worked. The pre-push
+check then looks for the excepted files by name in the result, because the
+stray check cannot help here — it measures the carve against what the
+directives selected, and an excepted path is selected by the directive it is
+being taken out of.
 
 ## A map with no carve behind it
 
