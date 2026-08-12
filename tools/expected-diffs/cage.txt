@@ -2,20 +2,45 @@
 # Nothing here is a free pass: each path was opened and read before it was
 # written down, and an entry that stops matching fails the run.
 
-# The two were not built the same way. .BUILDINFO records the monolith's cage
-# built with debug and check off and this one with them on, and a debug build
-# leaves different bytes in the binary. Pinned to that one pair, so the next
-# time this file differs it has to be looked at again.
+# Reference: built from packaging/cage at monolith commit 03404a92, then
+# origin/main, with pkgrel raised from 2 to the published 4 — the carve
+# republished without a monolith release behind it, and pkgrel is a .PKGINFO
+# field. Candidate: the artifact the staging database records. The two
+# .BUILDINFO package lists came out equal in both directions.
 #
-# The entry retires the next time cage is really rebuilt, since that build gets
-# the same options as the monolith's.
-content usr/bin/cage c2c795445793f74d9922fa9deb3c870754fcb246c2228941e20634efebd6be18..db55ddeebea0a84ecc51227c676e9e09b72231c1c5a46499a4cdbc7ff5d4910c — built with debug and check on where the monolith had them off
+# The reference is the same bytes the monolith's own build published: the cage
+# the channels serve as 0.3.0-2 carries this exact usr/bin/cage. So what is
+# below is a difference between the two repositories and not between two ways of
+# building.
 
-# scdoc writes the build date into the .TH line as it generates the page, and
-# that line is the only thing that differs once the two are decompressed.
+# One path differs and it is the binary, and what differs inside it is the
+# version string. cage builds that string out of git: meson.build asks git for
+# the short commit and the branch of whatever repository the build tree sits in
+# and falls back to the plain project version when there is none. The pipeline
+# builds inside its checkout of shed-os/cage, so the answer is that repository's
+# HEAD —
 #
-# Left unpinned: the date moves on every rebuild, so a pin would go stale the
-# next time either side is built. The cost is that this entry forgives anything
-# else that happens to the page, and the way to close it is SOURCE_DATE_EPOCH
-# in the build rather than a pin here.
-content usr/share/man/man1/cage.1.gz — the generated man page is stamped with the build date
+#     Cage version 0.3.0-579273d (branch 'main')
+#
+# where 579273d is a commit of the carved repository. The reference is laid out
+# with git archive, which the recipe requires, so no repository sits above it and
+# the string stays
+#
+#     Cage version 0.3.0
+#
+# which is also what the monolith's published build says. That is the whole
+# difference, read rather than assumed:
+#
+#   CAGE_VERSION is interpolated in two places and .rodata is 48 bytes longer,
+#   exactly twice the 24 characters the suffix adds
+#
+#   every section after it is the same size and sits 48 bytes further on, and
+#   .data, .data.rel.ro, .init and .fini are byte-identical
+#
+#   .text is the same size and, with addresses masked, the same 4913
+#   instructions in the same order — the same code reaching constants that moved
+#
+# Pinned, and the candidate half moves whenever shed-os/cage's HEAD does, so the
+# next rebuild has to re-derive this entry against itself rather than widen it to
+# the unpinned form.
+content usr/bin/cage 02524fe3df513766cacae676d74f3ecf208a2e4f914121ebe198b3a8b672c9d1..3f4ce2bd919463fb1251c5004f99f16d5a252fa0cb2655b996981a79c55b0f2e — cage stamps its version with the commit of the repository it is built in
