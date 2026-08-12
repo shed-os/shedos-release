@@ -106,7 +106,9 @@ monolith_version=$(pkgbuild_field "$work/monolith.PKGBUILD" pkgver) \
 # Cargo builds a package id out of the absolute path of the tree, so a
 # reference built anywhere else differs in .text. That path is the candidate's
 # builddir plus whatever the carved PKGBUILD's build() steps into under
-# $srcdir, which is the only place it is written down.
+# $srcdir, which is the only place it is written down. A build that steps
+# nowhere — cage hands the source to meson and stays put — runs where the
+# checkout is, and then the reference's own $srcdir is the candidate's.
 rc=0
 read_pkgbuild "${SHEDOS_REFERENCE_CARVED_DIR:-}" "$carved" \
     "$CARVED_RAW/$carved_repo/main/${carved_subdir:+$carved_subdir/}PKGBUILD" \
@@ -122,13 +124,17 @@ under_srcdir=$(awk '/^[[:space:]]*build\(\)/ { inside = 1; next }
      inside && match($0, /cd[[:space:]]+"?\$\{?srcdir\}?\//) {
          rest = substr($0, RSTART + RLENGTH)
          sub(/["[:space:]].*/, "", rest)
-         print rest
+         print NR "\t" rest
          exit
      }' "$work/carved.PKGBUILD")
-if [[ -z $under_srcdir ]] && grep -q '^source=' "$work/carved.PKGBUILD"; then
-    die "nothing in $carved/PKGBUILD says where under \$srcdir the build runs"
+crate=$builddir
+if [[ -n $under_srcdir ]]; then
+    # A directory named by a variable is a directory this cannot know, and
+    # taking the text literally builds somewhere real that is nowhere near it.
+    [[ ${under_srcdir#*$'\t'} != *'$'* ]] \
+        || die "line ${under_srcdir%%$'\t'*} of $carved/PKGBUILD steps into a path this cannot resolve"
+    crate=$builddir/src/${under_srcdir#*$'\t'}
 fi
-crate=$builddir${under_srcdir:+/src/$under_srcdir}
 
 # --- what has to sit around it ----------------------------------------------
 

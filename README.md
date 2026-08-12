@@ -158,9 +158,12 @@ script insists on every one of these:
   nobody asked
 - the tree where the pipeline's checkout puts it. Cargo builds a package id out
   of the absolute path, so the same crate built elsewhere differs in `.text`.
-  The path is `.BUILDINFO`'s `builddir` plus wherever the carved PKGBUILD `cd`s
-  to under `$srcdir` — for the shedos-ui packages, which clone themselves,
-  `/__w/shedos-ui/shedos-ui/<pkg>/src/shedos-ui/<pkg>`
+  The path is `.BUILDINFO`'s `builddir` plus wherever the carved PKGBUILD's
+  `build()` `cd`s to under `$srcdir` — for the shedos-ui packages, which clone
+  themselves, `/__w/shedos-ui/shedos-ui/<pkg>/src/shedos-ui/<pkg>`. A `build()`
+  that steps nowhere, like cage handing its source to meson, builds at the
+  checkout itself, and one that `cd`s somewhere a variable names is refused
+  rather than guessed at
 - every crate the package's `Cargo.toml` reaches by `path`, laid out around it
   the way the carved repo lays them out. The five UI crates each declare
   `shedos-prompt-ui = { path = "../shedos-prompt-ui" }`, so that directory has

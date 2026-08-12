@@ -113,6 +113,23 @@ EOF
     printf '[package]\nname = "alphatest"\n' > "$MONO/packaging/alphatest/Cargo.toml"
     printf 'committed\n' > "$MONO/packaging/alpha/src/main.rs"
 
+    mkdir -p "$MONO/packaging/beta"
+    cat > "$MONO/packaging/beta/PKGBUILD" <<'EOF'
+pkgname=beta
+pkgver=2.0
+pkgrel=1
+arch=('x86_64')
+depends=('glibc')
+makedepends=('meson')
+build() {
+    meson setup "$srcdir/beta-$pkgver" build
+    meson compile -C build
+}
+package() {
+    meson install -C build --destdir "$pkgdir"
+}
+EOF
+
     git -C "$MONO" init -q -b main
     git -C "$MONO" -c user.email=t@t -c user.name=t add -A
     git -C "$MONO" -c user.email=t@t -c user.name=t commit -qm 'the fixture'
@@ -136,11 +153,26 @@ write_carved() {
     } > "$CARVED/demo/alpha/PKGBUILD"
 }
 
+write_carved_beta() {
+    mkdir -p "$CARVED/beta"
+    {
+        echo 'pkgname=beta'
+        echo 'pkgver=2.0'
+        echo 'pkgrel=1'
+        echo 'source=("https://example.invalid/beta-2.0.tar.gz")'
+        echo 'build() {'
+        echo '    meson setup "$srcdir/beta-$pkgver" build'
+        echo '    meson compile -C build'
+        echo '}'
+    } > "$CARVED/beta/PKGBUILD"
+}
+
 write_maps() {
     rm -rf "$MAPS"
     mkdir -p "$MAPS"
     printf '%s\n' 'path packaging/alpha/' 'rename packaging/alpha:alpha' \
         'path packaging/alphalib/' 'rename packaging/alphalib:alphalib' > "$MAPS/demo.paths"
+    printf '%s\n' 'flatten packaging/beta' > "$MAPS/beta.paths"
 }
 
 # What the container would answer with, and what the archive would serve.
@@ -157,6 +189,7 @@ reset_fixtures() {
     write_monolith
     write_maps
     write_carved
+    write_carved_beta
     write_environment
     write_candidate "$WORK/alpha.pkg.tar.zst" alpha 1.0-2 /__w/demo/demo/alpha \
         glibc-2.44-1-x86_64 binutils-2.47-1-x86_64 pam-1.7.1-1-x86_64
@@ -173,6 +206,7 @@ plan() {
 }
 
 says() { grep -qF "$1" "$WORK/out"; }
+says_line() { grep -qxF "$1" "$WORK/out"; }
 
 # --- case 1: the arguments --------------------------------------------------
 
@@ -231,10 +265,29 @@ plan "$MONO" "$WORK/alpha.pkg.tar.zst"
 check 'the braced form is the same path' says 'crate    /__w/demo/demo/alpha/src/demo/alpha'
 
 reset_fixtures
+write_carved 'cd "$srcdir/demo/$_name"'
+plan "$MONO" "$WORK/alpha.pkg.tar.zst"
+check 'a cd this cannot resolve is refused' test "$?" -eq 2
+check 'it names the line it will not read' says 'line 6 of demo/alpha/PKGBUILD'
+
+reset_fixtures
 write_carved 'cargo build --release'
 plan "$MONO" "$WORK/alpha.pkg.tar.zst"
-check 'a carved build that names no directory is refused' test "$?" -eq 2
-check 'it names the file it read' says 'demo/alpha/PKGBUILD'
+rc=$?
+check 'a build that steps nowhere builds where the checkout is' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/out"
+check 'and that is the builddir itself' says_line 'crate    /__w/demo/demo/alpha'
+
+section 'case 4b — a package built from a tarball is the same rule'
+reset_fixtures
+write_candidate "$WORK/beta.pkg.tar.zst" beta 2.0-1 /__w/beta/beta glibc-2.44-1-x86_64
+plan "$MONO" "$WORK/beta.pkg.tar.zst"
+rc=$?
+check 'the plan is made' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/out"
+check 'meson reading $srcdir is not a cd' says_line 'crate    /__w/beta/beta'
+check 'and nothing is laid out beside it' not says 'beside   '
+check 'the tree is the packaging directory itself' test -f "$RUN/tree/beta/PKGBUILD"
 
 # --- case 5: what has to sit beside it --------------------------------------
 
