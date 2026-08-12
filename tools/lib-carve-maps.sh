@@ -43,11 +43,17 @@ rename_dest() {
 # name a destination of its own. That is what separates packages sharing a repo
 # from a map that is ambiguous about which of two directories the package is.
 #
+# A `new-package` directive is the other way a maps file names no packaging
+# directory: the carve makes a package the monolith has never built, so there is
+# no PKGBUILD on the other side to compare against. It contributes no pair and
+# says so, because a package silently absent from the comparison is a package
+# nothing guards.
+#
 # $3 is the maps that carve something other than a package, one name per line.
 # A maps file naming no packaging directory has to be listed there; this
 # refuses to guess which it is.
 derive_pairs() {
-    local out=$1 dir=$2 exempt=${3:-} file repo roots count root subdir taken
+    local out=$1 dir=$2 exempt=${3:-} file repo roots count root subdir taken new
 
     shopt -s nullglob
     local maps=("$dir"/*.paths)
@@ -61,6 +67,12 @@ derive_pairs() {
                 | sed 's:/*$::' | grep '^packaging/' | LC_ALL=C sort -u)
         count=0
         [[ -z $roots ]] || count=$(grep -c . <<<"$roots")
+
+        new=$(awk '$1 == "new-package" { print $2 }' "$file")
+        if [[ -n $new ]]; then
+            echo "$repo.paths carves $new which the monolith does not build"
+            continue
+        fi
 
         if (( count == 0 )); then
             grep -qxF "$repo" <<<"$exempt" && continue

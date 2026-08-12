@@ -8,6 +8,7 @@ ignored. Every directive needs a value.
 path <dir>              keep <dir> where it sits
 rename <old>:<new>      keep <old> too and move it to <new>
 flatten <dir>           keep <dir> and lift its contents to the repo root
+new-package <name>      <name> is a package the monolith does not build
 ```
 
 They compose. A package repo usually takes its packaging directory and its
@@ -25,6 +26,22 @@ is, where the pipeline's `test/*/run.sh` expects it.
 The suite then has to be re-rooted in the carved repo: every carve so far
 reached its package through the `packaging/<name>/` prefix that `flatten` has
 just removed, and a suite still spelling it out dies before its first fixture.
+
+## A package the monolith does not build
+
+A split that takes part of one package and gives it a new name has nothing on
+the monolith side to compare against: there is no `packaging/shedman/PKGBUILD`
+and there never was. `new-package shedman` says so, and the version check reads
+it as a package it names and does not pair rather than one that quietly fell
+out of the comparison. It selects nothing, so a maps file holding only that
+directive still carves nothing and says so.
+
+Such a map takes its files with `rename` a file at a time — `path` and
+`flatten` take whole directories, and the point of the split is that the
+directory belongs to two repos now. Note that a `rename` whose source still
+exists in the monolith brings that file's later commits along to the
+destination, so a path the monolith still uses for something else cannot be
+chased back through.
 
 ## A map with no carve behind it
 

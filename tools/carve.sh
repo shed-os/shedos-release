@@ -12,6 +12,8 @@
 #   rename <old>:<new>  keep <old> too and move it to <new>, so the commits
 #                       from before the move stay with the file
 #   flatten <dir>       keep <dir> and lift its contents to the repo root
+#   new-package <name>  <name> is a package the monolith does not build, so
+#                       nothing pairs it with one
 #
 # See carve-maps/README.md for how to write one.
 #
@@ -43,7 +45,7 @@ while read -r kind rest || [[ -n $kind ]]; do
     lineno=$((lineno + 1))
     case $kind in
         '' | '#'*) continue ;;
-        path | rename | flatten) ;;
+        path | rename | flatten | new-package) ;;
         *) die "unknown directive '$kind' on line $lineno of $maps" ;;
     esac
     # An empty value reaches filter-repo as --path '', which matches every
@@ -75,6 +77,8 @@ while read -r kind rest || [[ -n $kind ]]; do
             args+=(--path "$dir/" --path-rename "$dir/:")
             pairs+=("$dir/"$'\t')
             ;;
+        # Nothing to select: it is addressed to the version check.
+        new-package) ;;
     esac
 done < "$maps"
 
