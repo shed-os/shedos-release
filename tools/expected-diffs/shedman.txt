@@ -1,0 +1,106 @@
+# What separates shedman from the monolith it came out of. Nothing here is a free
+# pass: each path was opened and read before it was written down.
+#
+# This one does not take the shape of the others. shedman is a NEW package name — the
+# monolith has never built one, so there is no reference package to compare against and
+# tools/build-reference.sh has no packaging directory to build. The comparison is against
+# the monolith FILES the carve took, and the entries below are the whole of what moved.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-system, at monolith commit 03404a92 (origin/main at carve time).
+# Carve map: tools/carve-maps/shedman.paths. 42 files, named one at a time because the
+# packaging directory they sit in belongs to two repositories from here on:
+#
+#   the dispatcher            tree/usr/bin/shedman
+#   19 verbs                  tree/usr/libexec/shedman/{apply,config,_config-review,
+#                             _config-sync,conflicts,datetime,db,doctor,health,install,
+#                             logs,rollback,services,snapshot,status,uninstall,update,
+#                             updates,upgrade-history}
+#   the plan engine           tree/usr/lib/shedos/apply_core.py
+#   18 man sources            man/shedman.1.scd and man/shedman-<verb>.1.scd for the 17
+#                             verbs that have a page (_config-sync and _config-review are
+#                             the two halves of `shedman config` and are documented on
+#                             shedman-config.1)
+#   3 completions             tree/usr/share/{bash-completion/completions/shedman,
+#                             zsh/site-functions/_shedman,
+#                             fish/vendor_completions.d/shedman.fish}
+#
+# Nine test suites carve with them: shedman, apply, apply-checkpoint, completions, config,
+# doctor, man, smoke, status.
+#
+# What shedos-system keeps and shedman does NOT take: the ten verbs the later splits own
+# (dock, encrypt, fingerprint, kernel, key, lock, login, secureboot, theme, tpm2) and
+# their man pages, the /usr/bin/shedos-* back-compat shims, shedos-dock.5 and
+# shedos-review-exclude.5, and everything under /usr/lib/shedos except apply_core.py.
+
+# --- (b) what was changed on purpose ----------------------------------------------
+#
+# §5.1, the config layer. /etc/shedman/shedman.toml is new and in backup=(). It carries
+# the libexec path, the package `shedman version` reports, and the directory verb
+# declarations live in. The same values are compiled into every reader as defaults, so a
+# missing or unreadable file changes nothing; test/shedman T11 asserts the two agree.
+content usr/bin/shedman a38b2258629bd0456d50b080fa7a775d637ae5ac..89919538e77ad04398d90b7a3a3d28a3506e8cf8 — reads the libexec path and the package name out of the config, and lists from the declarations
+content usr/share/bash-completion/completions/shedman c66b525356255856d0ccec138cc625c6863aaa8b..149f668100c78c6b55f7b635eef861125efab326 — reads the libexec path and the roster out of the config instead of the hardcoded /usr/libexec/shedman
+content usr/share/zsh/site-functions/_shedman d7f34a482d2588266b2b37819f834517222c877b..b7da18c706250fa364a98c65428b47fa2e19f67d — the same, and its `version` description no longer names shedos-system
+content usr/share/fish/vendor_completions.d/shedman.fish ac6310124db7bddbf5e03e288fb26dd86d49738b..b3676b97fe5803a2975c55017b973441a1fefb4e — the same, and its hardcoded list of completable subcommands is now the declarations
+#
+# The version lookup, same section. `shedman version` shelled out to
+# `pacman -Qi shedos-system`, which was guaranteed wrong the moment the dispatcher left
+# that package; it reads the `package` key now, which ships as "shedman". Part of the
+# usr/bin/shedman entry above.
+#
+# §5.1, the verb contract. Twenty files that have no monolith counterpart:
+#   etc/shedman/shedman.toml
+#   usr/share/shedman/verbs.d/<name>.toml, one per verb, naming the verb, its owning
+#   package, its man page and what it does; update declares requires = ["migrate"].
+# The dispatcher validates the namespace from these — two declarations claiming one name
+# is an error on stderr, and an executable nobody declared is left out of the listing
+# and named by `shedman doctor` rather than refused, because the dispatcher is not the
+# place to break a machine over metadata.
+content usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf..d8525777c3a9b6be163fae46de6eb258f1090ccb — gains the audit that names an executable no declaration claims
+#
+# Ten man pages gained the *shedman*(1) cross-reference every other subcommand page
+# already had. The monolith's man suite checked a hand-picked eleven pages and these ten
+# were not among them; deriving the list from the tree is what found them.
+content usr/share/man/man1/shedman-conflicts.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-datetime.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-db.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-health.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-install.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-logs.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-services.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-snapshot.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-updates.1.gz — SEE ALSO gained *shedman*(1)
+content usr/share/man/man1/shedman-upgrade-history.1.gz — SEE ALSO gained *shedman*(1)
+#
+# The PKGBUILD is new and shares nothing with shedos-system's. depends is the subset the
+# 19 verbs and apply_core reach: python-dbus, imagemagick, sbctl, tpm2-tools, libfido2,
+# systemd-ukify, sbsigntools, zram-generator, tlp and ananicy-cpp-git all belong to verbs
+# and drop-ins that stayed behind. package() installs the verbs from the declarations, so
+# the hand-kept array that used to decide what shipped is gone.
+
+# --- (c) everything else is byte-identical ----------------------------------------
+#
+# Every carved file not named in (b) is byte-for-byte the monolith's. Measured by
+# comparing `git hash-object` for each carved path against the monolith blob at
+# 03404a92: 27 identical, 15 transformed, 0 different, 0 missing over the 42 package
+# files, and 491 identical over the carved test files. The carve itself is the same
+# claim before any transform: 42 of 42 blobs identical, 158 commits matching the
+# monolith's log for those paths line for line, plus the two merge commits filter-repo
+# keeps and `git log -- <paths>` prunes.
+#
+# One limit is worth writing down. Fourteen of the verbs were once /usr/bin/shedos-*
+# tools, and those paths are still live back-compat shims shedos-system ships. A carve
+# map cannot chase history through a path the monolith still uses for something else —
+# the rename would carry the shim's later commits onto the verb — so those fourteen
+# files' history in this repository starts at the commit that made them verbs. The bash
+# completer's move out of /etc/bash_completion.d is replayed, because that path is gone.
+
+# --- parity ------------------------------------------------------------------------
+#
+# tools/carve-maps/shedman.paths opens with `new-package shedman`, which is what
+# test/version-parity reads to say the monolith builds no such package. It is named in
+# that suite's output and contributes no pair, rather than being dropped from the
+# comparison in silence. There is nothing to hold at the monolith's pkgver: shedman is at
+# 2026.08.09-1, the current stable date under the house scheme for a new name.

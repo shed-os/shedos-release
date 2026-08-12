@@ -385,6 +385,18 @@ done
 paired=$(( packages - $(grep -c 'holds no PKGBUILD and is not a package' "$WORK/last.out") ))
 check 'it compared one pair per package the carve maps name' \
     grep -qx "all $paired carved package(s) are at the monolith version" "$WORK/last.out"
+
+# A carve that made a new package name has nothing to be held at, and the run has to
+# say which one rather than leave it out of the count without a word.
+while read -r repo new; do
+    [[ -n $new ]] || continue
+    check "and $new is named as a package the monolith does not build" \
+        grep -qx "$repo.paths carves $new which the monolith does not build" \
+        "$WORK/last.out"
+done < <(awk '$1 == "new-package" {
+             n = FILENAME; sub(/.*\//, "", n); sub(/\.paths$/, "", n)
+             print n, $2
+         }' "$MAPS_DIR"/*.paths)
 check 'and no carve map has gone missing' test "$paired" -ge 12
 
 # --- result -----------------------------------------------------------------
