@@ -12,7 +12,7 @@
 # --- (a) where the content came from ----------------------------------------------
 #
 # Source package: shedos-system. The carve was taken at monolith commit 03404a92; the
-# comparison below is against 2c377ee7, which is where the monolith stands now.
+# comparison below is against 7b7223a3, which is where the monolith stands now.
 # Carve map: tools/carve-maps/shedman.paths. 42 files, named one at a time because the
 # packaging directory they sit in belongs to two repositories from here on:
 #
@@ -88,7 +88,7 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 #
 # Every package file (tree/ and man/) not named in (b) or (b2) is byte-for-byte the
 # monolith's. Measured by comparing `git rev-parse` on each carved path against the
-# monolith blob at 2c377ee7, over the whole carved tree at HEAD:
+# monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
 #   package tree (tree/ + man/): 37 identical, 5 transformed
 #   test tree:                   479 identical, 12 transformed  (see (d))

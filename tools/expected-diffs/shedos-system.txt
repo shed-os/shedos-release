@@ -10,7 +10,8 @@
 # --- (a) where the content came from ----------------------------------------------
 #
 # Source package: shedos-system, carved at monolith commit 2c377ee7 (origin/main at carve
-# time) and compared against the same commit. Carve map: tools/carve-maps/shedos-system.paths
+# time) and compared against 7b7223a3, which is where the monolith stands now. Carve map:
+# tools/carve-maps/shedos-system.paths
 # — `flatten packaging/shedos-system` plus one `except` line per file the four splits take,
 # so the map says what the package is rather than relisting the hundred and fifty that did
 # not move.
@@ -60,7 +61,7 @@
 # word-matcher each reference only a shedman verb. They stay in the monolith, which still
 # ships those verbs and still runs them, and they belong with shedman at cutover.
 
-# --- (b) the 4 transformed package files -------------------------------------------
+# --- (b) the 3 transformed package files -------------------------------------------
 #
 # §5.6, the single fence-writer. tree/usr/lib/shedos/pacman-fence is new (see (b2)) and is
 # now the only place a managed block in /etc/pacman.conf is written. The scriptlet keeps the
@@ -108,16 +109,15 @@
 #
 # §2 row 2 and §5.1, the build. package() installs the verbs the declarations name, so the
 # hand-kept array that used to decide what shipped is gone — the failure mode §5.1 names.
-content PKGBUILD 334fe1ac68a6652a62474f35a410bcacf68ce968..edb207e64eaffe87a755b2a3fc12da43f6f1ec08 — §2 row 2 and §5.1: builds from this repository's tag, installs the verbs the declarations name instead of a hand-kept array, drops what the four splits took, gains depends=(shedman), and carries the pkgrel the pipeline's guard moved past what staging held
+content PKGBUILD 2b7acf79f608a3ab3b6fa102cf4909a2a2304881..edb207e64eaffe87a755b2a3fc12da43f6f1ec08 — §2 row 2 and §5.1: builds from this repository's tag, installs the verbs the declarations name instead of a hand-kept array, drops what the four splits took, gains depends=(shedman), and carries the pkgrel the pipeline's guard moved past what staging held
 content shedos-system.install 214bf3218be41dc9b1a7319c9a28e1bf4c94dc6d..01ba8916a6c0f72a379b4e90de46dfa92bc52de0 — §5.6: _add_shedos_repo asks the fence library for the text and the strip-then-append instead of holding a copy of both, says so on stderr when the library is not there rather than declining in silence on the one path that puts [shedos] in front of a box, and the build-container marker it checks is overridable for the harness so the suite that drives it can run inside a build container
 content tree/usr/lib/shedos/nvidia-reap ddee4ca0f494a975cdf26ef318b2e12f5654a7ca..5acbca4b68d2bbe97839b25436a5acdca26edbc1 — §5.5: reads the shipped driver list instead of repeating it, and a list it cannot read leaves the unit armed rather than reaping a stack it does not know
 #
-# PENDING CONVERGENCE: the fingerprint entry below is a bug fix the build-time completion
-# check found, and the same fix is prepared as an owner-gated rider on the monolith. The
-# carved blob is already byte-identical to the monolith working tree's, so this entry
-# disappears when the rider lands and the fleet rebuilds. Re-run the instrument against the
-# monolith commit of that day and drop it.
-content tree/usr/libexec/shedman/fingerprint 8299c7823a8560c62fb59bba05dfd3fe34098eba..cb13ae79bffe744c879ac97c69986aa5438eae03 — NO SPEC SECTION — a bug the verb contract found. The verb read $USER with nothing behind it, so a shell that never set one killed it before it reached the flag it was handed, and the build-time completion check runs in exactly such a shell
+# tree/usr/libexec/shedman/fingerprint was a fourth entry here — the verb read $USER with
+# nothing behind it, so a shell that never set one killed it before it reached the flag it
+# was handed, which is the shell the build-time completion check runs in. The monolith has
+# taken the same fix (9c67c9c7) and the two blobs are the same one again, so it is no
+# longer a difference.
 
 # --- (b2) the 15 files with no monolith counterpart --------------------------------
 #
@@ -148,9 +148,9 @@ content tree/usr/libexec/shedman/fingerprint 8299c7823a8560c62fb59bba05dfd3fe340
 #
 # Every package file (tree/, man/, PKGBUILD, the install scriptlet) not named in (b) or
 # (b2) is byte-for-byte the monolith's. Measured by comparing `git rev-parse` on each carved
-# path against the monolith blob at 2c377ee7, over the whole carved tree at HEAD:
+# path against the monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
-#   package tree:  154 identical, 4 transformed
+#   package tree:  155 identical, 3 transformed
 #   test tree:       0 identical, 27 transformed  (see (d))
 #   no monolith counterpart: 15                   (see (b2))
 #
@@ -234,7 +234,7 @@ content test/unlock/tpm2.sh a76173a3f2502dad150b381336fba29e9a441cfa..25c4e522f2
 #
 # tools/carve-maps/shedos-system.paths carves packaging/shedos-system, so version-parity
 # pairs this repository with that directory and holds pkgver equal and pkgrel equal-or-ahead.
-# The carved package is at 2026.08.09-6 and the monolith directory at 2026.08.09-1: pkgver
+# The carved package is at 2026.08.09-6 and the monolith directory at 2026.08.09-2: pkgver
 # equal, pkgrel ahead, which is what the check allows. pkgver is the tag name, and parity
 # pins pkgver to the monolith's, so a content change inside one date has nowhere to go but
 # the same tag and the next pkgrel — a new tag name would mean a new pkgver and a parity
