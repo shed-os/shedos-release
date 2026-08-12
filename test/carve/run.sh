@@ -150,10 +150,20 @@ refuses 'rename with no source'      bad-nosource  $'rename :new\n' \
         "has no source: ':new'"
 refuses 'new-package with no value'  bad-newpkg    $'new-package\n' \
         'new-package on line 1 of'
+refuses 'except with no value'       bad-except    $'except\n' \
+        'except on line 1 of'
 refuses 'maps that selects nothing'  bad-empty     $'# only a comment\n' \
         'selects nothing'
 refuses 'a declaration on its own'   bad-onlynew   $'new-package lonely\n' \
         'selects nothing'
+refuses 'an except on its own'       bad-onlyexc \
+        $'except packaging/cage/PKGBUILD\n' 'selects nothing'
+refuses 'an except naming nothing the monolith has' bad-excmiss \
+        $'flatten packaging/cage\nexcept packaging/cage/nosuch\n' \
+        'packaging/cage/nosuch, which the monolith does not have'
+refuses 'an except that leaves nothing behind' bad-excall \
+        $'flatten packaging/cage\nexcept packaging/cage\n' \
+        'kept no commits'
 refuses 'roots that match nothing'   bad-roots     $'path nowhere/\n' \
         'kept no commits'
 refuses 'a monolith that is not one' bad-mono      $'path packaging/cage/\n' \
@@ -235,6 +245,63 @@ if carve lib-both "$(maps lib-both $'path new/\nrename old:new\n')"; then
 else
     bad 'carve succeeded'
     cat "$WORK/lib-both.out"
+fi
+
+section 'except (the shape a package split between repos uses)'
+
+if carve cage-part "$(maps cage-part \
+        $'flatten packaging/cage\npath test/cage/\nexcept packaging/cage/0001.patch\n')"; then
+    ok 'carve succeeded'
+    check 'the excepted file is gone and the rest of the package is not' \
+        [ "$(pushed_paths cage-part)" = 'PKGBUILD test/cage/run.sh ' ]
+    check 'the commits that touched it are still there for what else they did' \
+        grep -qx 'add the cage patch and its out-of-tree suite' \
+            <<<"$(subjects cage-part)"
+    check 'the pre-push check counted the paths that are left' \
+        grep -qx 'verified 3 commits and 2 paths against .*/cage-part.paths' \
+            "$WORK/cage-part.out"
+else
+    bad 'carve succeeded'
+    cat "$WORK/cage-part.out"
+fi
+
+# Naming a directory takes the whole of it, the way the other directives match.
+if carve cage-dir "$(maps cage-dir \
+        $'flatten packaging/cage\npath test/cage/\nexcept test/cage\n')"; then
+    ok 'carve succeeded'
+    check 'a directory except takes everything under it' \
+        [ "$(pushed_paths cage-dir)" = '0001.patch PKGBUILD ' ]
+else
+    bad 'carve succeeded'
+    cat "$WORK/cage-dir.out"
+fi
+
+section 'the pre-push check catches a subtraction that did not happen'
+
+# The stray check measures the carve against what the maps file selected, and
+# an excepted path is selected by the directive it is being subtracted from —
+# so it cannot see this one. Break the subtraction and the carve must still die.
+BLIND=$WORK/carve-blind.sh
+# shellcheck disable=SC2016  # matching carve.sh's text, not expanding it
+sed 's|filter-repo --invert-paths "${excepts\[@\]}"|filter-repo --version >/dev/null|' \
+    "$CARVE" > "$BLIND"
+# shellcheck disable=SC2016
+if grep -q -- '--invert-paths "${excepts\[@\]}"' "$BLIND"; then
+    bad 'fault injection did not take — the harness is not testing what it thinks'
+else
+    ok 'fault injection took'
+    rm -rf "$(bare_of blind)"
+    git init -q --bare "$(bare_of blind)"
+    SHEDOS_CARVE_REMOTE=$(bare_of blind) bash "$BLIND" "$MONO" blind \
+        "$(maps blind $'flatten packaging/cage\nexcept packaging/cage/0001.patch\n')" \
+        > "$WORK/blind.out" 2>&1
+    blind_rc=$?
+    check 'the carve that kept an excepted path is refused' [ "$blind_rc" -ne 0 ]
+    check 'it names the path it should have subtracted' \
+        grep -q '0001.patch' "$WORK/blind.out"
+    check 'it refuses by name' \
+        grep -q 'refusing to push blind' "$WORK/blind.out"
+    check 'and nothing reached the remote' [ "$(pushed_refs blind)" = 0 ]
 fi
 
 section 'the pre-push check catches a carve that overreaches'
