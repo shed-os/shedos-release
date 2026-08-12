@@ -1,0 +1,92 @@
+# shedos-system keeps its name and sheds the four splits that came out of it:
+# the shedman dispatcher and its core verbs, the theme engine and its palettes,
+# the dock verb, and the system-wide GTK defaults that belong beside the rest
+# of the desktop. What is left is the boot, UKI, encryption and services half —
+# the whole packaging directory less the files below.
+flatten packaging/shedos-system
+
+# --- the shedman split ---------------------------------------------------
+except packaging/shedos-system/tree/usr/bin/shedman
+except packaging/shedos-system/tree/usr/libexec/shedman/apply
+except packaging/shedos-system/tree/usr/libexec/shedman/config
+except packaging/shedos-system/tree/usr/libexec/shedman/_config-review
+except packaging/shedos-system/tree/usr/libexec/shedman/_config-sync
+except packaging/shedos-system/tree/usr/libexec/shedman/conflicts
+except packaging/shedos-system/tree/usr/libexec/shedman/datetime
+except packaging/shedos-system/tree/usr/libexec/shedman/db
+except packaging/shedos-system/tree/usr/libexec/shedman/doctor
+except packaging/shedos-system/tree/usr/libexec/shedman/health
+except packaging/shedos-system/tree/usr/libexec/shedman/install
+except packaging/shedos-system/tree/usr/libexec/shedman/logs
+except packaging/shedos-system/tree/usr/libexec/shedman/rollback
+except packaging/shedos-system/tree/usr/libexec/shedman/services
+except packaging/shedos-system/tree/usr/libexec/shedman/snapshot
+except packaging/shedos-system/tree/usr/libexec/shedman/status
+except packaging/shedos-system/tree/usr/libexec/shedman/uninstall
+except packaging/shedos-system/tree/usr/libexec/shedman/update
+except packaging/shedos-system/tree/usr/libexec/shedman/updates
+except packaging/shedos-system/tree/usr/libexec/shedman/upgrade-history
+except packaging/shedos-system/tree/usr/lib/shedos/apply_core.py
+except packaging/shedos-system/man/shedman.1.scd
+except packaging/shedos-system/man/shedman-apply.1.scd
+except packaging/shedos-system/man/shedman-config.1.scd
+except packaging/shedos-system/man/shedman-conflicts.1.scd
+except packaging/shedos-system/man/shedman-datetime.1.scd
+except packaging/shedos-system/man/shedman-db.1.scd
+except packaging/shedos-system/man/shedman-doctor.1.scd
+except packaging/shedos-system/man/shedman-health.1.scd
+except packaging/shedos-system/man/shedman-install.1.scd
+except packaging/shedos-system/man/shedman-logs.1.scd
+except packaging/shedos-system/man/shedman-rollback.1.scd
+except packaging/shedos-system/man/shedman-services.1.scd
+except packaging/shedos-system/man/shedman-snapshot.1.scd
+except packaging/shedos-system/man/shedman-status.1.scd
+except packaging/shedos-system/man/shedman-uninstall.1.scd
+except packaging/shedos-system/man/shedman-update.1.scd
+except packaging/shedos-system/man/shedman-updates.1.scd
+except packaging/shedos-system/man/shedman-upgrade-history.1.scd
+# The completer's old home under /etc, so its whole life stays with the file.
+except packaging/shedos-system/tree/etc/bash_completion.d/shedman
+except packaging/shedos-system/tree/usr/share/bash-completion/completions/shedman
+except packaging/shedos-system/tree/usr/share/zsh/site-functions/_shedman
+except packaging/shedos-system/tree/usr/share/fish/vendor_completions.d/shedman.fish
+
+# --- the theme engine and the palettes it renders ------------------------
+except packaging/shedos-system/man/shedman-theme.1.scd
+except packaging/shedos-system/tree/etc/shedos/themes/palettes
+except packaging/shedos-system/tree/usr/lib/shedos/shedos_palette.py
+except packaging/shedos-system/tree/usr/lib/shedos/theme_renderer.py
+except packaging/shedos-system/tree/usr/libexec/shedman/theme
+
+# --- the dock verb, which joins the rest of the dock --------------------
+except packaging/shedos-system/man/shedman-dock.1.scd
+except packaging/shedos-system/man/shedos-dock.5.scd
+except packaging/shedos-system/tree/usr/libexec/shedman/dock
+
+# --- the system-wide GTK defaults, which join the skel copies -----------
+except packaging/shedos-system/tree/etc/gtk-3.0/settings.ini
+except packaging/shedos-system/tree/etc/gtk-4.0/settings.ini
+
+# The suites that read this package's files. The eleven that only ever read a
+# shedman verb are not here: they belong to the package that verb went to.
+path test/apparmor/
+path test/dkms-coverage/
+path test/emergency/
+path test/encrypt/
+path test/install-scriptlets/
+path test/kernel/
+path test/key/
+path test/login/
+path test/nvidia-reap/
+path test/pacman-channels/
+path test/retire-shedos-kernel/
+path test/secureboot/
+path test/shell-migrate/
+path test/switch-user/
+path test/tpm2/
+path test/uki/
+path test/unlock/
+
+# The one installer test that exercises a file in this package rather than one
+# in the installer.
+rename installer/tests/test_backfill_uki_cmdline.py:test/backfill-uki-cmdline/test_backfill_uki_cmdline.py
