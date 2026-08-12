@@ -1,0 +1,66 @@
+# shedman is the first product split: the dispatcher and the core
+# package-manager verbs come out of shedos-system, and the boot, UKI and
+# encryption half stays behind. There is no packaging/shedman to take, so the
+# files are named one at a time and the package tree is rebuilt at the root.
+new-package shedman
+
+rename packaging/shedos-system/tree/usr/bin/shedman:tree/usr/bin/shedman
+
+rename packaging/shedos-system/tree/usr/libexec/shedman/apply:tree/usr/libexec/shedman/apply
+rename packaging/shedos-system/tree/usr/libexec/shedman/config:tree/usr/libexec/shedman/config
+rename packaging/shedos-system/tree/usr/libexec/shedman/_config-review:tree/usr/libexec/shedman/_config-review
+rename packaging/shedos-system/tree/usr/libexec/shedman/_config-sync:tree/usr/libexec/shedman/_config-sync
+rename packaging/shedos-system/tree/usr/libexec/shedman/conflicts:tree/usr/libexec/shedman/conflicts
+rename packaging/shedos-system/tree/usr/libexec/shedman/datetime:tree/usr/libexec/shedman/datetime
+rename packaging/shedos-system/tree/usr/libexec/shedman/db:tree/usr/libexec/shedman/db
+rename packaging/shedos-system/tree/usr/libexec/shedman/doctor:tree/usr/libexec/shedman/doctor
+rename packaging/shedos-system/tree/usr/libexec/shedman/health:tree/usr/libexec/shedman/health
+rename packaging/shedos-system/tree/usr/libexec/shedman/install:tree/usr/libexec/shedman/install
+rename packaging/shedos-system/tree/usr/libexec/shedman/logs:tree/usr/libexec/shedman/logs
+rename packaging/shedos-system/tree/usr/libexec/shedman/rollback:tree/usr/libexec/shedman/rollback
+rename packaging/shedos-system/tree/usr/libexec/shedman/services:tree/usr/libexec/shedman/services
+rename packaging/shedos-system/tree/usr/libexec/shedman/snapshot:tree/usr/libexec/shedman/snapshot
+rename packaging/shedos-system/tree/usr/libexec/shedman/status:tree/usr/libexec/shedman/status
+rename packaging/shedos-system/tree/usr/libexec/shedman/uninstall:tree/usr/libexec/shedman/uninstall
+rename packaging/shedos-system/tree/usr/libexec/shedman/update:tree/usr/libexec/shedman/update
+rename packaging/shedos-system/tree/usr/libexec/shedman/updates:tree/usr/libexec/shedman/updates
+rename packaging/shedos-system/tree/usr/libexec/shedman/upgrade-history:tree/usr/libexec/shedman/upgrade-history
+
+# The plan engine both apply and doctor import.
+rename packaging/shedos-system/tree/usr/lib/shedos/apply_core.py:tree/usr/lib/shedos/apply_core.py
+
+rename packaging/shedos-system/man/shedman.1.scd:man/shedman.1.scd
+rename packaging/shedos-system/man/shedman-apply.1.scd:man/shedman-apply.1.scd
+rename packaging/shedos-system/man/shedman-config.1.scd:man/shedman-config.1.scd
+rename packaging/shedos-system/man/shedman-conflicts.1.scd:man/shedman-conflicts.1.scd
+rename packaging/shedos-system/man/shedman-datetime.1.scd:man/shedman-datetime.1.scd
+rename packaging/shedos-system/man/shedman-db.1.scd:man/shedman-db.1.scd
+rename packaging/shedos-system/man/shedman-doctor.1.scd:man/shedman-doctor.1.scd
+rename packaging/shedos-system/man/shedman-health.1.scd:man/shedman-health.1.scd
+rename packaging/shedos-system/man/shedman-install.1.scd:man/shedman-install.1.scd
+rename packaging/shedos-system/man/shedman-logs.1.scd:man/shedman-logs.1.scd
+rename packaging/shedos-system/man/shedman-rollback.1.scd:man/shedman-rollback.1.scd
+rename packaging/shedos-system/man/shedman-services.1.scd:man/shedman-services.1.scd
+rename packaging/shedos-system/man/shedman-snapshot.1.scd:man/shedman-snapshot.1.scd
+rename packaging/shedos-system/man/shedman-status.1.scd:man/shedman-status.1.scd
+rename packaging/shedos-system/man/shedman-uninstall.1.scd:man/shedman-uninstall.1.scd
+rename packaging/shedos-system/man/shedman-update.1.scd:man/shedman-update.1.scd
+rename packaging/shedos-system/man/shedman-updates.1.scd:man/shedman-updates.1.scd
+rename packaging/shedos-system/man/shedman-upgrade-history.1.scd:man/shedman-upgrade-history.1.scd
+
+# The bash completer lived under /etc before bash-completion moved its search
+# path, and that old path is gone from the monolith, so the move can be replayed.
+rename packaging/shedos-system/tree/etc/bash_completion.d/shedman:tree/usr/share/bash-completion/completions/shedman
+rename packaging/shedos-system/tree/usr/share/bash-completion/completions/shedman:tree/usr/share/bash-completion/completions/shedman
+rename packaging/shedos-system/tree/usr/share/zsh/site-functions/_shedman:tree/usr/share/zsh/site-functions/_shedman
+rename packaging/shedos-system/tree/usr/share/fish/vendor_completions.d/shedman.fish:tree/usr/share/fish/vendor_completions.d/shedman.fish
+
+path test/shedman/
+path test/apply/
+path test/apply-checkpoint/
+path test/completions/
+path test/config/
+path test/doctor/
+path test/man/
+path test/smoke/
+path test/status/
