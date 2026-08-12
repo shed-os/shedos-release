@@ -64,8 +64,15 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # man suite checked a hand-picked eleven pages and these ten were not among them; deriving
 # the list from the tree is what found them. §11 assigns man cross-references a
 # release-time link checker and sanctions no edit here, so these ten stand on the docs
-# rules alone. The same defect ships from the monolith today on kernel.1, lock.1 and
-# theme.1, which carve in Tasks 2 and 3.
+# rules alone.
+#
+# PENDING CONVERGENCE: the monolith has an owner rider fixing the same thirteen pages
+# (2e0665c8, the ten here plus kernel.1, lock.1 and theme.1, which carve in Tasks 2 and 3)
+# committed but not yet on origin/main, which is still 03404a92. All ten of these entries
+# are expected to disappear when it lands — the carved text is already byte-identical to
+# the rider's for all ten, upgrade-history included since its cross-reference line was
+# rewrapped to match. Re-run the instrument against the monolith commit of the day and
+# drop whichever entries have converged.
 content man/shedman-conflicts.1.scd 10318992269ea1714c0ed8ab4baf58ffa87ab812..bddd51fb40e8fe56d357ce012cf88c679e76dbb2 — SEE ALSO gained *shedman*(1)
 content man/shedman-datetime.1.scd fabb99f8cd5ea53ae29141c4fc32633b494ad0e8..b6f81c2d1f76fbb1718200211fca345c1ee69b71 — SEE ALSO gained *shedman*(1)
 content man/shedman-db.1.scd 959591debb459c757357463b0d3704e555786f74..3c92a9f5d772d897f120595b9818a103bea5fbae — SEE ALSO gained *shedman*(1)
@@ -75,7 +82,7 @@ content man/shedman-logs.1.scd 7c3f6b96ec502efc73577e7975f622c194047510..96e8b45
 content man/shedman-services.1.scd b1346f8f4bdb514a675f635ee5c3742d497ef8db..584b6271662709e3f483bd2235a7cc7d9da1240a — SEE ALSO gained *shedman*(1)
 content man/shedman-snapshot.1.scd fddff2bad77ad9e5d804809699316eaafee8a436..8ba5d832c03e598b7d8b6bf013388366d705863b — SEE ALSO gained *shedman*(1)
 content man/shedman-updates.1.scd 3a423f48aefc38e31cdc1776ec5f527bff5af9ab..0d078cfad2a956a8ad89ccf1720e5b527e48a0f4 — SEE ALSO gained *shedman*(1)
-content man/shedman-upgrade-history.1.scd f6a6d1ba567d6467075ea16797004cea7dda475b..4e2329b1e9d192ce4f4098cbd68753d010558958 — SEE ALSO gained *shedman*(1)
+content man/shedman-upgrade-history.1.scd f6a6d1ba567d6467075ea16797004cea7dda475b..a33c8364eaf16cfb0c43c255a62b40918a0eb465 — SEE ALSO gained *shedman*(1)
 
 # --- (b2) the 24 files with no monolith counterpart --------------------------------
 #
@@ -142,5 +149,10 @@ content test/doctor/pilot.py b1fb0fb66f816902229d0a70ffb9a113612ea7e7..3dea26f6f
 # tools/carve-maps/shedman.paths opens with `new-package shedman`, which is what
 # test/version-parity reads to say the monolith builds no such package. It is named in
 # that suite's output and contributes no pair, rather than being dropped from the
-# comparison in silence. There is nothing to hold at the monolith's pkgver: shedman is at
-# 2026.08.09-1, the current stable date under the house scheme for a new name.
+# comparison in silence. There is nothing to hold at the monolith's pkgver.
+#
+# shedman is at 2026.08.12-1. It was cut at 2026.08.09-1, the current stable date under
+# the house scheme for a new name, and re-cut when the verb declarations changed after
+# that release had been published: a tag names one tree for good, so a content change past
+# a published tag takes a new version rather than moving the old one. It is the only
+# package on the channel not at 2026.08.09, and that is what it means rather than drift.
