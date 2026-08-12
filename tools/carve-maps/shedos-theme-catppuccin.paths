@@ -1,0 +1,12 @@
+# The first theme data package: the four Catppuccin Mocha palettes and nothing
+# else. The monolith ships them under /etc, where pacman does not back them up
+# and an upgrade overwrites an edited one; a data package owns them under
+# /usr/share instead, so the rename below is the relocation itself and the
+# files reach the new path with their history on them. There is no
+# packaging/shedos-theme-catppuccin to take.
+new-package shedos-theme-catppuccin
+
+rename packaging/shedos-system/tree/etc/shedos/themes/palettes/catppuccin-mocha-blue.toml:tree/usr/share/shedos/themes/palettes/catppuccin-mocha-blue.toml
+rename packaging/shedos-system/tree/etc/shedos/themes/palettes/catppuccin-mocha-green.toml:tree/usr/share/shedos/themes/palettes/catppuccin-mocha-green.toml
+rename packaging/shedos-system/tree/etc/shedos/themes/palettes/catppuccin-mocha-mauve.toml:tree/usr/share/shedos/themes/palettes/catppuccin-mocha-mauve.toml
+rename packaging/shedos-system/tree/etc/shedos/themes/palettes/catppuccin-mocha-pink.toml:tree/usr/share/shedos/themes/palettes/catppuccin-mocha-pink.toml

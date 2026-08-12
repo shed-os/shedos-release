@@ -1,0 +1,14 @@
+# The theme engine is the reconciler that turns a palette into the files every
+# themed surface reads, the palette loader the terminal UIs import, the verb
+# that drives both, and the page documenting it. The palettes themselves are
+# data and carve into their own repository. There is no
+# packaging/shedos-theme-engine to take, so the files are named one at a time
+# and the package tree is rebuilt at the root.
+new-package shedos-theme-engine
+
+rename packaging/shedos-system/tree/usr/lib/shedos/theme_renderer.py:tree/usr/lib/shedos/theme_renderer.py
+rename packaging/shedos-system/tree/usr/lib/shedos/shedos_palette.py:tree/usr/lib/shedos/shedos_palette.py
+rename packaging/shedos-system/tree/usr/libexec/shedman/theme:tree/usr/libexec/shedman/theme
+rename packaging/shedos-system/man/shedman-theme.1.scd:man/shedman-theme.1.scd
+
+path test/theme-render/
