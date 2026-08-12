@@ -1,0 +1,210 @@
+# What separates the carved shedos-system from the monolith package of the same name.
+# Nothing here is a free pass: each path was opened and read before it was written down.
+#
+# The comparison is blob-to-blob between the carved repository and the monolith files the
+# carve took, and every path below is written the way the carved repository holds it
+# (`tree/…`, `man/…`, `test/…`) rather than the way the built package installs it, because
+# the carved path is what was compared. Every `content` line is pinned
+# <monolith blob>..<carved blob>.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-system, carved at monolith commit 2c377ee7 (origin/main at carve
+# time) and compared against the same commit. Carve map: tools/carve-maps/shedos-system.paths
+# — `flatten packaging/shedos-system` plus one `except` line per file the four splits take,
+# so the map says what the package is rather than relisting the hundred and fifty that did
+# not move.
+#
+# 355 commits carried. 158 package files and 27 test files, all byte-identical to the
+# monolith at the carve root, and the carved log matches `git log` over the in-scope
+# monolith paths line for line across 353 commits, with three known deviations named in (c).
+#
+# What the map subtracts, 55 files in four sets:
+#
+#   the shedman split (42)    the dispatcher, 19 verbs, apply_core.py, 18 man sources and
+#                             the three completions — tools/carve-maps/shedman.paths is the
+#                             authority for the list, and this map excepts exactly the live
+#                             paths in it plus the completer's dead /etc home so the whole
+#                             of that file's life goes with it
+#   the theme split (8)       man/shedman-theme.1.scd, the theme verb, theme_renderer.py,
+#                             shedos_palette.py and the four palettes under
+#                             tree/etc/shedos/themes/palettes/. §5.2. The man page goes with
+#                             the verb rather than staying: the verb contract requires every
+#                             declaration to name a man page the SAME package ships, so a
+#                             theme engine declaring `theme` while this package held the
+#                             page would fail the build-time check, and both shipping it
+#                             would be a file conflict after cutover
+#   the dock split (3)        the dock verb and its two man pages, shedman-dock.1.scd and
+#                             shedos-dock.5.scd. §5.5
+#   the desktop defaults (2)  tree/etc/gtk-3.0/settings.ini and tree/etc/gtk-4.0/settings.ini.
+#                             §5.5 moves the /etc pair to the desktop package, which already
+#                             ships the skel pair, and generates all four from one source.
+#                             The task brief does not name these among the subtractions and
+#                             the phase plan's desktop task does; keeping them would have
+#                             left two carved packages owning one path
+#
+# What comes: the 8 remaining verbs (encrypt, fingerprint, kernel, key, lock, login,
+# secureboot, tpm2), their 8 man pages plus shedos-review-exclude.5, the ~147 tree files,
+# the install scriptlet and the PKGBUILD lineage.
+#
+# Two of the three man pages the monolith's docs rider fixed stay here — kernel.1 and
+# lock.1 — and both carved with the fix in them, verified against the rider's text. The
+# third, theme.1, goes with the theme split.
+#
+# The suites: 17 carve with the package (apparmor, dkms-coverage, emergency, encrypt,
+# install-scriptlets, kernel, key, login, nvidia-reap, pacman-channels, retire-shedos-kernel,
+# secureboot, shell-migrate, switch-user, tpm2, uki, unlock), plus one pytest module lifted
+# out of the installer suite. ELEVEN suites that the survey counted as shedos-system's are
+# not here and are not this package's: check-health, install, logs, review-configs,
+# review-vscode, rollback, sync-configs, syntax-highlight, update, upgrade-history and
+# word-matcher each reference only a shedman verb. They stay in the monolith, which still
+# ships those verbs and still runs them, and they belong with shedman at cutover.
+
+# --- (b) the 4 transformed package files -------------------------------------------
+#
+# §5.6, the single fence-writer. tree/usr/lib/shedos/pacman-fence is new (see (b2)) and is
+# now the only place the ShedOS blocks in /etc/pacman.conf are written. The scriptlet keeps
+# the decisions — whether the canary is live, and the one-shot heal — and asks the library
+# for the text and the strip-then-append. The output is byte-identical to what the scriptlet
+# wrote before, proven fixture by fixture and pinned in test/pacman-channels.
+#
+# §5.1, the config layer grows with its consumers. The library reads `repo`, `repo-url`,
+# `canary-repo` and `canary-url` from /etc/shedman/shedman.toml, with today's literals
+# compiled in as defaults, so a box with no config file gets the same bytes. The shipped
+# shedman.toml does not name those keys yet — it belongs to shedman, and the commit that
+# adds them there is the one blocked on the fence-interface ruling below.
+#
+# §5.5, the shared driver list. tree/usr/share/shedos/nvidia-driver-stack is new (see (b2))
+# and nvidia-reap reads it instead of repeating it; the installer generates its copy from
+# the same file.
+#
+# §2 row 2 and §5.1, the build. package() installs the verbs the declarations name, so the
+# hand-kept array that used to decide what shipped is gone — the failure mode §5.1 names.
+content PKGBUILD 334fe1ac68a6652a62474f35a410bcacf68ce968..f47683f2766a02cf963eb502a6815a14f0cb8dbd — §2 row 2 and §5.1: builds from this repository's tag, installs the verbs the declarations name instead of a hand-kept array, drops what the four splits took, and gains depends=(shedman)
+content shedos-system.install 214bf3218be41dc9b1a7319c9a28e1bf4c94dc6d..a996d19aab29c6743965b0bca921db80afa47687 — §5.6: _add_shedos_repo asks the fence library for the text and the strip-then-append instead of holding a copy of both, and the build-container marker it checks is overridable so the suite that drives it can run inside one
+content tree/usr/lib/shedos/nvidia-reap ddee4ca0f494a975cdf26ef318b2e12f5654a7ca..5acbca4b68d2bbe97839b25436a5acdca26edbc1 — §5.5: reads the shipped driver list instead of repeating it, and a list it cannot read leaves the unit armed rather than reaping a stack it does not know
+content tree/usr/libexec/shedman/fingerprint 8299c7823a8560c62fb59bba05dfd3fe34098eba..cb13ae79bffe744c879ac97c69986aa5438eae03 — NO SPEC SECTION — a bug the verb contract found. The verb read $USER with nothing behind it, so a shell that never set one killed it before it reached the flag it was handed, and the build-time completion check runs in exactly such a shell
+
+# --- (b2) the 15 files with no monolith counterpart --------------------------------
+#
+# §5.6, the fence library: tree/usr/lib/shedos/pacman-fence. It renders either channel
+# block and does the strip-then-append that leaves exactly one canonical pair, canary
+# first, byte-idempotent. The install scriptlet here and `shedman migrate` in its own
+# repository both ask it; the monolith's three writers are left alone.
+#
+# §5.5, the shared driver list: tree/usr/share/shedos/nvidia-driver-stack, thirteen package
+# names read by nvidia-reap and, from the installer's side, generated into its own copy.
+#
+# §5.1, the verb contract: tree/usr/share/shedman/verbs.d/<name>.toml for each of the eight
+# verbs — encrypt, fingerprint, kernel, key, lock, login, secureboot, tpm2 — each naming the
+# verb, shedos-system as its owner, its man page and what it does, every description equal
+# to the verb's own --help-summary. lock has no flags and carries completes = false.
+#
+# test/man/run.sh is new: the monolith's manual suite went with shedman, and this one asks
+# the same questions of the pages and the verbs THIS repository ships, deriving both lists
+# from the tree rather than keeping them by hand.
+#
+# test/backfill-uki-cmdline/run.sh is new: the module it wraps is pytest, and the runner
+# discovers test/<suite>/run.sh. A missing pytest is a failure there rather than a skip.
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore, .github/workflows/ci.yml.
+
+# --- (c) the rest of the package tree is byte-identical -----------------------------
+#
+# Every package file (tree/, man/, PKGBUILD, the install scriptlet) not named in (b) or
+# (b2) is byte-for-byte the monolith's. Measured by comparing `git rev-parse` on each carved
+# path against the monolith blob at 2c377ee7, over the whole carved tree at HEAD:
+#
+#   package tree:  154 identical, 4 transformed
+#   test tree:       0 identical, 27 transformed  (see (d))
+#   no monolith counterpart: 15                   (see (b2))
+#
+# The carve itself is the same claim with nothing transformed yet: at the carve root
+# bc6d980, 158 of 158 package files and 27 of 27 test files identical.
+#
+# Every carried test file is transformed, and that is not a hedge — all 27 reached this
+# package through the `packaging/shedos-system/` prefix the carve removed, so the re-root
+# touched every one of them. Nineteen are that and nothing else; the other eight are listed
+# with what else changed in them.
+#
+# ONE DIFFERENCE THE BLOB COMPARISON CANNOT SEE: tree/usr/libexec/shedman/encrypt is 755
+# here and 644 in the monolith — the only one of the twenty-nine verbs that was not
+# executable. Both packages install it 755, so the shipped bytes and mode are unchanged;
+# the tree-derived manual suite is what noticed, and it is written down here because a
+# mode is invisible to a comparison of blobs.
+#
+# The carved log matches `git log --format='%an|%aI|%s'` over the in-scope monolith paths
+# line for line across 353 commits, with three deviations, all understood:
+#
+#   * two `Merge pull request` commits filter-repo keeps that `git log -- <paths>` prunes
+#     by history simplification — the same two Task 1's carve kept;
+#   * one commit subject naming another commit by its short hash, which filter-repo
+#     rewrote to that commit's hash in this history. Both name the same commit, verified by
+#     author, date and subject.
+
+# --- (d) the 27 transformed test files ---------------------------------------------
+#
+# The suites carve with the package and none of them ships in it, but they are carved files
+# and they moved, so they are enumerated on the same terms. Nothing was dropped that is not
+# still running in the monolith's own copy of the suite, and every split names where the
+# other half went.
+content test/apparmor/run.sh d56855fda213a7f25282f2bf61e2c3cdfed2a191..11223feef8fc18ad819d68f2d7f9323fafcd2048 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the package-root check and the install-time cmdline check stay with the package list and the installer that own them
+content test/backfill-uki-cmdline/test_backfill_uki_cmdline.py 17def77a0882531939e72953989ef85c8c368698..35761a1d02bd979bfa1a57175efa1efecab3cf63 — §5.5: moved out of the installer pytest suite to sit with the file it exercises; the path it reaches that file by is the only line that changed
+content test/dkms-coverage/run.sh 461f8abefdb231ff028817bf26dee377c5ebe31a..0552b37cfe5014198ae33009a4e579b44bfc108d — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/emergency/run.sh 1e2e8e6014eaffc67980d9423361742abaa7ec73..d28b328aeea88ec7075de4883a2f982b2109ea47 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the guided UI imports apply_core, which ships with shedman, so the cases run against a lib root of this repository over what is installed; the QEMU boot proof stays with the image build that can run it; and a unit verify left with nothing but an unrenderable Documentation= link reads as a pass rather than a bow-out
+content test/encrypt/arm.sh 7e6fe8abd4867062c3455359525f2dc9aed186e4..ed90fa89f6833ac0573b1a0427b46cf8b9edf6f6 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the verb ships because a declaration names it, so that is what the packaging case asks for
+content test/encrypt/enroll.sh 4cc4c144b52b475d95fadc6821c3c40f677c9c76..3d30c0f093055de4fbc13f0576c0b010c4500769 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/encrypt/esp-state.sh ed854860dc251b68b9fc619028141a9620808767..c5f5a491a762a0c517db689866159b8e002b0db0 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/encrypt/finalize.sh 58e506e50eb3e3430ce8dfa62fb70e95f7f6628e..a69131396f43ed562bf9ef3ab511321517051de1 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/encrypt/loop-e2e.sh f8b817591f70523da3a9aff0cf6a7c06f4d1486e..cd926a4c4edc94306fee8348f78d4507619310e0 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/encrypt/reconfigure.sh f1dabe91d90e4abc683041bd24bbbb8c73b5e123..da3920451ada7d48659ffc18054737c86cd3f1be — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/encrypt/run.sh 27f6214446337c8656a25b488fb71686bb970b30..9f91347ee3021b0d7a22e52f86b9544dc5c6bf10 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the comment naming the old install array names the class of bug instead
+content test/encrypt/swap-loop-e2e.sh 0cb78d576baabefd47886db4119e8cd3c2433779..011b47549e34a4fa4c4d05cf1c43f8d90c566ddd — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/install-scriptlets/run.sh 8b767908aa437ca3cc4a085934d23e25cec58062..5ec04648b54afe0eb3571c06c21568d16ab5f451 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/kernel/run.sh acdc93f3b29d61c88717de62c47e2faf0b02e370..b5917147f368fa420685dd7d4862a0378d727e7f — re-rooted off the packaging/shedos-system/ prefix the carve removed; the package-list and build-wiring checks stay where those lists live, and the Secure Boot verbs are asked for a declaration rather than a place in the old install array
+content test/key/run.sh c61f424082f7edeeadc9d59f4214e871cca3b24f..6b7eda4c935b9292e2c9b5459ea5412a2e2b4059 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/login/run.sh b0839ba93995bbf54071e9e8639c17e164863fdd..59de1c2f2d7955a32e3ef2f99044a7fa3d228426 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/nvidia-reap/run.sh cd0d75903a6c51b3ef182a44491d6edf57d57d0e..6554ec23a96f99520048e077c698c8e4e27dcde2 — §5.5: asks where the driver list is written down, that the tool keeps none of its own, that it reaps what the file names, and that it stays armed when it cannot read one
+content test/pacman-channels/run.sh 35fa6243baa77d740dcb148ae93e7880ecb723a0..775caf55016cb7f879a9566e9caf12efeaf103ef — §5.6: pins the bytes the library writes rather than describing them, asks the config for a channel, and covers the build-container guard the suite has to step past to run at all
+content test/retire-shedos-kernel/run.sh 731112d73bc50b0131c24e5756fec7b320a42eb1..36bd758c37cf7b7315e24cf42d89b07371a583ab — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/secureboot/run.sh af81a49e29cf97d6b19746536d0aed1f9fa6b0ec..bf57c3ca392608a14498eda83d5ff6a82b16a370 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/shell-migrate/run.sh 5d0b03b57a6d457ed3c5c2ad402753834b7e5d75..bfbc52ff33f34747a4df7b557d323146dd3e644e — re-rooted off the packaging/shedos-system/ prefix the carve removed; the files the tool seeds ship with the desktop package, so the fixture is a skel of its own, the stock pair is checked against the hashes the tool names rather than assumed, and a home with no rc at all is covered outright
+content test/switch-user/run.sh 73e808d1d560b2021e0dd1356efce165d778f804..683d9b3594d5d1f46c6a4246685ac23ece7bb98f — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/tpm2/run.sh 2af356a1cd2d1d0a9a4bec4233ae9a30acee8bec..3600d6c54949454c3f6ac487489d00610bb22f60 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/uki/run.sh b465856d3d9500aaac0d487bf52c16b59f1bda78..5cbd018410f791c7dd9651c2ed311e0bc0eae4f1 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/uki/test_recover_esp_loopback.sh 948491b63be10f8cd0e0fb8aba8e8ff3230e0e1e..652ac05b8333a24500e992a0adbafd514ef74123 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/unlock/run.sh abeaf42c3ff4a735e66039968a66309ab4d4166e..edba3dcab61e1a7dc53382f7d60a1b7ad32002b6 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/unlock/tpm2.sh a76173a3f2502dad150b381336fba29e9a441cfa..25c4e522f2e3f3d6f3c7796108f4ea587354effe — re-rooted off the packaging/shedos-system/ prefix the carve removed
+
+# --- ownership, for the map Phase 5 draws -------------------------------------------
+#
+# §5.3. Three edges cross the split and are recorded rather than changed here:
+#
+#   * tree/usr/lib/shedos/dkms-coverage stays here — retire-shedos-kernel calls it by that
+#     path and so does shedman's doctor audit, from the other side of the split. The path
+#     survives the carve unchanged and shedman's doctor suite reaches the installed copy.
+#   * tree/usr/lib/shedos/emergency-recovery-ui.py and tree/usr/lib/shedos/mount-report both
+#     `import apply_core`, which ships with shedman now. depends=(shedman) is what makes
+#     that resolve, and the emergency suite runs against a lib root of this repository over
+#     what is installed.
+#   * tree/usr/libexec/shedman/_config-review, in shedman, reads
+#     tree/etc/shedos/review-exclude.toml, which stays here, and shedos-review-exclude.5
+#     documents it here too.
+#
+# The session-launch cycle — the greeter execs start-hyprland-session.sh here, and the
+# greetd drop-in here names the greeter binary — is left exactly as it was. It is a Phase 5
+# ownership item and this carve does not touch it.
+
+# --- parity ------------------------------------------------------------------------
+#
+# tools/carve-maps/shedos-system.paths carves packaging/shedos-system, so version-parity
+# pairs this repository with that directory and holds pkgver equal and pkgrel equal-or-ahead.
+# Both are at 2026.08.09-1.
+#
+# This is where same-name dual production begins: the monolith still builds and publishes
+# shedos-system to the production channels, and this repository publishes a structurally
+# different package of the same name to staging. The pipeline's pkgrel guard reads the
+# staging database, and the name was new there — shedos-system-2026.08.09-1 was absent — so
+# it left pkgrel at 1 and no bump was made or pushed. Contents diverge by everything in
+# (b), (b2) and the four subtracted sets; versions do not.
