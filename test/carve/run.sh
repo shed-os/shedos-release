@@ -148,7 +148,11 @@ refuses 'rename with two colons'     bad-twocolon  $'rename old:new:extra\n' \
         "needs exactly one colon: 'old:new:extra'"
 refuses 'rename with no source'      bad-nosource  $'rename :new\n' \
         "has no source: ':new'"
+refuses 'new-package with no value'  bad-newpkg    $'new-package\n' \
+        'new-package on line 1 of'
 refuses 'maps that selects nothing'  bad-empty     $'# only a comment\n' \
+        'selects nothing'
+refuses 'a declaration on its own'   bad-onlynew   $'new-package lonely\n' \
         'selects nothing'
 refuses 'roots that match nothing'   bad-roots     $'path nowhere/\n' \
         'kept no commits'
@@ -174,6 +178,20 @@ if carve cage "$(maps cage $'flatten packaging/cage\n')"; then
 else
     bad 'carve succeeded'
     cat "$WORK/cage.out"
+fi
+
+section 'a package the monolith does not build'
+
+# The declaration is for the version check, which pairs a carved repo with the
+# monolith PKGBUILD it came from and has none to pair a new name against. The
+# carve reads it as nothing at all.
+if carve cage-new "$(maps cage-new $'new-package cage\nflatten packaging/cage\n')"; then
+    ok 'carve succeeded'
+    check 'declaring a new package selects nothing extra' \
+        [ "$(pushed_paths cage-new)" = '0001.patch PKGBUILD ' ]
+else
+    bad 'carve succeeded'
+    cat "$WORK/cage-new.out"
 fi
 
 section 'flatten composes with a second tree'

@@ -258,6 +258,19 @@ check 'it names the map it will not guess at' \
     grep -qx 'docs.paths carves no packaging directory and is not listed as exempt' \
     "$WORK/last.out"
 
+section 'case 10b — a map carving a package the monolith does not build declares it'
+reset_fixtures
+write_maps shedman $'new-package shedman\nrename packaging/beta/tree:tree'
+with_fixtures
+rc=$?
+check 'the check passes' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'it names the package it has nothing to compare against' \
+    grep -qx 'shedman.paths carves shedman which the monolith does not build' \
+    "$WORK/last.out"
+check 'and the pairs beside it are still counted' \
+    grep -qx 'all 2 carved package(s) are at the monolith version' "$WORK/last.out"
+
 section 'case 11 — a map carving two packaging directories is ambiguous'
 reset_fixtures
 write_maps beta $'flatten packaging/beta\npath packaging/beta-extras/'
