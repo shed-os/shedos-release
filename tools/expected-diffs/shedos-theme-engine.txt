@@ -143,6 +143,13 @@ content test/theme-render/run.sh d5f329f0d4a8d78f093d1ace30d6a1c9ea41b906..ae2d6
 #     verb. The directory is this package's contract and the hooks are the desktop's
 #     content; both packages owning the directory is ordinary pacman behaviour.
 #
+# Four paths ship from BOTH this package and the monolith's shedos-system until cutover:
+# /usr/libexec/shedman/theme, /usr/lib/shedos/theme_renderer.py,
+# /usr/lib/shedos/shedos_palette.py and /usr/share/man/man1/shedman-theme.1. There is no
+# `conflicts=` and that is deliberate, the same call Task 1 made for shedman: the two are
+# never installed together before the cutover that stops the monolith building the package,
+# and declaring a conflict now would break the one channel that has both. A Phase 5 input.
+#
 # NOTHING PULLS shedos-theme-catppuccin EXCEPT THIS PACKAGE. shedos-hyprland's `>=` pin
 # retargets to this engine in the desktop task, so a fleet that installed the engine gets
 # the palettes through its depends. That is deliberate rather than accidental, and it is
