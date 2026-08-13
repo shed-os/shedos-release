@@ -24,7 +24,9 @@
 #
 #   the dock verb         tree/usr/libexec/shedman/dock
 #   its two pages         man/shedman-dock.1.scd, man/shedos-dock.5.scd
-#   the GTK pair          tree/etc/gtk-{3,4}.0/settings.ini
+#   the GTK pair          tree/etc/gtk-{3,4}.0/settings.ini   (§5.5 and the phase plan's
+#                                                              desktop task, which names
+#                                                              the move and what it becomes)
 #
 # Every other dock file already lived here — the systemd user unit, start-dock.py, the
 # pinned-app seed, the skel config and its style — so the verb was the only piece of the
@@ -34,7 +36,10 @@
 
 # --- (b) the 3 transformed package files -------------------------------------------
 #
-# §5.5, one GTK settings source. The monolith tracked FOUR copies of settings.ini — the
+# §5.5, and the phase plan's desktop task, which is where the move is written down as this
+# task's ("GAINS both GTK settings.ini copies (system's /etc pair moves here — §5.5; one
+# source, the skel pair and defaults mirror generated from it at package() time)"):
+# one GTK settings source. The monolith tracked FOUR copies of settings.ini — the
 # system-wide pair in shedos-system and the per-user pair here — and built two more into
 # the defaults mirror, six shipped files kept equal by nobody having edited one yet. There
 # is now one tracked file, gtk/settings.ini, and package() installs it at all six paths
@@ -64,7 +69,7 @@
 # else grew one.
 #
 # §5.5 and §2 row 4, depends. Four edges changed and each is its own line below.
-content PKGBUILD 516b723f25ba3fd789c4d6bb5b871e446e1b3aba..072e5323e6475557f538b8c6a490a5cb208b068f — §5.5/§5.1/§2 row 4: builds from this repository's tag, installs the verbs the declarations name, generates the six GTK files from one source, ships the dock verb and a man5 page with it, retargets the version floor onto the theme engine, drops the three hidden-meta pins, declares shedman, shedos-system, python-tomlkit, python-gobject and gtk4, and carries the pkgrel the pipeline's guard moved past what staging held
+content PKGBUILD 516b723f25ba3fd789c4d6bb5b871e446e1b3aba..f895b2daa824aef5645294d917be3dc138c27dab — §5.5/§5.1/§2 row 4: builds from this repository's tag, installs the verbs the declarations name, generates the six GTK files from one source, ships the dock verb and a man5 page with it, retargets the version floor onto the theme engine, drops the three hidden-meta pins, declares shedman, shedos-system, python-tomlkit, python-gobject and gtk4, and carries the pkgrel the pipeline's guard moved past what staging held
 content tree/usr/libexec/shedman/keybindings e06717435adaa8e9e27ffd5215bdd4502bce3d8e..30c88d0b5f3142db6b4d1c32dc5baa075872ae1a — §5.1: answers the three completion modes with nothing instead of opening the dialog when a shell asks it what it takes
 content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b7529dc891a2..b50501b40c06cf1bb5eb596eb5273095056c0325 — §5.1: locks the screen through the dispatcher rather than through the libexec path the config layer owns
 
@@ -112,9 +117,12 @@ content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b
 # package as its owner, a man page this package ships, and a description equal to the
 # verb's own --help-summary. Three carry `completes = false`.
 #
-# test/gtk-settings/run.sh is new: it holds the invariant the transform above created — one
-# tracked settings.ini, six destinations read out of the PKGBUILD rather than restated, so
-# a second tracked copy or a dropped destination reddens it.
+# test/gtk-settings/run.sh is new: it holds the invariant the transform above created. G1
+# asks git for every tracked settings.ini and expects exactly one. G2 writes the six
+# destinations down and holds them against the _gtk_settings array sourced from the
+# PKGBUILD — both halves stated, which is what makes the comparison mean anything: a second
+# tracked copy reddens G1, and a destination dropped from the build or added without a
+# decision reddens G2.
 #
 # test/smoke/run.sh is new here and old in the monolith: it is the half of the monolith's
 # smoke suite that follows these verbs (see the suites section below).
@@ -174,9 +182,14 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 #              belong here (dock, browser, launcher, power) plus keybindings and
 #              screenrecord, whose own suites cover what they do rather than what every
 #              verb owes the dispatcher. 30 checks. The completion third of it is also
-#              asked of the BUILT package by the pipeline's verb-contract check, which is
-#              what caught the keybindings hang; the help and help-summary thirds are only
-#              asked here.
+#              asked of the BUILT package by the pipeline's verb-contract check; the help
+#              and help-summary thirds are only asked here. The completion cases run with a
+#              compositor that records being asked, because THE CONTRACT CHECK CANNOT SEE
+#              THE KEYBINDINGS BUG: headless, a dialog that cannot open a display exits 0
+#              with nothing on stdout, which is exactly what `completes = false` permits.
+#              What the pre-fix verb cannot hide is the `hyprctl binds -j` it makes on the
+#              way to the dialog, and that is what the suite watches for. A display-attached
+#              run reddens on the timeout instead; both shapes were watched failing.
 #   shedman    the dispatcher suite is about the dispatcher, which ships from shedman, and
 #              it went there whole in Task 1. Nothing in it reads a desktop verb.
 #
@@ -211,8 +224,8 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 #
 # The monolith still builds shedos-hyprland, so test/version-parity pairs this repository
 # with packaging/shedos-hyprland and holds pkgver equal: 2026.07.03, the monolith's. pkgrel
-# is 3, one ahead of the monolith's 2, because the pipeline's guard moves past a release
-# staging already carries and the first publish took -2. Parity allows pkgrel to run ahead
+# is 4, two ahead of the monolith's 2, because the pipeline's guard moves past a release
+# staging already carries and each push that follows a publish takes the next one. Parity allows pkgrel to run ahead
 # for exactly that reason. The tag 2026.07.03 is this repository's first and moves nothing
 # that was ever published from here.
 #
