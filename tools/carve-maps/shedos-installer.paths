@@ -1,0 +1,15 @@
+# The installer: the Python library the Calamares job modules import, the nine
+# modules themselves with their confs and branding, the typing stubs and the
+# pytest suite that covers all of it. The monolith never built a package out of
+# any of it — the Makefile copied the library into the ISO by hand — so there is
+# nothing on the other side to pair the versions against.
+new-package shedos-installer
+flatten installer
+
+# The runner CI discovers the pytest suite through. The suite itself is
+# tests/, which arrives with the flatten above.
+path test/installer/
+
+# test_backfill_uki_cmdline exercises a shedos-system file and went to
+# shedos-system with it.
+except installer/tests/test_backfill_uki_cmdline.py
