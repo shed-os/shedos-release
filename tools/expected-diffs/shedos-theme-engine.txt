@@ -1,0 +1,159 @@
+# What separates shedos-theme-engine from the monolith it came out of. Nothing here is a
+# free pass: each path was opened and read before it was written down.
+#
+# Like shedman's, this one is blob-to-blob rather than package-to-package. shedos-theme-
+# engine is a NEW package name — the monolith has never built one, so there is no reference
+# package to compare against and tools/build-reference.sh has no packaging directory to
+# build. Every path below is written the way the carved repository holds it (`tree/…`,
+# `man/…`, `test/…`) rather than the way the built package installs it, because the carved
+# path is what was compared. Every `content` line is pinned <monolith blob>..<carved blob>.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-system, carved at monolith commit 7b7223a3 and compared against
+# the same commit. Carve map: tools/carve-maps/shedos-theme-engine.paths. Five files,
+# named one at a time because the packaging directory they sat in belongs to several
+# repositories now:
+#
+#   the reconciler        tree/usr/lib/shedos/theme_renderer.py
+#   the palette loader    tree/usr/lib/shedos/shedos_palette.py
+#   the verb              tree/usr/libexec/shedman/theme
+#   its man source        man/shedman-theme.1.scd
+#   one suite             test/theme-render/run.sh
+#
+# 21 commits carried, and the carved log matches `git log --format='%an|%aI|%s'` over those
+# monolith paths line for line. At the carve root 2a6f163, 4 of 4 package files and 1 of 1
+# test file were byte-identical to the monolith.
+#
+# The four palettes the renderer reads are NOT here. They are data and they carve into
+# shedos-theme-catppuccin, which is what §5.2 means by a theme being a data package.
+#
+# The man page comes with the verb rather than staying with shedos-system: the verb
+# contract requires every declaration to name a man page the SAME package ships, so an
+# engine declaring `theme` while shedos-system held the page would fail the build-time
+# check, and both shipping it would be a file conflict.
+
+# --- (b) the 3 transformed package files -------------------------------------------
+#
+# §5.2, the search path. Palettes resolve from /etc/shedos/themes/palettes/ first and
+# /usr/share/shedos/themes/palettes/ second. A theme data package owns the second, where
+# pacman keeps its files; the first is the user's and wins on a name collision. `shedman
+# theme list` is the union of the two, each name once. The monolith had exactly one
+# hardcoded /etc path in the renderer and another in the verb, and files installed there
+# were not in backup=(), so an edited palette was overwritten without a .pacnew.
+#
+# §5.2, the required token set. CANONICAL_PALETTE is the 26 [colors] tokens and the
+# colours ShedOS means by them, written down once; REQUIRED_TOKENS is its key set. A
+# palette that does not define all 26, or whose [accent].primary/secondary names a colour
+# its own [colors] does not carry, is refused BY NAME before a byte is written, so the
+# live theme survives a bad palette. The monolith validated only "[colors] is non-empty
+# and every value is #rrggbb", and filled anything missing from a fallback literal spelled
+# out at each of some seventy call sites. Those literals are gone: the writers index the
+# palette directly, because validation has already guaranteed the token is there.
+#
+# That table is also §5.2's canonical fallback palette living in the engine. The copy
+# compiled into shedos_palette.py is one of the offline-degradation copies §5.2 accepts,
+# and test/theme-render T4 holds it against the canonical one. The copies in
+# shedos-prompt-ui and the skel hyprland.lua are in repositories this task does not touch;
+# checking those is the shedos-release integration test §5.2 asks for and it is NOT done
+# here.
+#
+# §5.2, the GTK theme name. It comes from a metadata TOML under
+# <root>/shedos/themes/metadata/ naming the palette, /etc before /usr/share, and falls back
+# to the accent-derived `catppuccin-mocha-<primary>-standard+default` when nothing states
+# one — which is what every palette got before there was anywhere to say otherwise.
+#
+# §5.2, the output contract is unchanged, and that is measured rather than asserted.
+# SCHEMA_VERSION stays 1. All four shipped palettes were rendered with the carved renderer
+# and again with the transformed one: the ten text outputs and the wallpaper symlink are
+# BYTE-IDENTICAL, and wallpaper-blurred.png is pixel-identical (imagemagick stamps a
+# creation time into the PNG, which differs between two runs of the same renderer seconds
+# apart). The current.tmp → current rename is untouched and pinned by test/theme-render W1
+# and W2, because five Rust surfaces watch the parent directory for that rename rather than
+# polling.
+#
+# The renderer's docstring said "nine canonical outputs" and then listed eleven files, and
+# never mentioned wallpaper-blurred.png at all. It now says ten, names the wallpaper pair
+# separately, and drops the claim that `shedman apply` re-renders — nothing in the monolith
+# calls the renderer from apply.
+#
+# §5.2, the post-apply hook contract, documented for the first time. The directory is the
+# engine's and ships with the package whether or not anything has dropped a hook in it. A
+# render that finds no executable hook says so on stderr instead of returning quietly,
+# because a box where nothing reloaded looked exactly like one where everything did.
+content tree/usr/lib/shedos/theme_renderer.py 1a9a3fb7b281d5de553502cc11c9a464bfe4eec9..8f576452f03be57b2c9896867995e0189352596c — §5.2: the two-root search path, the 26-token requirement and the canonical palette behind it, the GTK theme read from metadata, and the docstring corrected to the outputs it writes
+content tree/usr/libexec/shedman/theme d8a710e58d7cb50fb4f100d94c19a035fd3ca894..ef72b1bdd35114447eef0ca720ad1ddb1447a1f5 — §5.2: lists and resolves a palette across both roots, and says when a render had no hook to run
+content man/shedman-theme.1.scd 82ab43d66d11faa70360b795e0397983a7de474e..1fca601b9d517cfa23e140dd58924b87dcd052d2 — §5.2: documents the search path, the token set a palette must carry, the metadata file and the hook contract, none of which was written down anywhere
+#
+# Three environment overrides were added to shipped files and are named here because they
+# are the only way a suite can drive a render without touching the live system:
+# SHEDOS_THEME_ETC_ROOT and SHEDOS_THEME_SHARE_ROOT replace the two roots in both the
+# renderer's entry point and the verb, and the verb takes the renderer's path from
+# SHEDOS_LIB_ROOT, which is the name every other ShedOS suite already uses. A box sets
+# none of them and behaves exactly as before.
+
+# --- (b2) the 6 files with no monolith counterpart --------------------------------
+#
+# §5.1, the verb contract: tree/usr/share/shedman/verbs.d/theme.toml, naming the verb,
+# shedos-theme-engine as its owner, shedman-theme.1 and a description equal to the verb's
+# own --help-summary.
+#
+# §2 row 5: PKGBUILD is new and shares nothing with shedos-system's. depends is what a
+# render actually reaches — bash, coreutils, sudo, python, python-tomlkit, imagemagick —
+# plus shedman, the dispatcher the verb plugs into, and shedos-theme-catppuccin, because
+# DEFAULT_PALETTE names one of its palettes and an engine that cannot render its own
+# default is not installable in any useful sense. package() installs the verb the
+# declaration names and creates the hook directory.
+#
+# test/theme/run.sh is new: the verb had no suite at all. It drives the verb as a program
+# against scratch roots with a sudo stub, and covers the union listing, the /etc override,
+# an unknown palette being refused with the available ones named, a palette from /etc being
+# accepted and rendered, the zero-hook warning, a hook running, a failing hook being
+# reported without failing the apply, and `get` reading back what `set` wrote.
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore, .github/workflows/ci.yml.
+
+# --- (c) the rest is byte-identical -------------------------------------------------
+#
+# tree/usr/lib/shedos/shedos_palette.py is carried unchanged — the whole package tree less
+# the three files in (b). Measured by comparing `git rev-parse` on each carved path against
+# the monolith blob at 7b7223a3, over the whole carved tree at HEAD:
+#
+#   package tree (tree/ + man/): 1 identical, 3 transformed
+#   test tree:                   0 identical, 1 transformed   (see (d))
+#   no monolith counterpart:     6                            (see (b2))
+
+# --- (d) the 1 transformed test file ------------------------------------------------
+content test/theme-render/run.sh d5f329f0d4a8d78f093d1ace30d6a1c9ea41b906..ae2d684b73cb02667633a55e435dcca3f2b8d27e — re-rooted off the packaging/shedos-system/ prefix the carve removed; reads the palettes where the theme package installs them rather than out of the tree, and gains the search-path, required-token, canonical-copy, GTK-metadata and directory-swap cases
+#
+# The suite fails rather than skips when the palettes are not installed: they are a
+# dependency of this package, and a suite that quietly declines to run is how a package
+# ships with its own suite never having run. R4 no longer bows out when starship is absent
+# either — starship is in the pipeline's test packages, so an absent one is a failure.
+
+# --- ownership, for the map Phase 5 draws -------------------------------------------
+#
+# §5.3. Two edges cross the split and are recorded rather than changed here:
+#
+#   * shedos-system's install scriptlet runs /usr/lib/shedos/theme_renderer.py after an
+#     upgrade, which ships from here now. The call is guarded by a -f test, so a box
+#     without this package skips the render rather than failing the transaction.
+#   * the only post-apply hooks live in shedos-hyprland and are executed by this package's
+#     verb. The directory is this package's contract and the hooks are the desktop's
+#     content; both packages owning the directory is ordinary pacman behaviour.
+#
+# NOTHING PULLS shedos-theme-catppuccin EXCEPT THIS PACKAGE. shedos-hyprland's `>=` pin
+# retargets to this engine in the desktop task, so a fleet that installed the engine gets
+# the palettes through its depends. That is deliberate rather than accidental, and it is
+# the reason the dependency is a depends and not an optdepends.
+
+# --- parity ------------------------------------------------------------------------
+#
+# tools/carve-maps/shedos-theme-engine.paths opens with `new-package shedos-theme-engine`,
+# which is what test/version-parity reads to say the monolith builds no such package. It is
+# named in that suite's output and contributes no pair. There is nothing to hold at the
+# monolith's pkgver.
+#
+# The package is at 2026.08.09-1: the current stable date under the house scheme for a new
+# name, and its first release.

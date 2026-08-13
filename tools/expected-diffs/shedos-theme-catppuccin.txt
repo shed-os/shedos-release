@@ -1,0 +1,85 @@
+# What separates shedos-theme-catppuccin from the monolith it came out of. Nothing here is
+# a free pass: each path was opened and read before it was written down.
+#
+# Blob-to-blob rather than package-to-package: shedos-theme-catppuccin is a NEW package
+# name, so there is no reference package to compare against and tools/build-reference.sh
+# has no packaging directory to build. Every path below is written the way the carved
+# repository holds it.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-system, carved at monolith commit 7b7223a3 and compared against
+# the same commit. Carve map: tools/carve-maps/shedos-theme-catppuccin.paths. Four files,
+# the palettes ShedOS ships:
+#
+#   catppuccin-mocha-blue.toml   catppuccin-mocha-green.toml
+#   catppuccin-mocha-mauve.toml  catppuccin-mocha-pink.toml
+#
+# One commit carried, because the four were added together and never edited since. The
+# carved log matches `git log --format='%an|%aI|%s'` over the monolith path line for line.
+# At the carve root c8c2bbc, 4 of 4 files were byte-identical to the monolith.
+#
+# The engine that renders them is shedos-theme-engine and carves separately.
+
+# --- (b) THE RELOCATION, the one enumerated deviation ------------------------------
+#
+# §5.2. The four palettes install under /usr/share/shedos/themes/palettes/ here and under
+# /etc/shedos/themes/palettes/ in the monolith. **The files themselves are byte-identical**
+# — the move is expressed in the carve map as a rename, so each palette arrives at the new
+# path with its history on it, and nothing about its contents changed.
+#
+# Why it moves: the monolith installs them under /etc and does NOT list them in backup=(),
+# so pacman overwrites an edited palette on every upgrade without leaving a .pacnew. A
+# package-owned path under /usr/share is where immutable data belongs, and it is what makes
+# /etc the user's own layer instead of a battleground. The engine's search path reads /etc
+# first and /usr/share second, so a palette in either place is found and a file dropped in
+# /etc overrides the one of the same name — which is also what keeps both locations working
+# during dual production, while the monolith's shedos-system still installs its copies
+# under /etc on the same box.
+#
+# Nothing else about the four files differs, so there is no `content` line in this file at
+# all. That is the whole of the deviation.
+
+# --- (b2) the 6 files with no monolith counterpart --------------------------------
+#
+# §5.2, the metadata TOML: tree/usr/share/shedos/themes/metadata/shedos-theme-catppuccin.toml
+# names the GTK theme each palette was drawn against, replacing the name the engine used to
+# concatenate out of [accent].primary with no existence check. The four names it states are
+# exactly what that concatenation produced, so no box sees a different GTK theme; what
+# changes is that the pairing is now a fact of the theme rather than a spelling
+# coincidence, and a palette whose GTK theme is not named after its accent can say so. The
+# file is named for the package that ships it because several theme packages share that
+# directory and only one of them can own a given file name.
+#
+# §2 row 6: PKGBUILD is new and shares nothing with shedos-system's. There are no depends
+# at all — the package is data and installs no executable. It does NOT depend on the
+# engine: the engine depends on this package, because its DEFAULT_PALETTE names one of
+# these palettes, and inverting that would be a cycle for no gain.
+#
+# test/palettes/run.sh is new: the palettes had no suite of their own. It reads each one
+# with a real TOML parser and asks whether the colours are #rrggbb, whether [accent] names
+# two colours the palette defines, and whether the metadata names exactly the palettes
+# shipped beside it. The 26-token set a palette must carry belongs to the engine and is
+# asked there, against these files as they install, so the list is not written down twice.
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore, .github/workflows/ci.yml.
+
+# --- (c) everything else is byte-identical -----------------------------------------
+#
+# Measured by comparing `git rev-parse` on each carved path against the monolith blob at
+# 7b7223a3, over the whole carved tree at HEAD:
+#
+#   package tree:            4 identical, 0 transformed
+#   no monolith counterpart: 6                          (see (b2))
+
+# --- parity ------------------------------------------------------------------------
+#
+# tools/carve-maps/shedos-theme-catppuccin.paths opens with
+# `new-package shedos-theme-catppuccin`, which is what test/version-parity reads to say the
+# monolith builds no such package. It contributes no pair and there is nothing to hold at
+# the monolith's pkgver.
+#
+# The package is at 2026.08.09-1: the current stable date under the house scheme for a new
+# name, and its first release. A palette edit now republishes 4 KB of TOML instead of
+# rebuilding the whole system package, which is the other half of why the split exists.
