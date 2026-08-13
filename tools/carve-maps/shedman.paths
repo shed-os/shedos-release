@@ -64,3 +64,21 @@ path test/doctor/
 path test/man/
 path test/smoke/
 path test/status/
+
+# Eleven more suites came in a second pass, after this repository already had a
+# history and a published tag: each reads a shedman verb and nothing else, and
+# they were counted as shedos-system's until that package's carve found it could
+# not take them. They were carved on their own into a bare repository and merged
+# here, so a re-carve from scratch and the repository as it stands select the
+# same set.
+path test/check-health/
+path test/install/
+path test/logs/
+path test/review-configs/
+path test/review-vscode/
+path test/rollback/
+path test/sync-configs/
+path test/syntax-highlight/
+path test/update/
+path test/upgrade-history/
+path test/word-matcher/
