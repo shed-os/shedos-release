@@ -64,7 +64,7 @@
 # else grew one.
 #
 # §5.5 and §2 row 4, depends. Four edges changed and each is its own line below.
-content PKGBUILD 516b723f25ba3fd789c4d6bb5b871e446e1b3aba..28ef1d84f57603c371a2137a79163551a63b45ea — §5.5/§5.1/§2 row 4: builds from this repository's tag, installs the verbs the declarations name, generates the six GTK files from one source, ships the dock verb and a man5 page with it, retargets the version floor onto the theme engine, drops the three hidden-meta pins, and declares shedman, shedos-system, python-tomlkit, python-gobject and gtk4
+content PKGBUILD 516b723f25ba3fd789c4d6bb5b871e446e1b3aba..072e5323e6475557f538b8c6a490a5cb208b068f — §5.5/§5.1/§2 row 4: builds from this repository's tag, installs the verbs the declarations name, generates the six GTK files from one source, ships the dock verb and a man5 page with it, retargets the version floor onto the theme engine, drops the three hidden-meta pins, declares shedman, shedos-system, python-tomlkit, python-gobject and gtk4, and carries the pkgrel the pipeline's guard moved past what staging held
 content tree/usr/libexec/shedman/keybindings e06717435adaa8e9e27ffd5215bdd4502bce3d8e..30c88d0b5f3142db6b4d1c32dc5baa075872ae1a — §5.1: answers the three completion modes with nothing instead of opening the dialog when a shell asks it what it takes
 content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b7529dc891a2..b50501b40c06cf1bb5eb596eb5273095056c0325 — §5.1: locks the screen through the dispatcher rather than through the libexec path the config layer owns
 
@@ -210,6 +210,8 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 # --- parity ------------------------------------------------------------------------
 #
 # The monolith still builds shedos-hyprland, so test/version-parity pairs this repository
-# with packaging/shedos-hyprland and holds pkgver equal: 2026.07.03, the monolith's, with
-# pkgrel 2 to match. The tag 2026.07.03 is this repository's first and moves nothing that
-# was ever published from here.
+# with packaging/shedos-hyprland and holds pkgver equal: 2026.07.03, the monolith's. pkgrel
+# is 3, one ahead of the monolith's 2, because the pipeline's guard moves past a release
+# staging already carries and the first publish took -2. Parity allows pkgrel to run ahead
+# for exactly that reason. The tag 2026.07.03 is this repository's first and moves nothing
+# that was ever published from here.
