@@ -215,3 +215,13 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 # staging already carries and the first publish took -2. Parity allows pkgrel to run ahead
 # for exactly that reason. The tag 2026.07.03 is this repository's first and moves nothing
 # that was ever published from here.
+#
+# THE NEXT PAYLOAD CHANGE HERE HAS TO FORCE-MOVE THAT TAG, and that is the regime rather
+# than an accident. Parity pins pkgver to the monolith's 2026.07.03, so a change to tree/,
+# man/ or gtk/ cannot answer the build's tag guard with a new pkgver — a new tag name is a
+# new pkgver is a parity failure. It answers with the same tag moved and the next pkgrel,
+# which is what Task 2 wrote up and Task 3 exercised on shedos-system. The move is
+# justifiable only with `git diff <tag> origin/main -- tree/ man/ gtk/` empty, which says
+# both trees the tag has named produce the same shipped payload. gtk/ belongs in that path
+# list from now on: it is a source directory the build reads from the tag, and only the
+# PKGBUILD, the install file, test/ and .github/ are exempt from the guard.
