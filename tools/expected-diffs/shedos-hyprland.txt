@@ -1,0 +1,196 @@
+# What separates the carved shedos-hyprland from the monolith package of the same name.
+# Nothing here is a free pass: each path was opened and read before it was written down.
+#
+# The comparison is blob-to-blob between the carved repository and the monolith files the
+# carve took, and every path below is written the way the carved repository holds it
+# (`tree/…`, `man/…`, `test/…`) rather than the way the built package installs it, because
+# the carved path is what was compared. Every `content` line is pinned
+# <monolith blob>..<carved blob>.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-hyprland, carved at monolith commit 7b7223a3 and compared against
+# the same commit. Carve map: tools/carve-maps/shedos-hyprland.paths — `flatten
+# packaging/shedos-hyprland` plus five files named one at a time out of shedos-system, plus
+# the five suites.
+#
+# 231 commits carried, 173 paths. At the carve root c49a0d3, 130 of 130 package files and 5
+# of 5 test files were byte-identical to the monolith, and the carved log matches `git log
+# --full-history --format='%an|%aI|%s'` over the in-scope monolith paths LINE FOR LINE, all
+# 231 of them. (`--full-history` because two of the commits are merges; plain `git log
+# <paths>` simplifies them away and would have reported 229.)
+#
+# The five files that came from shedos-system rather than from here, §5.5:
+#
+#   the dock verb         tree/usr/libexec/shedman/dock
+#   its two pages         man/shedman-dock.1.scd, man/shedos-dock.5.scd
+#   the GTK pair          tree/etc/gtk-{3,4}.0/settings.ini
+#
+# Every other dock file already lived here — the systemd user unit, start-dock.py, the
+# pinned-app seed, the skel config and its style — so the verb was the only piece of the
+# dock in the other package. The pages follow the verb because the verb contract requires
+# every declaration to name a man page the SAME package ships. shedos-system's own carve
+# map excepts all five, so neither repository carries them twice.
+
+# --- (b) the 3 transformed package files -------------------------------------------
+#
+# §5.5, one GTK settings source. The monolith tracked FOUR copies of settings.ini — the
+# system-wide pair in shedos-system and the per-user pair here — and built two more into
+# the defaults mirror, six shipped files kept equal by nobody having edited one yet. There
+# is now one tracked file, gtk/settings.ini, and package() installs it at all six paths
+# from the _gtk_settings array. Measured rather than asserted: in the from-tag build all
+# six installed copies are
+# sha256 1dd7e20f7b9f0e81e9fccfcdeb0adc03488de2e9a473a5b31fe55737a644663e, which is the
+# sha256 of the monolith blob at 7b7223a3 for each of the four it replaces. The deleted
+# three are listed in (e); the source itself is in (b2), because the path is new.
+#
+# §5.1, the verb contract. Six declarations under tree/usr/share/shedman/verbs.d/ (see
+# (b2)), and package() installs the verb each one names instead of the hand-kept
+# _libexec_shedman array — the failure mode §5.1 names, and the one that would have dropped
+# the dock verb on the floor here, since it arrives with no line in that array. browser,
+# keybindings and launcher declare `completes = false`: they take no flags, and the
+# contract makes silence something a verb declares rather than something it just does.
+#
+# `shedman keybindings` answers the completion contract now, and this is a bug fix rather
+# than a transform. Its main() had no arm for --complete-bash/-zsh/-fish, so the flags fell
+# through to the dialog: the verb-contract check timed out on it, and on a live box a Tab
+# press after `shedman keybindings` opened a window. It returns 0 with nothing, which is
+# what `completes = false` declares.
+#
+# §5.1, the config layer. The Super+Escape bind spelled out /usr/libexec/shedman/lock — the
+# one place in this package that hardcoded where verbs live, which is a layout
+# /etc/shedman/shedman.toml owns now. It reads `shedman lock`, the form every other bind in
+# the same file already used. Nothing else here consumed a config-layer key, so nothing
+# else grew one.
+#
+# §5.5 and §2 row 4, depends. Four edges changed and each is its own line below.
+content PKGBUILD 516b723f25ba3fd789c4d6bb5b871e446e1b3aba..28ef1d84f57603c371a2137a79163551a63b45ea — §5.5/§5.1/§2 row 4: builds from this repository's tag, installs the verbs the declarations name, generates the six GTK files from one source, ships the dock verb and a man5 page with it, retargets the version floor onto the theme engine, drops the three hidden-meta pins, and declares shedman, shedos-system, python-tomlkit, python-gobject and gtk4
+content tree/usr/libexec/shedman/keybindings e06717435adaa8e9e27ffd5215bdd4502bce3d8e..30c88d0b5f3142db6b4d1c32dc5baa075872ae1a — §5.1: answers the three completion modes with nothing instead of opening the dialog when a shell asks it what it takes
+content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b7529dc891a2..b50501b40c06cf1bb5eb596eb5273095056c0325 — §5.1: locks the screen through the dispatcher rather than through the libexec path the config layer owns
+
+# --- the four depends edges, one at a time ----------------------------------------
+#
+# 1. `shedos-system>=2026.05.17` → `shedos-theme-engine>=2026.08.09`. The floor was always
+#    about one file: the Lua config dofile()s /etc/shedos/themes/current/palette.lua, and
+#    an old renderer meant the config fell back to hardcoded Mocha. The package that
+#    renders it is the theme engine now, so that is what the floor names. 2026.08.09 is the
+#    engine's first release, which makes it the first version that can write the schema-1
+#    outputs this config indexes at all — the floor is exact rather than historical, and it
+#    is not vacuous in the other direction: an engine that ever changes SCHEMA_VERSION is a
+#    floor this line has to move past.
+#
+# 2. `shedos-system`, unversioned and NOT the same edge. Dropping the pin outright would
+#    have taken the only shedos-system edge with it, and three waybar buttons exec
+#    /usr/lib/shedos/run-with-pause.sh, which that package ships. The loss of that edge is
+#    the thing worth recording; the pin's version floor moving is the smaller half.
+#
+# 3. `shedman`. §5.1: the dispatcher the six verbs plug into.
+#
+# 4. `python-tomlkit`, `python-gobject`, `gtk4`. The dock verb imports tomlkit and the
+#    keybindings dialog imports gi/Gtk 4.0 at module load. NONE of the three was declared in
+#    the monolith — the desktop's other depends dragged GTK in and the dock verb shipped
+#    from a package that declared tomlkit for other reasons, so the gap never showed. It
+#    shows now: the pipeline runs each verb out of the built package with nothing else
+#    installed.
+#
+# DROPPED, and the drop is the deviation: `shedos-tour`, `shedos-switcher` and
+# `shedos-hyprland-plugin-hyprspace` are gone from depends. They are part of what a ShedOS
+# desktop IS rather than what this package reaches for, and §6 puts them in the generated
+# meta. THE GENERATED META DOES NOT EXIST YET — this is a named Phase 5 input requirement.
+# Until it does, the monolith's shedos-meta still names all three and keeps every install
+# whole, so nothing on the fleet loses them; a box that installs the carved package alone
+# and nothing else is the case that would.
+
+# --- (b2) the 11 files with no monolith counterpart --------------------------------
+#
+# gtk/settings.ini — the one tracked GTK settings source. It is byte-identical to the four
+# copies it replaces (see (b)), but the path is new, so the instrument reads it as having
+# no counterpart rather than as identical.
+#
+# §5.1, six declarations under tree/usr/share/shedman/verbs.d/: browser.toml, dock.toml,
+# keybindings.toml, launcher.toml, power.toml, screenrecord.toml. Each names the verb, this
+# package as its owner, a man page this package ships, and a description equal to the
+# verb's own --help-summary. Three carry `completes = false`.
+#
+# test/gtk-settings/run.sh is new: it holds the invariant the transform above created — one
+# tracked settings.ini, six destinations read out of the PKGBUILD rather than restated, so
+# a second tracked copy or a dropped destination reddens it.
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore, .github/workflows/ci.yml.
+
+# --- (c) the rest is byte-identical -------------------------------------------------
+#
+# The whole package tree less the three files in (b). Measured by comparing `git rev-parse`
+# on each carved path against the monolith blob at 7b7223a3, over the whole carved tree at
+# HEAD:
+#
+#   package tree (tree/ + man/): 123 identical, 3 transformed
+#   test tree:                   0 identical, 5 transformed   (see (d))
+#   no monolith counterpart:     11                           (see (b2))
+#
+# AND AT THE PACKAGE LEVEL, which is the comparison that actually matters here and the one
+# the blob walk cannot make: the from-tag build was diffed against a local build of the
+# monolith's own packaging/shedos-hyprland at 7b7223a3. The payload gains exactly
+# etc/gtk-{3,4}.0/settings.ini, usr/libexec/shedman/dock, the two dock man pages and the
+# six declarations; it loses nothing; and the only common files that differ are the two in
+# (b) plus the pacman metadata (.PKGINFO carries the new depends). Every other file in the
+# package, all six GTK copies included, is byte-identical.
+
+# --- (d) the 5 transformed test files ------------------------------------------------
+content test/keybindings/run.sh 54042ecb1239225608ff926e32083154e39b78cb..a3d29b6ac9e3847e5f82519b796aa2c9e0ce0ac3 — re-rooted off the packaging/shedos-hyprland/ prefix the carve removed
+content test/recovery-notify/run.sh 177a75de1c0d5aaa4e3af5f3750275a5b3bcb5f1..23de421b290dfda023d7ca866ab0fcae98c922b4 — re-rooted off the packaging/shedos-hyprland/ prefix the carve removed
+content test/screenrecord/run.sh 21747e1309fe95b191d635b86eb5dae94787eabe..66ec502d584b08ba1a590be9cb481b5a3d2894fe — re-rooted off the packaging/shedos-hyprland/ prefix the carve removed
+content test/shell-config/run.sh 6b176bcadb0e46f5262fc6d92b82e6ef989ca99d..4ed50f2643fd371bfc40bd5493fb29c495c6441a — re-rooted off the packaging/shedos-hyprland/ prefix the carve removed
+content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0f8f9c99e6166db121e2cda1548c7684d8c1374b — re-rooted off the packaging/shedos-hyprland/ prefix the carve removed
+
+# --- (e) what the tree no longer holds ----------------------------------------------
+#
+# Three of the four tracked settings.ini are gone: tree/etc/gtk-4.0/settings.ini,
+# tree/etc/skel/.config/gtk-3.0/settings.ini and tree/etc/skel/.config/gtk-4.0/settings.ini.
+# The fourth is gtk/settings.ini. THE INSTRUMENT CANNOT SEE THIS — it walks the carved tree
+# and a deleted path is simply not in it, the same blind spot as catppuccin's relocation.
+# The evidence is elsewhere and it is real: the built package installs six settings.ini, all
+# equal to the monolith blob, and test/gtk-settings reddens if a second one is ever tracked.
+#
+# Nothing else was dropped. The package installs the same file set it always did, plus the
+# five that came from shedos-system and the six declarations.
+
+# --- the suites, and the halves that stayed behind ----------------------------------
+#
+# Five suites moved whole: keybindings, recovery-notify, screenrecord, shell-config,
+# waybar-workspace. They read this package's own files and nothing else's.
+#
+# TWO SUITES STRADDLE THE SPLIT AND ARE NOT HERE. test/smoke and test/shedman in the
+# monolith drive verbs from several packages at once. Their shedman-side halves went to
+# shedman in Task 1 and run there (20 suites, green); the desktop-side half of smoke — the
+# help/help-summary/completion contract for browser, keybindings, launcher, power,
+# screenrecord and dock — is asked of THIS package by the pipeline's own verb-contract
+# check, which runs every declared verb out of the built artifact rather than out of a
+# tree. That is a stronger form of the same question and it is why no smoke suite was
+# recreated here. The check is what caught the keybindings hang.
+#
+# The monolith still runs its own copies of all seven suites, unchanged, until cutover.
+
+# --- ownership, for the map Phase 5 draws -------------------------------------------
+#
+# §5.3. FIVE PATHS SHIP FROM BOTH THIS PACKAGE AND THE MONOLITH'S shedos-system until
+# cutover: /etc/gtk-3.0/settings.ini, /etc/gtk-4.0/settings.ini, /usr/libexec/shedman/dock,
+# /usr/share/man/man1/shedman-dock.1 and /usr/share/man/man5/shedos-dock.5. There is no
+# `conflicts=`, deliberately, and for the reason Tasks 1 and 3 gave: the two are never
+# installed together before the cutover that stops the monolith building the package, and
+# declaring a conflict now would break the one channel that carries both. Unlike Task 3's
+# four, THIS TASK CREATED THIS SURFACE, so it is worth saying plainly. The carved
+# shedos-system on staging (2026.08.09-7) ships none of the five — checked against the
+# channel's files database — so nothing in the pipeline can hit it.
+#
+# The post-apply hooks under tree/etc/shedos/themes/post-apply.d/ are this package's
+# content in the theme engine's directory. Both packages owning that directory is ordinary
+# pacman behaviour and it is recorded on both sides.
+
+# --- parity ------------------------------------------------------------------------
+#
+# The monolith still builds shedos-hyprland, so test/version-parity pairs this repository
+# with packaging/shedos-hyprland and holds pkgver equal: 2026.07.03, the monolith's, with
+# pkgrel 2 to match. The tag 2026.07.03 is this repository's first and moves nothing that
+# was ever published from here.
