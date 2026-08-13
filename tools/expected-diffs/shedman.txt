@@ -125,7 +125,7 @@ content man/shedman-apply.1.scd 99b27806bbadd514ae67bde35cd4d4813253e101..10c0a4
 # The three that are not shedman's — kernel.1, lock.1 and theme.1 — carve with the splits
 # that take those verbs.
 
-# --- (b2) the 46 files with no monolith counterpart --------------------------------
+# --- (b2) the 51 files with no monolith counterpart --------------------------------
 #
 # §5.1, the config layer and the verb contract: tree/etc/shedman/shedman.toml, and
 # tree/usr/share/shedman/verbs.d/<name>.toml one per verb — 19 of them, each naming the
@@ -145,8 +145,8 @@ content man/shedman-apply.1.scd 99b27806bbadd514ae67bde35cd4d4813253e101..10c0a4
 # a dependency cycle between the two packages, which pacman resolves and which is inherent
 # in a verb-contract package that also needs a library from a verb-providing one.
 #
-# Twenty-two fixture files under test/apply/fixtures are new, six scenarios the suite had
-# no way to state before. `pacman-reserved-name-refused` declares a channel and asserts the
+# Twenty-seven fixture files under test/apply/fixtures are new, seven scenarios the suite
+# had no way to state before. `pacman-reserved-name-refused` declares a channel and asserts the
 # refusal names shedos-system — it carries the migration marker in its initial state, which
 # is what makes the declaration the user's own. `pacman-fence-missing` points the harness at
 # a library that is not there and asserts the plan stops and says which file it wanted.
@@ -176,7 +176,7 @@ content man/shedman-apply.1.scd 99b27806bbadd514ae67bde35cd4d4813253e101..10c0a4
 #
 #   package tree (tree/ + man/): 35 identical, 7 transformed
 #   test tree:                   698 identical, 39 transformed  (see (d))
-#   no monolith counterpart:     46                             (see (b2))
+#   no monolith counterpart:     51                             (see (b2))
 #
 # The carve itself is the same claim with nothing transformed yet, measured against the
 # commit it was taken at: at the carve root eb06271 against 03404a92, 42 of 42 package
@@ -247,7 +247,7 @@ content test/word-matcher/run.sh 7d75e0f068fb352faf441536630e3b50d8e7afc6..1de1b
 # that suite's output and contributes no pair, rather than being dropped from the
 # comparison in silence. There is nothing to hold at the monolith's pkgver.
 #
-# shedman is at 2026.08.13.1-1. It was cut at 2026.08.09-1, the current stable date under
+# shedman is at 2026.08.13.1-2. It was cut at 2026.08.09-1, the current stable date under
 # the house scheme for a new name, and re-cut each time its tree changed after a release
 # had been published: a tag names one tree for good, so a content change past a published
 # tag takes a new version rather than moving the old one. 2026.08.12, then 2026.08.13 for
