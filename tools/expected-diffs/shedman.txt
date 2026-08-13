@@ -98,7 +98,25 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # renders both channel blocks with the shipped file and with no file at all and holds the
 # two identical, which is the same agreement T11 asks of the dispatcher for the keys whose
 # reader lives in another package.
-content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d15..daf6620b9b362e2dddfbd069ab235e8e17baf570 — §5.6: hands the current pacman.conf to the one writer of its managed blocks and takes back the file the declarations describe, refuses a declaration of a reserved channel name at plan time, and stops rather than write a file it could not have rendered
+#
+# The one-time removal of the reserved channel tables, which the owner approved after the
+# refusal above was written. Every box installed before shedos-system took the channels
+# back carries [pacman.repos.shedos] in its own /etc/shedos/system.toml — the file is in
+# backup=(), so an upgrade leaves it exactly as it was — and refusing that table fails the
+# whole apply on a declaration nobody made. The first plan that meets one removes it, shows
+# the removal in the plan like any other change, and writes
+# /var/lib/shedos/pacman-reserved.migrated naming what it removed. That marker is what
+# makes it the first plan's and not every plan's: after it exists, a table naming a channel
+# is a declaration someone made and gets the refusal. A box with nothing to remove writes
+# the marker as quiet housekeeping on its next apply, so a table declared later is refused
+# there too.
+#
+# The removal is a text cut held to what it means as data — tomlkit reads the comments
+# written under a table as part of it, so a tomlkit removal takes the NEXT table's comment
+# block with it; the cut takes the comments written ABOVE the table, which are the ones
+# describing what left, and falls back to tomlkit for a file it cannot express that way.
+content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d15..35d926295758d6a49b7b546a7072d4dcb506a419 — §5.6: hands the current pacman.conf to the one writer of its managed blocks and takes back the file the declarations describe, refuses a declaration of a reserved channel name at plan time, removes the reserved tables an upgraded box carries on the first plan that meets them, and stops rather than write a file it could not have rendered
+content man/shedman-apply.1.scd 99b27806bbadd514ae67bde35cd4d4813253e101..10c0a454848a1d2a08c476f66561b3831ccbfd9c — §5.6: says that the channels are not declarable, that the first plan removes the table an upgraded box carries, and what the marker under /var/lib/shedos is
 #
 # Ten man pages were transformed here too, gaining the *shedman*(1) cross-reference every
 # other subcommand page already had — deriving the man suite's page list from the tree is
@@ -107,7 +125,7 @@ content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d
 # The three that are not shedman's — kernel.1, lock.1 and theme.1 — carve with the splits
 # that take those verbs.
 
-# --- (b2) the 29 files with no monolith counterpart --------------------------------
+# --- (b2) the 46 files with no monolith counterpart --------------------------------
 #
 # §5.1, the config layer and the verb contract: tree/etc/shedman/shedman.toml, and
 # tree/usr/share/shedman/verbs.d/<name>.toml one per verb — 19 of them, each naming the
@@ -127,13 +145,25 @@ content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d
 # a dependency cycle between the two packages, which pacman resolves and which is inherent
 # in a verb-contract package that also needs a library from a verb-providing one.
 #
-# Five fixture files under test/apply/fixtures are new, two scenarios the suite had no way
-# to state before: `pacman-reserved-name-refused` declares a channel and asserts the
-# refusal names shedos-system, and `pacman-fence-missing` points the harness at a library
-# that is not there and asserts the plan stops and says which file it wanted. The harness
-# gained the two knobs those need, EXPECT_OUTPUT and FIXTURE_FENCE, both documented in its
-# header — a refusal whose whole point is what it says needs its words asserted, not just
-# its exit code.
+# Twenty-two fixture files under test/apply/fixtures are new, six scenarios the suite had
+# no way to state before. `pacman-reserved-name-refused` declares a channel and asserts the
+# refusal names shedos-system — it carries the migration marker in its initial state, which
+# is what makes the declaration the user's own. `pacman-fence-missing` points the harness at
+# a library that is not there and asserts the plan stops and says which file it wanted.
+# `pacman-reserved-stanza-retired` is the box every upgrade produces: the plan says it
+# removes [pacman.repos.shedos] and the file comes out without the table or the comment
+# that described it. `pacman-reserved-stanza-retired-once` applies twice and asserts the
+# second run says there is nothing to do and leaves the same file. `pacman-clean-config-
+# untouched` is the other direction — a config with no reserved table, byte-for-byte
+# unchanged. `pacman-server-url-with-equals` declares a repository whose Server URL carries
+# an `=` of its own, so re-packing the fence argv into fewer arguments cuts the URL and
+# reddens here rather than on a box. The harness gained the three knobs those need,
+# EXPECT_OUTPUT, FIXTURE_FENCE and APPLY_RUNS, all documented in its header — a refusal
+# whose whole point is what it says needs its words asserted, not just its exit code, and a
+# change that must happen once needs a second run to prove it did not happen twice.
+#
+# Two doctor cases are new with them: doctor reports the removal as drift while it is
+# pending, and answers a table declared after the migration with the refusal.
 #
 # Repository scaffolding the carve could not bring and the package does not ship:
 # README.md, .gitignore, .github/workflows/ci.yml.
@@ -144,9 +174,9 @@ content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d
 # monolith's. Measured by comparing `git rev-parse` on each carved path against the
 # monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
-#   package tree (tree/ + man/): 36 identical, 6 transformed
+#   package tree (tree/ + man/): 35 identical, 7 transformed
 #   test tree:                   698 identical, 39 transformed  (see (d))
-#   no monolith counterpart:     29                             (see (b2))
+#   no monolith counterpart:     46                             (see (b2))
 #
 # The carve itself is the same claim with nothing transformed yet, measured against the
 # commit it was taken at: at the carve root eb06271 against 03404a92, 42 of 42 package
@@ -185,12 +215,12 @@ content test/apply/fixtures/pacman-update-repo/expected-etc/pacman.conf 5ea543de
 content test/apply/fixtures/pacman-update-repo/expected-etc/shedos/system.toml 41c4dba285e3aa9980edc3afbf7e01263add484c..74383c42e29f4c8ebc6f9850ee7eba07efe9238f — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
 content test/apply/fixtures/pacman-update-repo/initial-etc/pacman.conf 3f8292bbb62d1bfd1fc1f381bad50fbd6611d5a4..09d61d8552b94f40972dc5355664c4aaf9143159 — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders — it starts at the canonical block carrying the old SigLevel
 content test/apply/fixtures/pacman-update-repo/system.toml 41c4dba285e3aa9980edc3afbf7e01263add484c..74383c42e29f4c8ebc6f9850ee7eba07efe9238f — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
-content test/apply/run.sh cd96c01c9b0a42ce37d91b744083554618133a2a..9c25cbcd7125d34ed8f32a95206885b0eb6dfebc — re-rooted off the packaging/shedos-system/ prefix the carve removed; the harness gained EXPECT_OUTPUT so a refusal's words can be asserted and FIXTURE_FENCE so one fixture can be run without a fence library, and it hands the library path to the tool
+content test/apply/run.sh cd96c01c9b0a42ce37d91b744083554618133a2a..ad1f072bf6345bd7db110b2465693b9538bbe6b7 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the harness gained EXPECT_OUTPUT so a refusal's words can be asserted, FIXTURE_FENCE so one fixture can be run without a fence library, and APPLY_RUNS so a change that has to happen once and not again can be driven twice, and it hands the library path to the tool
 content test/apply/unit_mounts.py 6672f0d80cd53aa88f14a563d675c5db1fdfe502..fc5bda9cf0c8941d44bb9cc7cd079510e78e9dd8 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/check-health/run.sh 4dbde46de38a85ec58a7f5f2d9c73ea85e20bb3c..8fc7a7318dbe4dc9b63614a32ffd28a2b65b04cc — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
 content test/completions/run.sh 534ea0a99e86f138234f8aac95cfd66f2edd67d8..714c3ab0f73b42e9f95972b4ed7d8bbe814e90a2 — re-rooted off the packaging/shedos-system/ prefix the carve removed; names its stage in a config file instead of rewriting the shipped completer's hardcoded libexec line, stages declarations for its stubs, and asserts an undeclared executable is not completed
 content test/config/run.sh 74bb20fd6a1e8d54affc8e654e5b6c5977742360..3cf7077ab12ade7951fb857ed57020c7136e4764 — re-rooted off the packaging/shedos-system/ prefix the carve removed
-content test/doctor/pilot.py b1fb0fb66f816902229d0a70ffb9a113612ea7e7..3dea26f6fac69b0adffa4d64b1623236b0eaf61a — re-rooted off the packaging/shedos-system/ prefix the carve removed; the lib root each case runs against is this repo's modules over the installed ones so the DKMS cases keep asking the real helper, which ships in shedos-system, and three cases cover the undeclared-verb audit
+content test/doctor/pilot.py b1fb0fb66f816902229d0a70ffb9a113612ea7e7..94ab347f28df04ccbe5f02f48e4359d2e25752cd — re-rooted off the packaging/shedos-system/ prefix the carve removed; the lib root each case runs against is this repo's modules over the installed ones so the DKMS cases keep asking the real helper, which ships in shedos-system, and three cases cover the undeclared-verb audit while two more ask what doctor says about a reserved table before and after the removal has run
 content test/doctor/run.sh 1db52fc01d1b1921dc42b6bb63004cb99c302e60..8b127cc6c8a95ea721e6a79027d54460e4754a51 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/install/run.sh 8c9084cf8f03446228c7a53e6dc169e5dbfb722a..ed1816e341f0b20cdc0136fc184f04f28e676037 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
 content test/logs/pilot.py f3965801be0e77f239678c960d2ae8e8bfecb08e..96bae6de5cec9019989318d93086dbd0d53f2435 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
@@ -217,8 +247,12 @@ content test/word-matcher/run.sh 7d75e0f068fb352faf441536630e3b50d8e7afc6..1de1b
 # that suite's output and contributes no pair, rather than being dropped from the
 # comparison in silence. There is nothing to hold at the monolith's pkgver.
 #
-# shedman is at 2026.08.12-1. It was cut at 2026.08.09-1, the current stable date under
-# the house scheme for a new name, and re-cut when the verb declarations changed after
-# that release had been published: a tag names one tree for good, so a content change past
-# a published tag takes a new version rather than moving the old one. It is the only
-# package on the channel not at 2026.08.09, and that is what it means rather than drift.
+# shedman is at 2026.08.13.1-1. It was cut at 2026.08.09-1, the current stable date under
+# the house scheme for a new name, and re-cut each time its tree changed after a release
+# had been published: a tag names one tree for good, so a content change past a published
+# tag takes a new version rather than moving the old one. 2026.08.12, then 2026.08.13 for
+# the fence caller and the grafted suites, then 2026.08.13.1 for the migration below —
+# the fourth component is what a SECOND cut on one day gets, since the date scheme has one
+# release a day in it and a published tag never moves. `vercmp 2026.08.13.1 2026.08.13`
+# is 1. It is the only package on the channel not at 2026.08.09, and that is what it means
+# rather than drift.

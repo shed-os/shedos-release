@@ -121,9 +121,14 @@
 # of it; `shedman doctor` builds the same plan and goes with it. shedman's
 # `pacman-reserved-name-refused` fixture is exactly that box: exit 2, nothing reconciled.
 # Nothing live is affected while the monolith serves the fleet, and the refusal is what the
-# spec asks for, so it is not softened here — but the stanza has to come out of every
-# installed /etc/shedos/system.toml before cutover, or the refusal needs a grace path.
-# NAMED AS A CUTOVER REQUIREMENT AND AN OWNER DECISION.
+# spec asks for, so it is not softened here.
+#
+# CLOSED, by the owner-approved migration in shedman rather than by anything in this
+# package: the first plan under the new contract removes the reserved tables from
+# /etc/shedos/system.toml, shows the removal in the plan, and records that it ran under
+# /var/lib/shedos, after which a table naming a channel gets the refusal above. See
+# tools/expected-diffs/shedman.txt. The refusal here is unchanged and still what an
+# upgraded box meets on the second plan.
 #
 # §5.5, the shared driver list. tree/usr/share/shedos/nvidia-driver-stack is new (see (b2))
 # and nvidia-reap reads it instead of repeating it; the installer generates its copy from
