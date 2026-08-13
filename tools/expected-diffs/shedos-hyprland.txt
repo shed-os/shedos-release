@@ -101,7 +101,7 @@ content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b
 # whole, so nothing on the fleet loses them; a box that installs the carved package alone
 # and nothing else is the case that would.
 
-# --- (b2) the 11 files with no monolith counterpart --------------------------------
+# --- (b2) the 12 files with no monolith counterpart --------------------------------
 #
 # gtk/settings.ini — the one tracked GTK settings source. It is byte-identical to the four
 # copies it replaces (see (b)), but the path is new, so the instrument reads it as having
@@ -116,6 +116,9 @@ content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b
 # tracked settings.ini, six destinations read out of the PKGBUILD rather than restated, so
 # a second tracked copy or a dropped destination reddens it.
 #
+# test/smoke/run.sh is new here and old in the monolith: it is the half of the monolith's
+# smoke suite that follows these verbs (see the suites section below).
+#
 # Repository scaffolding the carve could not bring and the package does not ship:
 # README.md, .gitignore, .github/workflows/ci.yml.
 
@@ -127,7 +130,7 @@ content tree/etc/skel/.config/hypr/keybindings.lua e8216639bf4c94a96e0ba4f90bc0b
 #
 #   package tree (tree/ + man/): 123 identical, 3 transformed
 #   test tree:                   0 identical, 5 transformed   (see (d))
-#   no monolith counterpart:     11                           (see (b2))
+#   no monolith counterpart:     12                           (see (b2))
 #
 # AND AT THE PACKAGE LEVEL, which is the comparison that actually matters here and the one
 # the blob walk cannot make: the from-tag build was diffed against a local build of the
@@ -161,16 +164,23 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 # Five suites moved whole: keybindings, recovery-notify, screenrecord, shell-config,
 # waybar-workspace. They read this package's own files and nothing else's.
 #
-# TWO SUITES STRADDLE THE SPLIT AND ARE NOT HERE. test/smoke and test/shedman in the
-# monolith drive verbs from several packages at once. Their shedman-side halves went to
-# shedman in Task 1 and run there (20 suites, green); the desktop-side half of smoke — the
-# help/help-summary/completion contract for browser, keybindings, launcher, power,
-# screenrecord and dock — is asked of THIS package by the pipeline's own verb-contract
-# check, which runs every declared verb out of the built artifact rather than out of a
-# tree. That is a stronger form of the same question and it is why no smoke suite was
-# recreated here. The check is what caught the keybindings hang.
+# TWO SUITES STRADDLE THE SPLIT AND BOTH HALVES RUN. test/smoke and test/shedman in the
+# monolith drive verbs from several packages at once.
 #
-# The monolith still runs its own copies of all seven suites, unchanged, until cutover.
+#   smoke      the monolith's copy covers datetime, db, dock, fingerprint, theme, browser,
+#              launcher, power and tour. Its shedman-side half (datetime, db) runs in
+#              shedman; its desktop-side half runs HERE, as test/smoke/run.sh over all six
+#              verbs this package ships — the four that were in the monolith's list and now
+#              belong here (dock, browser, launcher, power) plus keybindings and
+#              screenrecord, whose own suites cover what they do rather than what every
+#              verb owes the dispatcher. 30 checks. The completion third of it is also
+#              asked of the BUILT package by the pipeline's verb-contract check, which is
+#              what caught the keybindings hang; the help and help-summary thirds are only
+#              asked here.
+#   shedman    the dispatcher suite is about the dispatcher, which ships from shedman, and
+#              it went there whole in Task 1. Nothing in it reads a desktop verb.
+#
+# The monolith still runs its own copies of all eight suites, unchanged, until cutover.
 
 # --- ownership, for the map Phase 5 draws -------------------------------------------
 #
@@ -187,6 +197,15 @@ content test/waybar-workspace/run.sh 2d562e2226c115fc2ab017c4acc824b272dae998..0
 # The post-apply hooks under tree/etc/shedos/themes/post-apply.d/ are this package's
 # content in the theme engine's directory. Both packages owning that directory is ordinary
 # pacman behaviour and it is recorded on both sides.
+#
+# §5.2's cross-repo fallback drift check is STILL NOT DONE, and this package is one of the
+# repositories it is about. tree/etc/skel/.config/hypr/hyprland.lua carries four hardcoded
+# rgba values as the palette to use when /etc/shedos/themes/current/palette.lua is missing,
+# which is one of the offline-degradation copies §5.2 accepts and one of the copies the
+# engine's own enumeration named as unchecked. The engine holds the canonical table and
+# test/theme-render T4 checks the copy that lives with it; checking this one and
+# shedos-prompt-ui's is the shedos-release integration test §5.2 asks for, and it is a
+# Task 6 item. Recorded here so it is deferred rather than missed.
 
 # --- parity ------------------------------------------------------------------------
 #
