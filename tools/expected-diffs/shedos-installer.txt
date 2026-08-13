@@ -1,0 +1,200 @@
+# What separates the carved shedos-installer from the monolith. There is no monolith
+# package of the same name to compare against — the monolith never built one — so what is
+# written down here is how the carved repository differs from the monolith FILES it carves,
+# plus the packaging that had no monolith counterpart at all.
+#
+# The comparison is blob-to-blob between the carved repository and those files, and every
+# path below is written the way the carved repository holds it rather than the way the built
+# package installs it, because the carved path is what was compared. Every `content` line is
+# pinned <monolith blob>..<carved blob>.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source: installer/ and test/installer/, carved at monolith commit 7b7223a3 and compared
+# against the same commit. Carve map: tools/carve-maps/shedos-installer.paths — `flatten
+# installer` plus `path test/installer/`, less one excepted file.
+#
+# 154 commits carried, 144 paths. At the carve root d3edbaa, 64 of 64 package files and 9 of
+# 9 test files were byte-identical to the monolith. The carved log matches `git log
+# --full-history --format='%an|%aI|%s'` over installer/ and test/installer/ with exactly two
+# understood differences, both counted and chased rather than waved off:
+#
+#   the monolith names one commit the carve does not — 0c32300a, whose only in-scope file is
+#   installer/tests/test_backfill_uki_cmdline.py, the file the map excepts. A commit that
+#   touched nothing else this repository holds does not survive the subtraction.
+#
+#   the carve names one merge the monolith's path log does not — 78316329, which is TREESAME
+#   to both of its parents in scope (`git diff <parent> <merge> -- installer/ test/installer/`
+#   is empty on both sides), so the monolith's log simplifies it away while filter-repo keeps
+#   it, because both parents map to distinct carved commits. It is why one subject appears
+#   twice in the carved log.
+#
+# Both logs are 154 lines and the two differences cancel.
+
+# --- (b) the 5 transformed package files -------------------------------------------
+#
+# §2 row 11, the packaging itself. The library was never packaged: the ISO build copied
+# installer/shedos_installer into /opt/shedos-installer and the two modules that import it
+# reached it with `sys.path.insert('/opt/shedos-installer')`. The package installs it at
+# /usr/lib/shedos-installer and both modules name that. Not site-packages: a python
+# minor-version bump moves that directory out from under an ISO built before it, and the
+# installer is the one thing on the ISO that cannot answer an ImportError. Three places now
+# hold that one path — the PKGBUILD and the two modules — and test/install-paths holds them
+# together, red under a change to any one of them.
+#
+# §5.5, the wallpaper. shedos_configs read /opt/shedos-installer/branding/wallpapers/
+# shedos-default.png, which the ISO build staged by copying the monolith's branding/
+# wallpapers/. That file is shedos-branding's, byte for byte: the monolith blob at
+# branding/wallpapers/shedos-default.png and the one in packaging/shedos-branding/tree are
+# both sha256 664c3ce244bc1cc734afc43f5c422a766438860528ebedf57ebd54e4cb4e5316. The module
+# names the packaged path now and the package depends on shedos-branding, which is on the
+# ISO's own package list.
+#
+# §5.5, the NVIDIA stack. The thirteen package names were written out in shedos_nvidia and
+# again in shedos-system's nvidia-reap. shedos-system publishes them as
+# /usr/share/shedos/nvidia-driver-stack, nvidia-reap already reads that file, and this module
+# reads the same file through the same SHEDOS_NVIDIA_STACK_FILE override. THE SPEC SAYS
+# "generated" AND THIS IS READ AT RUNTIME INSTEAD — the deviation is deliberate and is
+# written up at the bottom of this file.
+#
+# Dead surface, §2 row 11 by name. pydantic was declared and never imported anywhere.
+# psutil was declared and imported once, lazily, inside hardware.py's get_memory_info, and
+# nothing in the monolith ever called that function (`grep -rn get_memory_info` over the
+# whole tree finds the definition and nothing else), so the function goes with the
+# declaration — a dead function whose only purpose is to import a dependency the package
+# deliberately does not declare is a trap for whoever reads it next.
+content calamares/modules-src/shedos_limine/main.py 8d8fcdc8bb86f23b04dbbc67092cc1ee87c3c497..aac191be8eede90a2df55cc4d2e91b8c7e7920af — §2 row 11: imports the library from /usr/lib/shedos-installer, where the package puts it, instead of the /opt directory the ISO build used to copy it to
+content calamares/modules-src/shedos_nvidia/main.py 637ab7099ae5d26e2ec193a44d744641047f1f30..29569869968668c4c786e827a8cd3eac5f52c0cc — §2 row 11 and §5.5: same import path, and the thirteen driver names are gone from here in favour of the file shedos-system publishes, with an unreadable file failing the job instead of installing and removing nothing
+content calamares/modules-src/shedos_configs/main.py 747a35373990b8b41d6c05a82e386328aa7fcc91..964e0816720abb882ab09df141cf827b11ab4275 — §5.5: copies the wallpaper from /usr/share/shedos/wallpapers, which is shedos-branding's own copy of the same bytes
+content shedos_installer/utils/hardware.py 8909858e26583ef1689f345c36191735543ece2a..851a5c15f5ba0ba2bfbde28d0b374f4788fd91c1 — §2 row 11: get_memory_info removed, the only importer of psutil and called by nothing
+content pyproject.toml e0d8e6a3151fba98e57ec22cbefe4463a6b1f7e8..a269871ece32696be06d7ca348466eac22f0cf63 — §2 row 11: the psutil and pydantic dependency declarations removed; the ruff, mypy and setuptools configuration is carried unchanged
+
+# --- (b2) the 8 files with no monolith counterpart --------------------------------
+#
+# PKGBUILD — the package that did not exist. pkgver 2026.08.09 (the current stable date) and
+# pkgrel 1, the house scheme for a new name, and it builds from this repository's own tag
+# like every other carved repo. It installs the library, the nine job modules at
+# /usr/lib/calamares/modules, settings.conf and the module confs at /etc/calamares, and the
+# branding bundle at /etc/calamares/branding/shedos — the layout the ISO build stages by hand
+# today, path for path, except for the library root. See the correspondence below.
+#
+# shedos_installer/driver_stack.py — the reader for shedos-system's list, and the only new
+# library module. It refuses an empty answer: a caller that installs nothing leaves an NVIDIA
+# box on modesetting and one that removes nothing leaves the whole stack on a machine with no
+# NVIDIA card, and both are silent.
+#
+# tests/test_driver_stack.py — four cases for that reader: file order, comments and blank
+# lines, a missing file, a file naming nothing. Each was watched failing under a mutation of
+# the thing it checks.
+#
+# test/install-paths/run.sh — the PKGBUILD's install root and both modules' INSTALLER_ROOT
+# have to agree, and the library the build collects has to be a python package in this tree.
+#
+# test/shared-data/run.sh — the two files this code reads from other packages, asked of the
+# installed system: pacman has to say shedos-system owns the driver stack and shedos-branding
+# owns the wallpaper, and the library has to read the whole list out of the real file.
+#
+# Repository scaffolding the carve could not bring and the package does not ship: README.md,
+# .gitignore, .github/workflows/ci.yml.
+
+# --- (c) the rest is byte-identical -------------------------------------------------
+#
+# Measured by comparing `git rev-parse` on each carved path against the monolith blob at
+# 7b7223a3, over the whole carved tree at HEAD:
+#
+#   package tree (library + modules): 58 identical, 5 transformed
+#   test tree:                        7 identical, 2 transformed   (see (d))
+#   no monolith counterpart:          8                            (see (b2))
+#
+# Every module conf, the settings.conf sequence, the branding bundle, the typing stubs and
+# every library file but the two named above are the monolith's bytes.
+
+# --- (d) the 2 transformed test files ------------------------------------------------
+content test/installer/run.sh 9931db139948d6c51b2e3039d5cdd7132fcdea06..1f17eea4a0a998bdc7d4883295089fd09ff53765 — re-rooted off the installer/ prefix the carve removed, and it fails instead of skipping when pytest is missing: the pipeline installs python-pytest for it, so a missing interpreter means the suite the package rests on did not run
+content tests/test_calamares_modules.py 234021691cf76525f60bdf1b0428bea2ed5955e8..f2c3589d5b883cd9c27e6d4af1a8654e44257904 — re-rooted the same way, and the NVIDIA cases take their package list from a fixture file instead of a constant in the module; the two cases that asserted what the list CONTAINS are gone from here, because the list belongs to shedos-system now and its own suite pins the thirteen names
+
+# --- (e) what the tree no longer holds ----------------------------------------------
+#
+# shedos_installer/config.py is deleted. It held INSTALLER_DIR and PACKAGE_DIR, the path of
+# the packages/ tree the ISO build copies under /opt/shedos-installer for a reader that was
+# never written — nothing in the monolith imports the module. Removing both constants left an
+# empty module, so the module goes too. THE INSTRUMENT CANNOT SEE THIS: it walks the carved
+# tree and a deleted path is simply not in it.
+#
+# installer/tests/test_backfill_uki_cmdline.py is not here and never was: it exercises a
+# shedos-system file and the carve map excepts it. It lives in shedos-system as
+# test/backfill-uki-cmdline/.
+
+# --- what the package replaces, path for path ---------------------------------------
+#
+# The ISO build stages all of this by hand today (Makefile:360-391). The package installs the
+# same files at the same paths, with one move:
+#
+#   installer/shedos_installer/          → /usr/lib/shedos-installer/shedos_installer/
+#                                          (the ISO stages it at /opt/shedos-installer/)
+#   installer/calamares/modules-src/     → /usr/lib/calamares/modules/         (same path)
+#   installer/calamares/settings.conf    → /etc/calamares/settings.conf        (same path)
+#   installer/calamares/modules/*.conf   → /etc/calamares/modules/             (same path)
+#   installer/calamares/branding/shedos/ → /etc/calamares/branding/shedos/     (same path)
+#
+# THE TWO CANNOT BOTH BE LIVE. The profile's airootfs is laid down before pacstrap runs, so a
+# file staged into airootfs at a path a package also owns fails the ISO build with "exists in
+# filesystem" — the Makefile says so itself about /etc/os-release (:366-368). The ISO build
+# installing this package and the Makefile staging these files is the same collision, and the
+# staging has to go in the same change that adds the package to the ISO's package list.
+# Nothing collides today: the ISO does not install this package and the monolith does not
+# build it.
+#
+# The branding version is the sharp edge of that change and is named here rather than solved:
+# the Makefile rewrites four version fields in branding.desc after staging it
+# (Makefile:382-386), and a packaged branding.desc carries no ISO version to rewrite. Where
+# that stamp comes from once the file is package-owned is an ISO-build question.
+
+# --- the two monolith riders, both owner-gated --------------------------------------
+#
+# 1. packages/installer-only.txt gains shedos-installer. That list is what keeps a package
+#    out of shedos-meta (render-meta-depends.sh:61-66) and out of the public repo
+#    (build-packages.yml:240-246). Both are name matches against a list the monolith reads,
+#    so the entry changes nothing the monolith does today — it builds no package by that name
+#    — and it is what those two exclusions will read when the ISO build carries it.
+#
+# 2. The Makefile's `cp -r packages` staging is removed. It copied the whole repo-root
+#    packages/ tree under /opt/shedos-installer for config.py's PACKAGE_DIR, and nothing ever
+#    read that constant.
+#
+# NEITHER IS COMMITTED. The monolith is read-only for this phase and both are the owner's to
+# take.
+#
+# shedos-release's OWN copy of installer-only.txt must NOT gain the name, and that is not an
+# oversight: the publisher refuses to sign anything on that list (publish.sh:69-77), and this
+# package publishes to staging like every other carved package until the ISO build takes it
+# over. The two copies disagree on purpose until then. What the ISO build reaches for
+# afterwards — a channel this list forbids, or the build artifact directly — is a question
+# for whoever wires the ISO, and it is open.
+
+# --- parity ------------------------------------------------------------------------
+#
+# The monolith builds no shedos-installer, so the maps file says `new-package
+# shedos-installer` and test/version-parity pairs this repository with nothing. pkgver
+# 2026.08.09 is the current stable date and pkgrel starts at 1, the same scheme shedman,
+# shedos-theme-engine and shedos-theme-catppuccin took.
+#
+# There is no version floor on shedos-system, and the reason is worth writing down: what this
+# package needs from it is a FILE, and the monolith's shedos-system and the carved one carry
+# the same pkgver. A pkgrel floor would not hold either — the monolith's pkgrel moves on any
+# change to that package, so it would be satisfied by a build that ships no driver-stack file
+# at all. test/shared-data asks the installed package for the file instead, which is the only
+# form of the question that cannot be answered by a version number.
+
+# --- the deviation from "generated", stated plainly ---------------------------------
+#
+# §5.5 says the driver stack is "generated from a shared data file shipped by shedos-system",
+# and this reads the file at runtime instead. Generating it into the package at build time
+# would put the thirteen names back into a shipped artifact, and an ungenerated build would
+# ship an empty list — which installs nothing on an NVIDIA box and strips nothing from a
+# machine without one, silently, on the installed system. Reading it makes the drift
+# impossible rather than checked, gives the module the same override nvidia-reap already
+# takes, and turns the missing-file case into a job that fails with a reason.
+#
+# The check §7 asks for is real and it is test/shared-data: the file has to exist, pacman has
+# to say shedos-system put it there, and the library has to read every name out of it.
