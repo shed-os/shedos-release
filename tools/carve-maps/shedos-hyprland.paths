@@ -1,0 +1,20 @@
+# The desktop keeps its name and its whole packaging directory, and gains the
+# five files that were split across shedos-system for no reason but where they
+# were first written: the dock verb with its two pages, and the system-wide GTK
+# defaults whose skel copies are already here. shedos-system's own map excepts
+# all five, so neither repository carries them twice.
+flatten packaging/shedos-hyprland
+
+rename packaging/shedos-system/tree/usr/libexec/shedman/dock:tree/usr/libexec/shedman/dock
+rename packaging/shedos-system/man/shedman-dock.1.scd:man/shedman-dock.1.scd
+rename packaging/shedos-system/man/shedos-dock.5.scd:man/shedos-dock.5.scd
+rename packaging/shedos-system/tree/etc/gtk-3.0/settings.ini:tree/etc/gtk-3.0/settings.ini
+rename packaging/shedos-system/tree/etc/gtk-4.0/settings.ini:tree/etc/gtk-4.0/settings.ini
+
+# The suites for the desktop's own surfaces. smoke and shedman read verbs from
+# several packages and stay where the dispatcher went.
+path test/keybindings/
+path test/recovery-notify/
+path test/screenrecord/
+path test/shell-config/
+path test/waybar-workspace/
