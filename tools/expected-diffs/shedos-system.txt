@@ -61,7 +61,7 @@
 # word-matcher each reference only a shedman verb. They stay in the monolith, which still
 # ships those verbs and still runs them, and they belong with shedman at cutover.
 
-# --- (b) the 3 transformed package files -------------------------------------------
+# --- (b) the 5 transformed package files -------------------------------------------
 #
 # §5.6, the single fence-writer. tree/usr/lib/shedos/pacman-fence is new (see (b2)) and is
 # now the only place a managed block in /etc/pacman.conf is written. The scriptlet keeps the
@@ -99,9 +99,19 @@
 #
 # §5.1, the config layer grows with its consumers. The library reads `repo`, `repo-url`,
 # `canary-repo` and `canary-url` from /etc/shedman/shedman.toml, with today's literals
-# compiled in as defaults, so a box with no config file gets the same bytes. The shipped
-# shedman.toml does not name those keys yet — it belongs to shedman, and the commit that
-# adds them there is the one blocked on the fence-interface ruling below.
+# compiled in as defaults, so a box with no config file gets the same bytes. shedman's
+# shipped config file now names all four, and its own suite holds the two renderings
+# identical.
+#
+# §5.6, the documentation of the contract. tree/etc/shedos/system.toml and
+# tree/usr/share/shedos/system.toml.example both shipped a `[pacman.repos.shedos]` stanza
+# and described one fence holding every declared repository. Declaring a channel is an
+# error now and each declared repository gets a fence of its own, so both files say that
+# instead: what a declaration does, that dropping one removes its block, that a block for a
+# repository nobody declared is reconciled away, and that the two channels belong to this
+# package and are opted into by uncommenting the canary block in /etc/pacman.conf itself.
+# The shipped system.toml no longer declares any repository at all, which is what a box
+# gets by default; the example keeps the third-party `my-mirror` stanza commented out.
 #
 # §5.5, the shared driver list. tree/usr/share/shedos/nvidia-driver-stack is new (see (b2))
 # and nvidia-reap reads it instead of repeating it; the installer generates its copy from
@@ -109,9 +119,11 @@
 #
 # §2 row 2 and §5.1, the build. package() installs the verbs the declarations name, so the
 # hand-kept array that used to decide what shipped is gone — the failure mode §5.1 names.
-content PKGBUILD 2b7acf79f608a3ab3b6fa102cf4909a2a2304881..edb207e64eaffe87a755b2a3fc12da43f6f1ec08 — §2 row 2 and §5.1: builds from this repository's tag, installs the verbs the declarations name instead of a hand-kept array, drops what the four splits took, gains depends=(shedman), and carries the pkgrel the pipeline's guard moved past what staging held
+content PKGBUILD 2b7acf79f608a3ab3b6fa102cf4909a2a2304881..91e4289002339523d12b7ded768bfe018a406e60 — §2 row 2 and §5.1: builds from this repository's tag, installs the verbs the declarations name instead of a hand-kept array, drops what the four splits took, gains depends=(shedman), and carries the pkgrel the pipeline's guard moved past what staging held
 content shedos-system.install 214bf3218be41dc9b1a7319c9a28e1bf4c94dc6d..01ba8916a6c0f72a379b4e90de46dfa92bc52de0 — §5.6: _add_shedos_repo asks the fence library for the text and the strip-then-append instead of holding a copy of both, says so on stderr when the library is not there rather than declining in silence on the one path that puts [shedos] in front of a box, and the build-container marker it checks is overridable for the harness so the suite that drives it can run inside a build container
 content tree/usr/lib/shedos/nvidia-reap ddee4ca0f494a975cdf26ef318b2e12f5654a7ca..5acbca4b68d2bbe97839b25436a5acdca26edbc1 — §5.5: reads the shipped driver list instead of repeating it, and a list it cannot read leaves the unit armed rather than reaping a stack it does not know
+content tree/etc/shedos/system.toml ded8d899c57361c596e9f0c288e44cb06bfb98a8..8291e781e17a2533a1159809d57e610067249af8 — §5.6: stops shipping a declaration of a reserved channel name and says what [pacman.repos] is for instead
+content tree/usr/share/shedos/system.toml.example 86ccef3469c4f3bd1c9bf7998e71d5fc1f55c88f..902478acdca2cb29f226a941e379d8cf645d35d0 — §5.6: documents a fence per declared repository, what dropping one does, and why the two channels are not declarable
 #
 # tree/usr/libexec/shedman/fingerprint was a fourth entry here — the verb read $USER with
 # nothing behind it, so a shell that never set one killed it before it reached the flag it
@@ -150,7 +162,7 @@ content tree/usr/lib/shedos/nvidia-reap ddee4ca0f494a975cdf26ef318b2e12f5654a7ca
 # (b2) is byte-for-byte the monolith's. Measured by comparing `git rev-parse` on each carved
 # path against the monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
-#   package tree:  155 identical, 3 transformed
+#   package tree:  153 identical, 5 transformed
 #   test tree:       0 identical, 27 transformed  (see (d))
 #   no monolith counterpart: 15                   (see (b2))
 #
@@ -200,7 +212,7 @@ content test/kernel/run.sh acdc93f3b29d61c88717de62c47e2faf0b02e370..b5917147f36
 content test/key/run.sh c61f424082f7edeeadc9d59f4214e871cca3b24f..6b7eda4c935b9292e2c9b5459ea5412a2e2b4059 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/login/run.sh b0839ba93995bbf54071e9e8639c17e164863fdd..59de1c2f2d7955a32e3ef2f99044a7fa3d228426 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/nvidia-reap/run.sh cd0d75903a6c51b3ef182a44491d6edf57d57d0e..6554ec23a96f99520048e077c698c8e4e27dcde2 — §5.5: asks where the driver list is written down, that the tool keeps none of its own, that it reaps what the file names, and that it stays armed when it cannot read one
-content test/pacman-channels/run.sh 35fa6243baa77d740dcb148ae93e7880ecb723a0..5db97f420ec9d8e7ac21ae6ed5b7f49d242580e8 — §5.6: pins the bytes the library writes rather than describing them, asks the config for a channel, covers the build-container guard the suite has to step past to run at all, and asks what happens when the library is not there
+content test/pacman-channels/run.sh 35fa6243baa77d740dcb148ae93e7880ecb723a0..7ace0024a4c8188fc5462796d26fd97f810b1b60 — §5.6: pins the bytes the library writes rather than describing them, asks the config for a channel, covers the build-container guard the suite has to step past to run at all, asks what happens when the library is not there, and holds the reserved names against a box that renamed its channels so a literal in either comparison reddens
 content test/retire-shedos-kernel/run.sh 731112d73bc50b0131c24e5756fec7b320a42eb1..36bd758c37cf7b7315e24cf42d89b07371a583ab — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/secureboot/run.sh af81a49e29cf97d6b19746536d0aed1f9fa6b0ec..bf57c3ca392608a14498eda83d5ff6a82b16a370 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/shell-migrate/run.sh 5d0b03b57a6d457ed3c5c2ad402753834b7e5d75..bfbc52ff33f34747a4df7b557d323146dd3e644e — re-rooted off the packaging/shedos-system/ prefix the carve removed; the files the tool seeds ship with the desktop package, so the fixture is a skel of its own, the stock pair is checked against the hashes the tool names rather than assumed, and a home with no rc at all is covered outright
@@ -234,7 +246,7 @@ content test/unlock/tpm2.sh a76173a3f2502dad150b381336fba29e9a441cfa..25c4e522f2
 #
 # tools/carve-maps/shedos-system.paths carves packaging/shedos-system, so version-parity
 # pairs this repository with that directory and holds pkgver equal and pkgrel equal-or-ahead.
-# The carved package is at 2026.08.09-6 and the monolith directory at 2026.08.09-2: pkgver
+# The carved package is at 2026.08.09-7 and the monolith directory at 2026.08.09-2: pkgver
 # equal, pkgrel ahead, which is what the check allows. pkgver is the tag name, and parity
 # pins pkgver to the monolith's, so a content change inside one date has nowhere to go but
 # the same tag and the next pkgrel — a new tag name would mean a new pkgver and a parity
@@ -247,4 +259,5 @@ content test/unlock/tpm2.sh a76173a3f2502dad150b381336fba29e9a441cfa..25c4e522f2
 # staging database. On the first publish the name was new there — shedos-system-2026.08.09-1
 # was absent — so it left pkgrel at 1 and made no bump. On every push after that it found
 # its own release and bumped past it, which is how the package reached -6. Contents diverge
-# by everything in (b), (b2) and the four subtracted sets; pkgver does not.
+# by everything in (b), (b2) and the four subtracted sets; pkgver does not. The series has
+# reached -7.

@@ -33,12 +33,23 @@
 # 491 files across nine test suites carve with them: shedman, apply, apply-checkpoint,
 # completions, config, doctor, man, smoke, status.
 #
+# ELEVEN MORE SUITES WERE GRAFTED IN A SECOND PASS, 246 files across check-health, install,
+# logs, review-configs, review-vscode, rollback, sync-configs, syntax-highlight, update,
+# upgrade-history and word-matcher. Each reads a shedman verb and nothing else. They were
+# counted as shedos-system's by the survey and could not carve there, because the files
+# they exercise are not in that package; they came here by a second carve of just those
+# directories into a bare repository, fetched and merged, so they arrive with their history
+# rather than as new files (34 commits, `test: take the suites for the verbs this package
+# ships`). BOTH SIDES' ACCOUNTING: the monolith still holds and still runs its own copies —
+# it is READ-ONLY this phase and still ships those verbs — so the suites exist in two
+# places until cutover, exactly as the carved package files do.
+#
 # What shedos-system keeps and shedman does NOT take: the ten verbs the later splits own
 # (dock, encrypt, fingerprint, kernel, key, lock, login, secureboot, theme, tpm2) and
 # their man pages, the /usr/bin/shedos-* back-compat shims, shedos-dock.5 and
 # shedos-review-exclude.5, and everything under /usr/lib/shedos except apply_core.py.
 
-# --- (b) the 5 transformed package files -------------------------------------------
+# --- (b) the 6 transformed package files -------------------------------------------
 #
 # §5.1, the config layer. tree/etc/shedman/shedman.toml is new and in backup=(). It
 # carries the libexec path, the package `shedman version` reports, and the directory verb
@@ -60,6 +71,35 @@ content tree/usr/share/zsh/site-functions/_shedman d7f34a482d2588266b2b37819f834
 content tree/usr/share/fish/vendor_completions.d/shedman.fish ac6310124db7bddbf5e03e288fb26dd86d49738b..b3676b97fe5803a2975c55017b973441a1fefb4e — §5.1: the same, and its hardcoded list of completable subcommands is now the declarations
 content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf..d8525777c3a9b6be163fae46de6eb258f1090ccb — §5.1: gains the audit that names an executable no declaration claims
 #
+# §5.6, the single fence-writer, from this side of it. `shedman apply` no longer renders a
+# managed block in /etc/pacman.conf. shedos-system ships the one writer,
+# /usr/lib/shedos/pacman-fence, and its install scriptlet is the other caller; two
+# renderers of one file is why a repository declared in [pacman.repos] landed inside the
+# `>>> shedos <<<` block and was stripped again by the next pacman transaction.
+# plan_pacman keeps its pure current_text → desired_text shape — it diffs before it applies
+# — by running `pacman-fence rewrite-repos` with the current file on stdin and taking
+# stdout as the desired file. EACH FIELD IS ITS OWN ARGV SLOT, deliberately: a Server URL
+# is allowed an equals sign of its own and a packed form cut it there.
+#
+# There is no build-time edge: the library is an executable at a stable path, and
+# shedos-system depends on shedman rather than the other way round. A library that is not
+# installed stops the plan by name rather than letting a subprocess failure become a
+# half-written pacman.conf.
+#
+# §5.6, reserved names. [pacman.repos.shedos] and [pacman.repos.shedostest] are refused at
+# schema-validation time with an error naming shedos-system as the channels' owner, rather
+# than reaching the library and dying inside a subprocess. Which names are reserved comes
+# from `pacman-fence reserved`, not from a literal here, so a box that renamed its channels
+# is answered correctly; the two ShedOS ships stand in when the library cannot be reached.
+#
+# §5.1, the config layer grows with its consumers. tree/etc/shedman/shedman.toml gains
+# `repo`, `repo-url`, `canary-repo` and `canary-url` with today's literals, which is what
+# the fence library reads with the same values compiled in as defaults. test/shedman T14
+# renders both channel blocks with the shipped file and with no file at all and holds the
+# two identical, which is the same agreement T11 asks of the dispatcher for the keys whose
+# reader lives in another package.
+content tree/usr/lib/shedos/apply_core.py b9f07d0d51842eb166caf3d858de42a64a9c5d15..daf6620b9b362e2dddfbd069ab235e8e17baf570 — §5.6: hands the current pacman.conf to the one writer of its managed blocks and takes back the file the declarations describe, refuses a declaration of a reserved channel name at plan time, and stops rather than write a file it could not have rendered
+#
 # Ten man pages were transformed here too, gaining the *shedman*(1) cross-reference every
 # other subcommand page already had — deriving the man suite's page list from the tree is
 # what found them. They are no longer differences: the monolith has since made the same
@@ -67,7 +107,7 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # The three that are not shedman's — kernel.1, lock.1 and theme.1 — carve with the splits
 # that take those verbs.
 
-# --- (b2) the 24 files with no monolith counterpart --------------------------------
+# --- (b2) the 29 files with no monolith counterpart --------------------------------
 #
 # §5.1, the config layer and the verb contract: tree/etc/shedman/shedman.toml, and
 # tree/usr/share/shedman/verbs.d/<name>.toml one per verb — 19 of them, each naming the
@@ -79,7 +119,21 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # tpm2-tools, libfido2, systemd-ukify, sbsigntools, zram-generator, tlp and
 # ananicy-cpp-git all belong to verbs and drop-ins that stayed behind. package() installs
 # the verbs from the declarations, so the hand-kept array that used to decide what shipped
-# is gone — the failure mode §5.1 names.
+# is gone — the failure mode §5.1 names. It gains `shedos-theme-engine`, because FIVE verbs
+# here import shedos_palette — datetime, logs, status, upgrade-history and _config-review —
+# and that module ships from the theme engine now. `datetime` imports it at module load, so
+# without the dependency `datetime --help-summary` dies on any box where shedos-system no
+# longer carries the file. That edge and shedos-theme-engine's own depends=(shedman) form
+# a dependency cycle between the two packages, which pacman resolves and which is inherent
+# in a verb-contract package that also needs a library from a verb-providing one.
+#
+# Five fixture files under test/apply/fixtures are new, two scenarios the suite had no way
+# to state before: `pacman-reserved-name-refused` declares a channel and asserts the
+# refusal names shedos-system, and `pacman-fence-missing` points the harness at a library
+# that is not there and asserts the plan stops and says which file it wanted. The harness
+# gained the two knobs those need, EXPECT_OUTPUT and FIXTURE_FENCE, both documented in its
+# header — a refusal whose whole point is what it says needs its words asserted, not just
+# its exit code.
 #
 # Repository scaffolding the carve could not bring and the package does not ship:
 # README.md, .gitignore, .github/workflows/ci.yml.
@@ -90,9 +144,9 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # monolith's. Measured by comparing `git rev-parse` on each carved path against the
 # monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
-#   package tree (tree/ + man/): 37 identical, 5 transformed
-#   test tree:                   479 identical, 12 transformed  (see (d))
-#   no monolith counterpart:     24                             (see (b2))
+#   package tree (tree/ + man/): 36 identical, 6 transformed
+#   test tree:                   698 identical, 39 transformed  (see (d))
+#   no monolith counterpart:     29                             (see (b2))
 #
 # The carve itself is the same claim with nothing transformed yet, measured against the
 # commit it was taken at: at the carve root eb06271 against 03404a92, 42 of 42 package
@@ -107,26 +161,54 @@ content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf
 # files' history in this repository starts at the commit that made them verbs. The bash
 # completer's move out of /etc/bash_completion.d is replayed, because that path is gone.
 
-# --- (d) the 12 transformed test files ---------------------------------------------
+# --- (d) the 39 transformed test files ---------------------------------------------
 #
-# The nine suites carve with the package and none of them ships in it, but they are
-# carved files and they moved, so they are enumerated on the same terms. Every one of
-# these is the accommodation the brief sanctions — "the carved suites must pass
-# unmodified except where they patched the old hardcodes" — plus the two halves of the
-# split that had to stay with the packages that kept them. No check was dropped that is
-# not still running in the monolith's own copy of the suite.
+# The suites carve with the package and none of them ships in it, but they are carved files
+# and they moved, so they are enumerated on the same terms. Every one of these is the
+# accommodation the brief sanctions — "the carved suites must pass unmodified except where
+# they patched the old hardcodes" — plus the two halves of the split that had to stay with
+# the packages that kept them, the fixtures the fence change reached, and the eleven grafted
+# suites, which reached their verbs through the packaging directory the split took them out
+# of. No check was dropped that is not still running in the monolith's own copy of the suite.
 content test/apply-checkpoint/run.sh b468801a65a016f21d90cc01ca5809edec7c8129..76edf6a696e433ed186e0a0c0bcb8e13a5b57eaa — re-rooted off the packaging/shedos-system/ prefix the carve removed
-content test/apply/run.sh cd96c01c9b0a42ce37d91b744083554618133a2a..10d57346cdcd7adf443b8e52bcb1c230baa57012 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/apply/fixtures/firewall-toml-preserves-other-sections/expected-system.toml d0eacec7017661bf0615955b19ab6caa03795a4f..a858886ae0f049505f5f520d1f53031d0bef555d — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/firewall-toml-preserves-other-sections/initial-etc/pacman.conf 39b2824ece8861e8f78972b5dc2d900e37629144..b36582b6d5dba8e857468d1db84019cc42c30fe9 — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders — the copy this fixture carries lives here rather than under expected-etc, which it does not have
+content test/apply/fixtures/firewall-toml-preserves-other-sections/system.toml d386f48ad4ebedaba4d08f32e99fb478f34a2569..6846a5fbebe399a659ff060cba828a8407444ac1 — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-add-repo/expected-etc/pacman.conf 320d5d0a3e42c18e5d1c357cf5d0bc6fc2e39dd4..089f75010d4697fc0c639e2bbcbf7337eaab1e9c — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-add-repo/expected-etc/shedos/system.toml bdca59b2660a51bfe970cdb27a1aebe29bbdea46..4c67f365991864c494c541e7bfb4da8d80f42b9c — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-add-repo/system.toml bdca59b2660a51bfe970cdb27a1aebe29bbdea46..4c67f365991864c494c541e7bfb4da8d80f42b9c — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-noop-aligned/expected-etc/pacman.conf 455d3230a95cf35088a9ee057ce7eaa98879b1d1..be3bbee9088c32d22642a578bd029c204bd2028b — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-noop-aligned/expected-etc/shedos/system.toml bdca59b2660a51bfe970cdb27a1aebe29bbdea46..4c67f365991864c494c541e7bfb4da8d80f42b9c — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-noop-aligned/initial-etc/pacman.conf 455d3230a95cf35088a9ee057ce7eaa98879b1d1..be3bbee9088c32d22642a578bd029c204bd2028b — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders — the aligned case starts at the byte-identical file, so it still plans nothing
+content test/apply/fixtures/pacman-noop-aligned/system.toml bdca59b2660a51bfe970cdb27a1aebe29bbdea46..4c67f365991864c494c541e7bfb4da8d80f42b9c — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-update-repo/expected-etc/pacman.conf 5ea543de72fa67d71fbbc319ed2f9f5d06861f42..90a535c49898dc940587daf105ef7af29a9ab508 — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-update-repo/expected-etc/shedos/system.toml 41c4dba285e3aa9980edc3afbf7e01263add484c..74383c42e29f4c8ebc6f9850ee7eba07efe9238f — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/fixtures/pacman-update-repo/initial-etc/pacman.conf 3f8292bbb62d1bfd1fc1f381bad50fbd6611d5a4..09d61d8552b94f40972dc5355664c4aaf9143159 — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders — it starts at the canonical block carrying the old SigLevel
+content test/apply/fixtures/pacman-update-repo/system.toml 41c4dba285e3aa9980edc3afbf7e01263add484c..74383c42e29f4c8ebc6f9850ee7eba07efe9238f — §5.6: the declaration is a repository apply may own, because [pacman.repos.shedos] is now refused; the block it expects is the text the one writer renders
+content test/apply/run.sh cd96c01c9b0a42ce37d91b744083554618133a2a..9c25cbcd7125d34ed8f32a95206885b0eb6dfebc — re-rooted off the packaging/shedos-system/ prefix the carve removed; the harness gained EXPECT_OUTPUT so a refusal's words can be asserted and FIXTURE_FENCE so one fixture can be run without a fence library, and it hands the library path to the tool
 content test/apply/unit_mounts.py 6672f0d80cd53aa88f14a563d675c5db1fdfe502..fc5bda9cf0c8941d44bb9cc7cd079510e78e9dd8 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/check-health/run.sh 4dbde46de38a85ec58a7f5f2d9c73ea85e20bb3c..8fc7a7318dbe4dc9b63614a32ffd28a2b65b04cc — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/completions/run.sh 534ea0a99e86f138234f8aac95cfd66f2edd67d8..714c3ab0f73b42e9f95972b4ed7d8bbe814e90a2 — re-rooted off the packaging/shedos-system/ prefix the carve removed; names its stage in a config file instead of rewriting the shipped completer's hardcoded libexec line, stages declarations for its stubs, and asserts an undeclared executable is not completed
 content test/config/run.sh 74bb20fd6a1e8d54affc8e654e5b6c5977742360..3cf7077ab12ade7951fb857ed57020c7136e4764 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/doctor/pilot.py b1fb0fb66f816902229d0a70ffb9a113612ea7e7..3dea26f6fac69b0adffa4d64b1623236b0eaf61a — re-rooted off the packaging/shedos-system/ prefix the carve removed; the lib root each case runs against is this repo's modules over the installed ones so the DKMS cases keep asking the real helper, which ships in shedos-system, and three cases cover the undeclared-verb audit
 content test/doctor/run.sh 1db52fc01d1b1921dc42b6bb63004cb99c302e60..8b127cc6c8a95ea721e6a79027d54460e4754a51 — re-rooted off the packaging/shedos-system/ prefix the carve removed
-content test/status/run.sh edfc9531038c8e6534dec4aa0d29679c088d0217..d5c689cf3c0ed60b804fc0fa4ab8f7e5ff84e1a6 — re-rooted off the packaging/shedos-system/ prefix the carve removed
+content test/install/run.sh 8c9084cf8f03446228c7a53e6dc169e5dbfb722a..ed1816e341f0b20cdc0136fc184f04f28e676037 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/logs/pilot.py f3965801be0e77f239678c960d2ae8e8bfecb08e..96bae6de5cec9019989318d93086dbd0d53f2435 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/logs/run.sh 68d5eb34f8d3599ae76ca2658532e6fe8919fba0..5816823c7a5689e7674050d960b64dfede6dbf2e — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else, and its library root is no longer exported at all, so the TUI reads the palette module where the theme engine installs it
+content test/man/run.sh 3fec2abebe8361b646dd3e695c56fdf2d50873d8..98f694ea795c6d78f5edc4735409fc8a1e365054 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the page list is derived from man/*.scd instead of a hand-picked eleven, which is what found the ten missing cross-references in (b)
+content test/review-configs/run.sh 2cc46e1544ca1a3ef7e95de41eb9f1d67f6b8cac..13f97623b3f077f41ada696db9001c7dfc2e0d44 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/review-vscode/run.sh 05186b1983274e8d4ae6f3fbff11b6f36d3e3d26..438d1a3683e843811bcd6d98a5cfbecda937ecff — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/rollback/run.sh 22edd85b545b75e789d2b207bb02bfb2fb291f62..c2b1fc5cd3084e7384321e650749c5c403c415e0 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/shedman/run.sh 6d58b7f661dd9b0201217cc46850edd4fd99dc4c..7c06420d787c8077c7df4782cac2120b56a33eb6 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the T7/T8 shim checks stay with the /usr/bin/shedos-* shims in shedos-system, T10-T13 cover the config defaults, an undeclared executable and a name collision, and T14 holds the four channel keys against the defaults compiled into the fence library
+content test/smoke/run.sh cf48cbed44d25abca91a091c22b40eb0780b4851..aab2702ca347939d0f33c8fcb00da611fc269ee4 — re-rooted off the packaging/shedos-system/ prefix the carve removed; split to the two verbs that carved here (datetime, db), the desktop and tour cases staying in the monolith copy, and SHEDOS_LIB_ROOT left at its default because shedos_palette ships elsewhere
+content test/status/run.sh edfc9531038c8e6534dec4aa0d29679c088d0217..db041f338739f2819309d997cece8c54ff404424 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the library root no longer points at this repository, which does not ship the palette module, so the watch cases stop taking the import-failed path
 content test/status/watch_pilot.py 0d62a2283b3e777b2550c48ee70c9b1d6970a28c..2cc8c6e03d9540351ae089123eda802184628495 — re-rooted off the packaging/shedos-system/ prefix the carve removed
-content test/completions/run.sh 534ea0a99e86f138234f8aac95cfd66f2edd67d8..714c3ab0f73b42e9f95972b4ed7d8bbe814e90a2 — re-rooted; names its stage in a config file instead of rewriting the shipped completer's hardcoded libexec line, stages declarations for its stubs, and asserts an undeclared executable is not completed
-content test/shedman/run.sh 6d58b7f661dd9b0201217cc46850edd4fd99dc4c..f8ff64b62c3cc9d63a4fe71536c956dcdc7c2148 — re-rooted; the T7/T8 shim checks stay with the /usr/bin/shedos-* shims in shedos-system, and T10-T13 cover the config defaults, an undeclared executable and a name collision
-content test/smoke/run.sh cf48cbed44d25abca91a091c22b40eb0780b4851..aab2702ca347939d0f33c8fcb00da611fc269ee4 — re-rooted; split to the two verbs that carved here (datetime, db), the desktop and tour cases staying in the monolith copy, and SHEDOS_LIB_ROOT left at its default because shedos_palette ships elsewhere
-content test/man/run.sh 3fec2abebe8361b646dd3e695c56fdf2d50873d8..98f694ea795c6d78f5edc4735409fc8a1e365054 — re-rooted; the page list is derived from man/*.scd instead of a hand-picked eleven, which is what found the ten missing cross-references in (b)
-content test/doctor/pilot.py b1fb0fb66f816902229d0a70ffb9a113612ea7e7..3dea26f6fac69b0adffa4d64b1623236b0eaf61a — re-rooted; the lib root each case runs against is this repo's modules over the installed ones so the DKMS cases keep asking the real helper, which ships in shedos-system, and three cases cover the undeclared-verb audit
+content test/sync-configs/run.sh 3c746a3d03944461105d343f6b33f147c2481e26..c5fdf5640dcbe100ccc475d9094a6dd45709b188 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/syntax-highlight/run.sh 4b43fd225ef105558214cc694d630b3a7ef7428a..cfa2d6d8949a09fd593aa2bf11fc8b8b69183d9d — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/update/run.sh 9d1d9658d922543ca3aa4cfda7f5947a488dc818..182760f05c081f1a5a5d1e6d625256a3e2fed967 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/upgrade-history/pilot.py 44ebec35edae8e299f43bcd7ecb2d2c35bd0f496..ae7e3a2ebdd29bfc281185b9eb96ed5607ffde10 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
+content test/upgrade-history/run.sh a47f85a3e1079d39d468f5bc340370f78e2763c1..db8eabbe999df2a7bc6dde9d18653f707ec9338f — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else, and its library root is no longer exported at all, so the TUI reads the palette module where the theme engine installs it
+content test/word-matcher/run.sh 7d75e0f068fb352faf441536630e3b50d8e7afc6..1de1b8539b0fa29c76d224af8e16a85cd11f8df3 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
 
 # --- parity ------------------------------------------------------------------------
 #
