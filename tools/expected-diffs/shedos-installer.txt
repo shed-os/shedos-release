@@ -11,7 +11,9 @@
 # --- (a) where the content came from ----------------------------------------------
 #
 # Source: installer/ and test/installer/, carved at monolith commit 7b7223a3 and compared
-# against the same commit. Carve map: tools/carve-maps/shedos-installer.paths — `flatten
+# against 8ce1763e, which is where the monolith is now. The two riders below landed in
+# between and neither touches a path this repository holds, so every pin below reads the same
+# against either commit — measured at both, not assumed. Carve map: tools/carve-maps/shedos-installer.paths — `flatten
 # installer` plus `path test/installer/`, less one excepted file.
 #
 # 154 commits carried, 144 paths. At the carve root d3edbaa, 64 of 64 package files and 9 of
@@ -65,18 +67,23 @@
 # deliberately does not declare is a trap for whoever reads it next.
 content calamares/modules-src/shedos_limine/main.py 8d8fcdc8bb86f23b04dbbc67092cc1ee87c3c497..aac191be8eede90a2df55cc4d2e91b8c7e7920af — §2 row 11: imports the library from /usr/lib/shedos-installer, where the package puts it, instead of the /opt directory the ISO build used to copy it to
 content calamares/modules-src/shedos_nvidia/main.py 637ab7099ae5d26e2ec193a44d744641047f1f30..29569869968668c4c786e827a8cd3eac5f52c0cc — §2 row 11 and §5.5: same import path, and the thirteen driver names are gone from here in favour of the file shedos-system publishes, with an unreadable file failing the job instead of installing and removing nothing
-content calamares/modules-src/shedos_configs/main.py 747a35373990b8b41d6c05a82e386328aa7fcc91..964e0816720abb882ab09df141cf827b11ab4275 — §5.5: copies the wallpaper from /usr/share/shedos/wallpapers, which is shedos-branding's own copy of the same bytes
+content calamares/modules-src/shedos_configs/main.py 747a35373990b8b41d6c05a82e386328aa7fcc91..073d05f056d10a401e23425e56d9153c72f951b4 — §5.5: copies the wallpaper from /usr/share/shedos/wallpapers, which is shedos-branding's own copy of the same bytes
 content shedos_installer/utils/hardware.py 8909858e26583ef1689f345c36191735543ece2a..851a5c15f5ba0ba2bfbde28d0b374f4788fd91c1 — §2 row 11: get_memory_info removed, the only importer of psutil and called by nothing
 content pyproject.toml e0d8e6a3151fba98e57ec22cbefe4463a6b1f7e8..a269871ece32696be06d7ca348466eac22f0cf63 — §2 row 11: the psutil and pydantic dependency declarations removed; the ruff, mypy and setuptools configuration is carried unchanged
 
 # --- (b2) the 8 files with no monolith counterpart --------------------------------
 #
-# PKGBUILD — the package that did not exist. pkgver 2026.08.09 (the current stable date) and
-# pkgrel 1, the house scheme for a new name, and it builds from this repository's own tag
-# like every other carved repo. It installs the library, the nine job modules at
+# PKGBUILD — the package that did not exist. It builds from this repository's own tag like
+# every other carved repo, and installs the library, the nine job modules at
 # /usr/lib/calamares/modules, settings.conf and the module confs at /etc/calamares, and the
 # branding bundle at /etc/calamares/branding/shedos — the layout the ISO build stages by hand
 # today, path for path, except for the library root. See the correspondence below.
+#
+# The module directories and the branding bundle both install whole, by walking the tree
+# rather than by naming files. A module that later grows a helper or a schema would otherwise
+# be staged by the ISO build's rsync and dropped by the package, which is the failure the
+# house has already met once with a shedman verb missing from a PKGBUILD array. __pycache__
+# is the one exclusion, and it is the same one the rsync makes.
 #
 # shedos_installer/driver_stack.py — the reader for shedos-system's list, and the only new
 # library module. It refuses an empty answer: a caller that installs nothing leaves an NVIDIA
@@ -150,20 +157,21 @@ content tests/test_calamares_modules.py 234021691cf76525f60bdf1b0428bea2ed5955e8
 # (Makefile:382-386), and a packaged branding.desc carries no ISO version to rewrite. Where
 # that stamp comes from once the file is package-owned is an ISO-build question.
 
-# --- the two monolith riders, both owner-gated --------------------------------------
+# --- the two monolith riders, now landed --------------------------------------------
 #
-# 1. packages/installer-only.txt gains shedos-installer. That list is what keeps a package
+# 1. packages/installer-only.txt names shedos-installer. That list is what keeps a package
 #    out of shedos-meta (render-meta-depends.sh:61-66) and out of the public repo
 #    (build-packages.yml:240-246). Both are name matches against a list the monolith reads,
 #    so the entry changes nothing the monolith does today — it builds no package by that name
 #    — and it is what those two exclusions will read when the ISO build carries it.
 #
-# 2. The Makefile's `cp -r packages` staging is removed. It copied the whole repo-root
+# 2. The Makefile's `cp -r packages` staging is gone. It copied the whole repo-root
 #    packages/ tree under /opt/shedos-installer for config.py's PACKAGE_DIR, and nothing ever
 #    read that constant.
 #
-# NEITHER IS COMMITTED. The monolith is read-only for this phase and both are the owner's to
-# take.
+# BOTH LANDED, on the owner's ruling, as 62818cff and 204fde5b. Each is byte-identical to the
+# draft it was gated on. The monolith moved 7b7223a3..8ce1763e with them and one commit of its
+# own; nothing in that range touches a path this repository holds.
 #
 # shedos-release's OWN copy of installer-only.txt must NOT gain the name, and that is not an
 # oversight: the publisher refuses to sign anything on that list (publish.sh:69-77), and this
@@ -175,9 +183,16 @@ content tests/test_calamares_modules.py 234021691cf76525f60bdf1b0428bea2ed5955e8
 # --- parity ------------------------------------------------------------------------
 #
 # The monolith builds no shedos-installer, so the maps file says `new-package
-# shedos-installer` and test/version-parity pairs this repository with nothing. pkgver
-# 2026.08.09 is the current stable date and pkgrel starts at 1, the same scheme shedman,
+# shedos-installer` and test/version-parity pairs this repository with nothing. The first cut
+# was pkgver 2026.08.09 — the current stable date — with pkgrel 1, the same scheme shedman,
 # shedos-theme-engine and shedos-theme-catppuccin took.
+#
+# What the channel carries is 2026.08.09.1-1. The first release had published when a review
+# found the module loop naming files, and a published tag does not move: the fourth component
+# is the house form for a second cut of a date-versioned package, established when shedman
+# took 2026.08.13.1. `vercmp 2026.08.09.1 2026.08.09` is 1, so the new release supersedes the
+# old one rather than sitting under it, and the publisher replaced the entry rather than
+# adding one.
 #
 # There is no version floor on shedos-system, and the reason is worth writing down: what this
 # package needs from it is a FILE, and the monolith's shedos-system and the carved one carry
