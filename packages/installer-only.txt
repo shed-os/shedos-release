@@ -1,8 +1,10 @@
-# AUR packages that exist only for the live ISO / installer environment.
+# Packages that exist only for the live ISO / installer environment.
 #
-# These are listed in packages/aur.txt so build-aur-packages.sh builds
-# them locally and bundles them into the airootfs squashfs. Once
-# Calamares unpacks that squashfs onto /target, they ride along onto
+# The AUR entries are listed in packages/aur.txt so build-aur-packages.sh
+# builds them locally and bundles them into the airootfs squashfs.
+# shedos-installer is not an AUR package: it is built from its own
+# repository and installed into the ISO by the ISO build. Either way,
+# once Calamares unpacks that squashfs onto /target, they ride along onto
 # the installed system.
 #
 # What makes them DIFFERENT from regular AUR entries:
@@ -20,9 +22,11 @@
 # version on the user's system until they remove it. There is no
 # update path through ShedOS infrastructure.
 #
-# Use this list for installer tooling (Calamares and its required
-# Calamares-only dependencies) — not for end-user applications, which
-# should land in aur.txt (republished) or aur-norepublish.txt
-# (visible as optdepends but never republished).
+# Use this list for installer tooling (Calamares, the ShedOS Calamares
+# modules, and their Calamares-only dependencies) — not for end-user
+# applications, which should land in aur.txt (republished) or
+# aur-norepublish.txt (visible as optdepends but never republished).
 #
 # One package per line. Comments with '#' are ignored.
+
+shedos-installer
