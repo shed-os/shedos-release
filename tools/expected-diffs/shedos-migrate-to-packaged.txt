@@ -1,16 +1,29 @@
-# What may differ between the monolith's shedos-migrate-to-packaged and the one
-# shed-os/shedos-migrate builds. Nothing here is a free pass: each path was opened and
-# read before it was written down, and an entry that stops matching fails the run.
+# What separates shed-os/shedos-migrate from the monolith it came out of. Nothing here is
+# a free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file.
 
-# Reference: built from packaging/shedos-migrate-to-packaged at monolith commit 1303cdfb,
-# which was origin/main at the time, under a scratch MAKEPKG_CONF carrying the same
-# BUILDENV and OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came
-# from that PKGBUILD unmodified and matched the published 2026.08.09-1, so nothing was
-# patched to make the two agree. Candidate: the artifact the staging database records.
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-migrate-to-packaged — the tool that takes a box from Arch or
+# from the unpackaged ShedOS layout onto the packaged one. Carve map:
+# tools/carve-maps/shedos-migrate.paths, two directives — `flatten
+# packaging/shedos-migrate-to-packaged`, so the packaging directory is the repository
+# root, and `path test/migrate/`, which keeps the suite where the pipeline's
+# `test/*/run.sh` looks for it.
+#
+# Three package files carve — the PKGBUILD, tree/usr/bin/shedos-migrate-to-packaged and
+# the verb it dispatches to, tree/usr/libexec/shedman/migrate — with 46 suite files, most
+# of them fixtures. The carve took both directories as the monolith held them at
+# 14e20946, and the comparison below is against 8ce1763e, which is where the monolith
+# stands now.
 
-# The package is arch=any and its package() installs two scripts out of tree/ — it
-# compiles nothing and downloads nothing, so a second build has nothing to move. What
-# differs is deliberate, and it is the pacman fence.
+# --- (b) the 2 transformed package files -------------------------------------------
 #
 # §5.6, the single fence-writer. This tool kept its own copy of the [shedos] block and
 # appended it verbatim; three copies of that text existed across the fleet and they had
@@ -18,8 +31,42 @@
 # the opening marker it looks for, which is the block's own first line. The bytes it
 # appends are unchanged — the suite's expected-pacman-conf fixtures are untouched and
 # still match. depends gains shedos-system, which is the package that ships the library.
-# Paths below are the carved repository's, pinned <monolith blob>..<carved blob>.
 content tree/usr/libexec/shedman/migrate ab7ac8e18a93186e66b7b4dc9987ec47ee1470dd..6c4f0c3a75cf1ffc55d47b307e831e1582e973bf — §5.6: asks the one writer for the block and its marker instead of carrying a second copy
 content PKGBUILD 928b330121ad783b78099d7eaac689d141073a41..29de6224e051b1d517c3e91d48a3345f4adda369 — §5.6: depends gains shedos-system, which ships the library, and the pipeline's pkgrel guard moves pkgrel past what staging carries
+
+# --- (b2) the 3 files with no monolith counterpart ---------------------------------
 #
-# An entry appearing here later is a real difference, not a build that drifted.
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore and .github/workflows/ci.yml, which calls the shared pipeline in
+# shed-os/shedos-ci.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 1 identical, 2 transformed
+#   test tree:    45 identical, 1 transformed                         (see (d))
+#   no monolith counterpart: 3                                        (see (b2))
+
+# --- (d) the one transformed test file ----------------------------------------------
+#
+# The accommodation a carve makes and nothing more: the suite reached the verb through
+# the packaging/shedos-migrate-to-packaged/ prefix that `flatten` has just removed, and a
+# suite still spelling it out dies before its first fixture. One line, and every fixture
+# beside it is the monolith's byte for byte — which is what says the fence change above
+# appends the same text it always did.
+content test/migrate/run.sh a00ab57ffaa5b38db2f56a54c9183d5f06b576f5..5440504ba17fc2c8fd6f2d0ad6f800da1fc2f517 — re-rooted off the packaging/shedos-migrate-to-packaged/ prefix the carve removed
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from
+# packaging/shedos-migrate-to-packaged at monolith commit 1303cdfb, which was origin/main
+# at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the
+# pipeline writes beside its own config. Its pkgver-pkgrel came from that PKGBUILD
+# unmodified and matched the published 2026.08.09-1, so nothing was patched to make the
+# two agree. Candidate: the artifact the staging database recorded.
+#
+# The package is arch=any and its package() installs two scripts out of tree/ — it
+# compiles nothing and downloads nothing, so a second build has nothing to move. What
+# differed was the fence change in (b) reaching the installed copy of the verb, which is
+# the same difference the tree form pins, seen from the other side.
