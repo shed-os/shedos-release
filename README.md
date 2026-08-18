@@ -115,6 +115,16 @@ Every expectation that matched is printed, and one that has stopped matching
 anything fails the run, so an allowlist cannot outlive the difference it was
 written for.
 
+Almost every file under `tools/expected-diffs/` is now the other kind — a
+tree-form enumeration, described below, which governs the source and carries
+no allowlist of installed bytes. Those files keep what their artifact
+comparison found as history instead, and `build-reference.sh --compare`
+refuses them by name rather than handing `compare-package.sh` a file it would
+die reading. Comparing those two packages again means building the reference,
+reading the result against that history, and — if a whole-package check is
+wanted — writing the one-line allowlist it needs out of the pins the file
+keeps.
+
 `builddate` and `packager` are ignored — they say when and where a build ran,
 never what it built. `size` is reconciled rather than ignored: the tool adds up
 the lengths the content findings account for and compares that against the
@@ -145,6 +155,10 @@ prints where it landed; `--compare` hands both packages to the tool above and
 exits with what that says. Docker is all it needs on the machine running it.
 The commit defaults to the clone's HEAD, and an expectation written against an
 older one names the commit to pass here.
+
+The expectation file it looks for is the package's own where there is one and
+otherwise the carved repository's, because a repository carving several
+packages enumerates its tree once for all of them.
 
 The reference has to sit close enough to the pipeline's build that whatever is
 left over belongs to the package rather than to the builder, which is why the

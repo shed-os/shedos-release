@@ -38,6 +38,7 @@ section() { printf '\n── %s\n' "$1"; }
 
 MONO=$WORK/monolith
 MAPS=$WORK/maps
+EXPECTED=$WORK/expected-diffs
 CARVED=$WORK/carved
 ARCHIVE=$WORK/archive
 RUN=$WORK/run
@@ -172,8 +173,8 @@ write_carved_beta() {
 }
 
 write_maps() {
-    rm -rf "$MAPS"
-    mkdir -p "$MAPS"
+    rm -rf "$MAPS" "$EXPECTED"
+    mkdir -p "$MAPS" "$EXPECTED"
     printf '%s\n' 'path packaging/alpha/' 'rename packaging/alpha:alpha' \
         'path packaging/alphalib/' 'rename packaging/alphalib:alphalib' > "$MAPS/demo.paths"
     printf '%s\n' 'flatten packaging/beta' > "$MAPS/beta.paths"
@@ -202,7 +203,8 @@ reset_fixtures() {
 # Run the script over the fixtures, planning only. Output lands in $WORK/out.
 plan() {
     rm -rf "$RUN"
-    env SHEDOS_REFERENCE_MAPS_DIR="$MAPS" SHEDOS_REFERENCE_CARVED_DIR="$CARVED" \
+    env SHEDOS_REFERENCE_MAPS_DIR="$MAPS" SHEDOS_REFERENCE_EXPECTED_DIR="$EXPECTED" \
+        SHEDOS_REFERENCE_CARVED_DIR="$CARVED" \
         SHEDOS_REFERENCE_INSTALLED="$WORK/installed" \
         SHEDOS_REFERENCE_ARCHIVE="file://$ARCHIVE" \
         SHEDOS_REFERENCE_DIR="$RUN" SHEDOS_REFERENCE_DRY_RUN=1 \
@@ -355,6 +357,26 @@ reset_fixtures
 plan --compare "$MONO" "$WORK/alpha.pkg.tar.zst"
 check 'a package with no expectation file is refused' test "$?" -eq 2
 check 'it names the file it looked for' says 'expected-diffs/alpha.txt'
+check 'and the carved repository it fell back to' says 'expected-diffs/demo.txt'
+
+# A repo carving several packages enumerates its tree once, under its own
+# name, so a package with no file of its own is not a package with no
+# expectations.
+reset_fixtures
+printf 'content usr/bin/alpha %064d..%064d — a difference someone read\n' 1 2 \
+    > "$EXPECTED/demo.txt"
+plan --compare "$MONO" "$WORK/alpha.pkg.tar.zst"
+check "the carved repository's file stands in for a package with none" test "$?" -eq 0
+
+# That file enumerates a carved tree once it pins git blobs, and
+# compare-package.sh reads installed bytes: it would die inside its parser on
+# the first pin, so the comparison is refused here by name.
+reset_fixtures
+printf 'content tree/usr/bin/alpha %040d..%040d — a difference someone read\n' 1 2 \
+    > "$EXPECTED/demo.txt"
+plan --compare "$MONO" "$WORK/alpha.pkg.tar.zst"
+check 'a tree-form enumeration is refused rather than handed over' test "$?" -eq 2
+check 'and it says what to do instead' says 'enumerates a carved tree'
 
 reset_fixtures
 plan --network bridge "$MONO" "$WORK/alpha.pkg.tar.zst"

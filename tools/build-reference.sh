@@ -13,18 +13,23 @@
 # rebuilt later.
 #
 # With --compare the reference goes straight into compare-package.sh against
-# the candidate, with the package's own expectation file, and this exits with
-# whatever that says.
+# the candidate, with the expectation file the package or its carved
+# repository holds, and this exits with whatever that says. A repository whose
+# expectations enumerate its tree has no allowlist for two packages, and the
+# comparison is refused rather than handed a file that would die in the
+# parser: build without --compare and compare against the evidence that file
+# keeps.
 #
 # The container runs on docker's `host` network unless --network says otherwise,
 # because bridge networking is not available everywhere.
 #
 # The README's "Building the reference" says why each of these matters.
 #
-# SHEDOS_REFERENCE_MAPS_DIR, SHEDOS_REFERENCE_CARVED_DIR,
-# SHEDOS_REFERENCE_INSTALLED and SHEDOS_REFERENCE_ARCHIVE replace the maps
-# directory, the carved PKGBUILD fetch, the container probe and the package
-# archive; SHEDOS_REFERENCE_DIR names the work directory and
+# SHEDOS_REFERENCE_MAPS_DIR, SHEDOS_REFERENCE_EXPECTED_DIR,
+# SHEDOS_REFERENCE_CARVED_DIR, SHEDOS_REFERENCE_INSTALLED and
+# SHEDOS_REFERENCE_ARCHIVE replace the maps directory, the expectation files,
+# the carved PKGBUILD fetch, the container probe and the package archive;
+# SHEDOS_REFERENCE_DIR names the work directory and
 # SHEDOS_REFERENCE_DRY_RUN stops once the plan is made. That is how the suite
 # beside this runs offline.
 set -euo pipefail
@@ -77,11 +82,6 @@ builddir=$(meta BUILDINFO builddir | head -1)
 [[ -n $pkgname && -n $pkgver && -n $pkgrel && -n $epoch && -n $builddir ]] \
     || die "$candidate does not carry the .PKGINFO and .BUILDINFO fields a reference needs"
 
-expected=$ROOT/tools/expected-diffs/$pkgname.txt
-if [[ -n $compare && ! -f $expected ]]; then
-    die "$expected does not exist"
-fi
-
 # --- which monolith directory builds it -------------------------------------
 
 pairs=$work/pairs
@@ -100,6 +100,29 @@ while read -r repo path subdir; do
 done < "$pairs"
 [[ -n $package_dir ]] || die "no carve map names a packaging directory building $pkgname"
 carved=$carved_repo${carved_subdir:+/$carved_subdir}
+
+# The package's own expectation file where there is one, and otherwise the
+# carved repository's: a repo carving several packages enumerates its tree
+# once for all of them.
+expected_dir=${SHEDOS_REFERENCE_EXPECTED_DIR:-$ROOT/tools/expected-diffs}
+own=$expected_dir/$pkgname.txt
+expected=$own
+[[ -f $expected ]] || expected=$expected_dir/$carved_repo.txt
+if [[ -n $compare ]]; then
+    if [[ ! -f $expected ]]; then
+        [[ $expected == "$own" ]] && die "$own does not exist"
+        die "neither $own nor $expected exists"
+    fi
+    # A tree-form enumeration pins git blobs and answers a question about a
+    # carved tree, not about two packages, and compare-package.sh dies inside
+    # its parser on the first of those pins. Refused by name here: the
+    # artifact comparison is asked for on its own now, against the evidence
+    # the enumeration keeps.
+    if grep -qE '^content[[:space:]]+[^[:space:]]+[[:space:]]+[0-9a-f]{40}\.\.[0-9a-f]{40}[[:space:]]' \
+        "$expected"; then
+        die "$expected enumerates a carved tree: build without --compare and compare the packages against the evidence it keeps"
+    fi
+fi
 
 git -C "$mono" show "$commit:$package_dir/PKGBUILD" > "$work/monolith.PKGBUILD"
 monolith_version=$(pkgbuild_field "$work/monolith.PKGBUILD" pkgver) \

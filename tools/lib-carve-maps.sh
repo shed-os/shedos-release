@@ -21,10 +21,10 @@ pkgbuild_field() {
 
 # What a maps file selects, read once for every tool that has to agree about
 # it. MAP_PAIRS gets one "<src>\t<dst>" per selecting directive, MAP_EXCEPTS
-# the paths left behind, MAP_ARGS the filter-repo arguments the pairs stand
-# for, and MAP_NEW the name of a package the monolith does not build. A
-# malformed file sets MAP_ERROR and returns 2 instead of exiting, so each
-# caller keeps its own voice.
+# the paths left behind, and MAP_ARGS the filter-repo arguments the pairs
+# stand for. A malformed file sets MAP_ERROR and returns 2 instead of
+# exiting, so each caller — carve.sh and the enumeration walk both read it —
+# keeps its own voice.
 #
 # The `|| [[ -n $kind ]]` picks up a last line with no newline after it.
 # Without it that directive vanishes, and a maps file down to no directives at
@@ -32,7 +32,7 @@ pkgbuild_field() {
 read_map() {
     local maps=$1 kind rest lineno=0 old new dir
     MAP_PAIRS=() MAP_EXCEPTS=() MAP_ARGS=()
-    MAP_NEW='' MAP_ERROR=''
+    MAP_ERROR=''
 
     while read -r kind rest || [[ -n $kind ]]; do
         lineno=$((lineno + 1))
@@ -78,8 +78,9 @@ read_map() {
             except)
                 MAP_EXCEPTS+=("${rest%/}")
                 ;;
-            # Nothing to select: it is addressed to the version check.
-            new-package) MAP_NEW=$rest ;;
+            # Nothing to select: it is addressed to the version check, which
+            # reads the directive out of the file rather than from here.
+            new-package) ;;
         esac
     done < "$maps"
 }
