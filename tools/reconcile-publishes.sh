@@ -33,6 +33,11 @@ RELEASE_REPO=${SHEDOS_RECONCILE_TARGET:-shed-os/shedos-release}
 # artifact has expired cannot be republished from, and no number here changes
 # that.
 LOOKBACK=${SHEDOS_RECONCILE_LOOKBACK:-10}
+# The workflow that builds. Asking for every successful run on main instead
+# would let a repository's other workflows fill the window above, so the build
+# this is looking for falls out of it and a complete channel reads as a
+# repository with no usable build at all.
+WORKFLOW=${SHEDOS_RECONCILE_WORKFLOW:-ci.yml}
 
 dispatch=0
 case ${1:-} in
@@ -97,7 +102,8 @@ latest_build() {
         fi
         printf '%s\t%s\n' "$id" "$sha"
         return 0
-    done < <(gh api "repos/$repo/actions/runs?branch=main&status=success&per_page=$LOOKBACK" \
+    done < <(gh api \
+        "repos/$repo/actions/workflows/$WORKFLOW/runs?branch=main&status=success&per_page=$LOOKBACK" \
         --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"' 2> /dev/null)
     return 1
 }

@@ -116,9 +116,11 @@ case "$1 ${2:-}" in
             exit 0
         fi
         repo=${target#repos/}
-        if [[ $repo == *'/actions/runs?'* ]]; then
-            repo=${repo%%/actions/runs?*}
-            file=$root/runs/${repo//\//_}
+        if [[ $repo == *'/actions/workflows/'* ]]; then
+            workflow=${repo##*/actions/workflows/}
+            workflow=${workflow%%/runs*}
+            repo=${repo%%/actions/workflows/*}
+            file=$root/runs/${repo//\//_}.$workflow
             [[ -f $file ]] || exit 0
             awk -F'\t' '{ print $1 "\t" $2 }' "$file"
             exit 0
@@ -171,7 +173,7 @@ SHA_C=$(printf 'c%.0s' {1..40})
 # repo, run id, head sha. Added newest first, because that is the order the
 # runs API answers in and the reconcile takes the first one it can use.
 add_run() {
-    local file=$GH/runs/${1//\//_}
+    local file=$GH/runs/${1//\//_}.${4:-ci.yml}
     printf '%s\t%s\n' "$2" "$3" > "$file.new"
     [[ ! -f $file ]] || cat "$file" >> "$file.new"
     mv "$file.new" "$file"
@@ -382,6 +384,26 @@ check 'it says why' \
     grep -qx 'the channel database is not signed by the key the channel publishes' \
     "$WORK/last.out"
 check 'and it asks for nothing off a channel it could not verify' test -z "$(dispatches)"
+
+section 'case 5f — another workflow'"'"'s runs do not crowd the build out'
+reset_fixture
+# A repository with a second workflow — a docs deploy, a nightly, anything —
+# whose runs are newer and more numerous than the build. Asking for every
+# successful run on main would fill the lookback window with them, push the
+# build out of it, and report a repository that is perfectly fine as one with
+# no usable build at all.
+for id in 900 901 902 903 904 905 906 907 908 909; do
+    add_run shed-os/alpha "$id" "$SHA_C" docs.yml
+done
+reconcile --dispatch
+rc=$?
+check 'the reconcile still finds the build' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'and reports the channel complete' \
+    grep -qx 'shed-os/alpha: the channel has everything run 100 built' "$WORK/last.out"
+check 'the other workflow is never mistaken for a build with a lost artifact' \
+    not grep -q 'succeeded on main and its artifact is gone' "$WORK/last.out"
+check 'and nothing was asked for' test -z "$(dispatches)"
 
 # --- case 6: the lists the publisher would refuse on -------------------------
 
