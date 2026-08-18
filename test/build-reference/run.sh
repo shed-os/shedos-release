@@ -421,8 +421,10 @@ skip_reason=
 # that has moved past it is said out loud instead.
 file=$PIN_PACKAGE-$PIN_RELEASE-x86_64.pkg.tar.zst
 if [[ -z $skip_reason ]]; then
-    served=$(curl -sSL -A 'shedos-release (+https://shedos.org)' \
-        "$CANDIDATE_URL/shedos.db.tar.gz" | bsdtar -xOf - --include '*/desc' \
+    # Cache-busted, like every read of a channel: a CDN copy one publish behind
+    # would answer this with a release that is no longer there.
+    served=$(curl -sSL -A 'shedos-release (+https://shedos.org)' -H 'Cache-Control: no-cache' \
+        "$CANDIDATE_URL/shedos.db.tar.gz?cb=$(date +%s)" | bsdtar -xOf - --include '*/desc' \
         | grep -xE "$PIN_PACKAGE-[^-]+-[^-]+-x86_64\.pkg\.tar\.zst" | head -1)
     [[ $served == "$file" ]] || skip_reason="the channel serves ${served:-nothing}, past the $file the pin was written for"
 fi
@@ -437,8 +439,8 @@ else
         test "${PIN_RELEASE%-*}" = "$version"
 
     candidate=$WORK/$PIN_PACKAGE.pkg.tar.zst
-    curl -fsSL -A 'shedos-release (+https://shedos.org)' -o "$candidate" \
-        "$CANDIDATE_URL/$file"
+    curl -fsSL -A 'shedos-release (+https://shedos.org)' -H 'Cache-Control: no-cache' \
+        -o "$candidate" "$CANDIDATE_URL/$file?cb=$(date +%s)"
     check 'the channel still serves the candidate the pin was written for' test -s "$candidate"
 
     reference=$(bash "$BUILD_REFERENCE" "$SHEDOS_REFERENCE_MONOLITH" "$candidate" \
