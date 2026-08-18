@@ -44,6 +44,18 @@ uncommented "$ALLOWLIST" | grep -qxF "$repo" \
 
 # --- 2. every package must be the one the build hashed ----------------------
 
+# The commit the build was made at. shedos-ci sends it with every request and
+# nothing here used to read it, so a published package could not be traced back
+# to the tree it came from without going and looking for it. It gets written
+# beside the package below, which makes the channel the record of what it was
+# asked for rather than only of what it holds.
+build_commit=$(jq -r '.sha // empty' "$payload")
+[[ -n $build_commit ]] || die 'payload names no commit'
+[[ $build_commit =~ ^[0-9a-f]{40}$ ]] \
+    || die "'$build_commit' is not a commit"
+build_run=$(jq -r '.run_id // empty' "$payload")
+[[ $build_run =~ ^[0-9]+$ ]] || die "'$build_run' is not a run id"
+
 entries=$(jq -r '.packages[] | "\(.file) \(.sha256)"' "$payload") \
     || die 'payload has no usable package list'
 [[ -n $entries ]] || die 'payload lists no packages'
@@ -246,9 +258,16 @@ done
 
 # A box that pulls the db mid-publish must never see an entry whose file
 # isn't up yet.
+# Each record stands on its own rather than pointing at a shared one: an
+# object store has no directory to read a sibling out of, and a package that
+# outlives the request that brought it should still say where it came from.
+printf 'repo %s\nrun %s\ncommit %s\n' "$repo" "$build_run" "$build_commit" \
+    > "$work/origin"
+
 for file in "${files[@]}"; do
     channel_put "$work/$file" "$file"
     channel_put "$work/$file.sig" "$file.sig"
+    channel_put "$work/origin" "$file.origin"
 done
 channel_put_root "$keyring" shedos.gpg
 for name in shedos.db.tar.gz shedos.db.tar.gz.sig \

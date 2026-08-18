@@ -145,14 +145,21 @@ stage_artifact() {
     printf '%s' "$dir"
 }
 
-# The shape shedos-ci's request-publish.sh dispatches.
+# The shape shedos-ci's request-publish.sh dispatches. The commit is a real
+# forty-character one, because that is what $GITHUB_SHA is and the publisher
+# writes it into the channel — a fixture shorter than the real thing would let
+# a check on its shape pass here and fail in production.
+PAYLOAD_COMMIT=1111111111111111111111111111111111111111
+PAYLOAD_RUN=4242
+
 make_payload() {
     local out=$1 repo=$2 dir=$3
     local packages
     packages=$(cd "$dir" && awk 'NF {print $1 "\t" $NF}' SHA256SUMS \
         | jq -Rn '[inputs | split("\t") | {file: .[1], sha256: .[0]}]')
-    jq -n --arg repo "$repo" --argjson packages "$packages" \
-        '{repo: $repo, run_id: 0, sha: "deadbeef", artifact: "pkg-deadbeef",
+    jq -n --arg repo "$repo" --arg sha "$PAYLOAD_COMMIT" \
+        --argjson run "$PAYLOAD_RUN" --argjson packages "$packages" \
+        '{repo: $repo, run_id: $run, sha: $sha, artifact: ("pkg-" + $sha),
           packages: $packages}' > "$out"
 }
 
@@ -221,6 +228,32 @@ check 'the keyring is the one we were given' \
     cmp -s "$WORK/keyring.gpg" "$BUCKET/staging/shedos.gpg"
 check 'the keyring uploads before the db' \
     ordered_before '^up shedos\.gpg' '^up shedos\.db'
+
+# The request carries the commit it was built at, and until now the publisher
+# read it and threw it away — so a package in the channel could not say which
+# tree it came from. It is written beside the package, and it has to come back
+# out saying what went in.
+check 'the request is recorded beside the package' test -f "$CHANNEL/$ALPHA_BASE.origin"
+check 'and it records the commit that was sent' \
+    grep -qx "commit $PAYLOAD_COMMIT" "$CHANNEL/$ALPHA_BASE.origin"
+check 'and the run that sent it' grep -qx "run $PAYLOAD_RUN" "$CHANNEL/$ALPHA_BASE.origin"
+check 'and the repository it came from' \
+    grep -qx 'repo shed-os/shedman' "$CHANNEL/$ALPHA_BASE.origin"
+check 'the record uploads before the db, like the package it describes' \
+    ordered_before '^up .*\.origin' '^up shedos\.db'
+
+section 'case 1b — a request that names no commit is not published'
+nocommit_dir=$(stage_artifact nocommit "$ALPHA")
+jq 'del(.sha)' "$WORK/alpha.json" > "$WORK/nocommit.json"
+run_publish "$WORK/nocommit.json" "$nocommit_dir"
+check 'publish fails' test "$?" -ne 0
+check 'it says what is missing' grep -q 'payload names no commit' "$WORK/last.out"
+
+jq '.sha = "deadbeef"' "$WORK/alpha.json" > "$WORK/shortcommit.json"
+run_publish "$WORK/shortcommit.json" "$nocommit_dir"
+check 'a commit that is not one is refused' test "$?" -ne 0
+check 'and it says which value' \
+    grep -q "'deadbeef' is not a commit" "$WORK/last.out"
 
 # --- case 2: incremental ----------------------------------------------------
 

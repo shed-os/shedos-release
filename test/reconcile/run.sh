@@ -161,6 +161,13 @@ chmod +x "$STUB/gh"
 GH=$WORK/gh
 reset_github() { rm -rf "$GH"; mkdir -p "$GH/runs" "$GH/artifacts" "$GH/sums"; }
 
+# Real forty-character commits. The publisher refuses a request whose sha is
+# not one, so a fixture with a short stand-in would let this suite pass while
+# every request it built was refused on arrival.
+SHA_A=$(printf 'a%.0s' {1..40})
+SHA_B=$(printf 'b%.0s' {1..40})
+SHA_C=$(printf 'c%.0s' {1..40})
+
 # repo, run id, head sha. Added newest first, because that is the order the
 # runs API answers in and the reconcile takes the first one it can use.
 add_run() {
@@ -208,7 +215,7 @@ reconcile() {
 reset_fixture() {
     reset_channel
     reset_github
-    add_run shed-os/alpha 100 aaaaaaa
+    add_run shed-os/alpha 100 "$SHA_A"
     built shed-os/alpha 100 alpha-1.0-1-any.pkg.tar.zst
     serve alpha 1.0-1
     seal_channel
@@ -236,7 +243,7 @@ section 'case 2 — a build the channel never received is found and asked for ag
 reset_fixture
 # The build moved to 1.0-2 and the channel still serves 1.0-1: the request went
 # out, took the pending slot from nobody, and was taken from by the next one.
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 reconcile --dispatch
 check 'the reconcile reports the drop' test "$?" -eq 1
@@ -258,13 +265,17 @@ check 'it names the run whose artifact holds the packages' \
 check 'the run id is a number rather than a string' \
     test "$(dispatches | jq -r '.client_payload.run_id | type')" = number
 check 'it names the artifact by the commit' \
-    test "$(dispatches | jq -r '.client_payload.artifact')" = pkg-bbbbbbb
+    test "$(dispatches | jq -r '.client_payload.artifact')" = "pkg-$SHA_B"
 check 'it carries the file the build produced' \
     test "$(dispatches | jq -r '.client_payload.packages[0].file')" \
         = alpha-1.0-2-any.pkg.tar.zst
 check 'and the checksum the build recorded for it' \
     test "$(dispatches | jq -r '.client_payload.packages[0].sha256')" \
         = "$(printf 'alpha-1.0-2-any.pkg.tar.zst' | sha256sum | cut -d' ' -f1)"
+# publish.sh writes this commit into the channel and refuses anything that is
+# not one, so the request has to carry the real shape or it dies on arrival.
+check 'the commit it sends is a commit the publisher will take' \
+    grep -qE '^[0-9a-f]{40}$' <<< "$(dispatches | jq -r '.client_payload.sha')"
 
 section 'case 2c — a package the channel has never carried at all is a drop'
 reset_fixture
@@ -280,7 +291,7 @@ check 'and the request carries both packages the build produced' \
 
 section 'case 3 — without --dispatch it finds the drop and asks for nothing'
 reset_fixture
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 reconcile
 check 'it still reports the drop' test "$?" -eq 1
@@ -309,7 +320,7 @@ check 'and it does not ask the publisher to go backwards' test -z "$(dispatches)
 
 section 'case 5 — a build whose artifact is gone cannot be republished from'
 reset_fixture
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 expire_artifact shed-os/alpha 101
 reconcile --dispatch
@@ -342,7 +353,7 @@ check 'and it is counted as unread rather than as complete' \
 
 section 'case 5c — a request that will not send is not a request that was sent'
 reset_fixture
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 : > "$GH/dispatch-fails"
 reconcile --dispatch
@@ -352,7 +363,7 @@ check 'it says the request did not go' \
 
 section 'case 5d — a channel it cannot verify stops it before it asks anything'
 reset_fixture
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 rm -f "$PKGS/shedos.db.tar.gz.sig"
 reconcile --dispatch
@@ -362,7 +373,7 @@ check 'and nothing went out' test -z "$(dispatches)"
 
 section 'case 5e — a database signed by a key the channel does not publish stops it'
 reset_fixture
-add_run shed-os/alpha 101 bbbbbbb
+add_run shed-os/alpha 101 "$SHA_B"
 built shed-os/alpha 101 alpha-1.0-2-any.pkg.tar.zst
 seal_channel "$DECOY"
 reconcile --dispatch
@@ -392,7 +403,7 @@ check 'and nothing went out' test -z "$(dispatches)"
 section 'case 7 — every repository on the allowlist is asked about'
 reset_fixture
 printf 'shed-os/alpha\nshed-os/beta\n' > "$WORK/allowlist.txt"
-add_run shed-os/beta 200 ccccccc
+add_run shed-os/beta 200 "$SHA_C"
 built shed-os/beta 200 beta-2.0-1-any.pkg.tar.zst
 reconcile --dispatch
 check 'the reconcile reports the one that is behind' test "$?" -eq 1

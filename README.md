@@ -54,6 +54,12 @@ puts them back. Packages upload before the database, so a machine that pulls
 mid-publish never sees an entry whose file isn't up yet. The database is then
 mirrored as `shedostest.*` so a stable box can opt into the canary.
 
+Beside every package it publishes, the publisher writes a `.origin` record
+naming the repository, the run and the commit the request carried. The request
+has always carried the commit and nothing read it, so a package in the channel
+could not say which tree it came from. The record is what the release manifest
+reads to pin a package whose PKGBUILD pins no tag.
+
 The public keyring goes up beside the packages as `shedos.gpg` at the channel
 root, because a box migrating from Arch fetches it before it owns a single
 ShedOS package and has nothing else to verify the repo with.
@@ -95,7 +101,7 @@ version = "2026.08.09"
 [[package]]
 name = "shedos-theme-engine"
 repo = "shedos-theme-engine"
-tag = "2026.08.09"
+ref = "2026.08.09"
 pkgver = "2026.08.09"
 pkgrel = "1"
 sha256 = "7e8b46343285326315b04128294212c0f0171eeb6bf25c20b5cafd9db193918e"
@@ -106,12 +112,14 @@ sha256 = "7e8b46343285326315b04128294212c0f0171eeb6bf25c20b5cafd9db193918e"
 `tools/resolve-manifest.sh <manifest>` checks every pin against the world and
 names the entry and the axis for anything that has moved:
 
-- `tag` — the repository carries the tag
-- `pkgbuild` — the tag builds a package by that name
-- `pkgver` — the PKGBUILD at the tag is at that pkgver
-- `pkgrel` — the tag is not *ahead* of the release the channel serves. Behind
-  is fine and normal: the pipeline moves pkgrel past whatever the channel
-  already carries every time it republishes, and the tag does not follow.
+- `ref` — the repository carries the tag, or the commit
+- `pkgbuild` — the ref builds a package by that name
+- `pkgver` — the PKGBUILD at the ref is at that pkgver
+- `pkgrel` — for a tag, not *ahead* of the release the channel serves; behind is
+  fine and normal, because the pipeline moves pkgrel past whatever the channel
+  already carries every time it republishes and the tag does not follow. For a
+  commit, exactly the released pkgrel: the commit names the tree the package was
+  built from, and that tree carries the release or it is not the tree.
 - `channel` — the signed database serves that name at that version and sha256
 - `bytes` — the file the channel hands over hashes to that sha256
 
@@ -134,12 +142,18 @@ not verify against the keyring the channel publishes, and a field it cannot
 fill is left as a comment saying why — never guessed. It exits non-zero while
 any field is still a hole, because a draft is not a manifest.
 
-The tag comes from the source the owning repository's PKGBUILD pins. Seven of
-the eighteen packages on the channel pin no tag at all — two pin a commit, one
-pins a source with no ref, and four declare no source and build from the
-checkout — so no manifest naming every published package can be written under
-this schema yet, and the first one is not committed. Run the drafter to see
-which seven and why.
+Where a PKGBUILD pins a tag, that tag is the ref and nothing is derived. Where
+it pins none — seven of the eighteen packages on the channel — the ref is the
+commit the release was built at, and the drafter finds it one of two ways. The
+publisher records the commit of every request it serves beside the package it
+published, so anything published since then is placed by what was recorded.
+Anything published before is placed by reading the branch for the commit whose
+PKGBUILD says that exact release, and the draft says so in a comment: a derived
+answer and a recorded one are not the same quality of answer, and the reader
+decides whether the difference matters. If the branch holds more than one such
+commit the draft says that too, and leaves the entry as a hole, because
+choosing quietly between two candidates is the one thing a drafting tool must
+never do.
 
 ## When a publish goes missing
 
