@@ -254,5 +254,8 @@ content test/word-matcher/run.sh 7d75e0f068fb352faf441536630e3b50d8e7afc6..1de1b
 # the fence caller and the grafted suites, then 2026.08.13.1 for the migration below —
 # the fourth component is what a SECOND cut on one day gets, since the date scheme has one
 # release a day in it and a published tag never moves. `vercmp 2026.08.13.1 2026.08.13`
-# is 1. It is the only package on the channel not at 2026.08.09, and that is what it means
-# rather than drift.
+# is 1. Eight of the eighteen names the channel carries are not at 2026.08.09: the two
+# forks keep the versions upstream gave them, four packages are still at the July
+# release, and the installer took a second cut of a day exactly as this did. A version of
+# its own is the ordinary case here, and it reads as drift only where nothing accounts
+# for it.
