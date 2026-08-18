@@ -121,6 +121,7 @@ blob() { git -C "$1" rev-parse "HEAD:$2"; }
 
 run() { bash "$VERIFY" "$@" > "$WORK/out" 2>&1; }
 said() { grep -qF "$1" "$WORK/out"; }
+not() { ! "$@"; }
 quiet() { "$@" > /dev/null 2>&1; }
 
 # --- the walk ---------------------------------------------------------------
@@ -209,6 +210,27 @@ printf 'content usr/bin/alpha %064d..%064d %s the shape a built package takes\n'
 run repo "$ALPHA_MAP" "$MONO" "$MONO_AT" "$CLOSE_REPO" HEAD "$PACKAGED"
 check 'an enumeration of a built package is refused rather than reconciled' \
     said "pins a built package's bytes"
+
+# The shape every Wave 1-2 expectation file was converted into: prose keeping what
+# the artifact comparison of the two packages found, sha256 pins and all, over
+# tree-form entries that govern the source. The pins are history in a comment and no
+# expectation is made of them — a refusal that read the whole file rather than its
+# directives would take every converted file with it.
+CONVERTED=$WORK/converted.txt
+{
+    printf '# --- the artifact comparison, kept as history ---\n'
+    printf '#   content usr/bin/alpha %064d..%064d %s the pair it was pinned to\n' \
+        1 2 "$DASH"
+} > "$CONVERTED"
+expectation "$CONVERTED" tree/usr/bin/alpha \
+    "$(blob "$MONO" packaging/alpha/tree/usr/bin/alpha)" \
+    "$(blob "$CLOSE_REPO" tree/usr/bin/alpha)" 'it reads its config now'
+
+run repo "$ALPHA_MAP" "$MONO" "$MONO_AT" "$CLOSE_REPO" HEAD "$CONVERTED"
+check 'a converted file reconciles on its tree entries' \
+    said 'claimed 1, transformed 1, reconciled 1'
+check 'and the sha256 pins it keeps as history are not read as expectations' \
+    not said "pins a built package's bytes"
 
 # --- what a walk of one repository can still see -----------------------------
 
