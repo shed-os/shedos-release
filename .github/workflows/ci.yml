@@ -14,10 +14,30 @@ jobs:
     container:
       image: archlinux:latest
     steps:
+      # A CDN node can hand out a package database for hours after the pool
+      # behind it dropped the releases that database names, and every install
+      # in the org gets out of that the same way. The script comes from
+      # shedos-ci at a commit this repo names, never at whatever its main
+      # holds: it runs as root beside the signing key in the other workflow,
+      # and taking it at HEAD would make a push there a push into here.
+      # It comes before the install because the install is one of its scripts;
+      # with no git in the image yet, the action falls back to a REST tarball.
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      # actions/checkout empties a directory it cannot recognise as a checkout
+      # of what it was asked for, so this repo's own checkout takes the scripts
+      # with it unless they leave the workspace first.
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
       - name: Install test dependencies
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --needed --noconfirm \
+          bash /opt/shedos-ci/scripts/install-packages.sh \
               base-devel git sudo jq rclone gnupg python python-yaml git-filter-repo \
               curl
           # archlinux:latest ships an empty keyring; populate it for makepkg.

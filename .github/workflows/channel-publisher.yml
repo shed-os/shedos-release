@@ -26,12 +26,29 @@ jobs:
       R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       R2_BUCKET: shedos-repo
     steps:
-      # Before checkout: the action needs git in the container, or it falls
-      # back to a tarball download.
+      # A held CDN copy of a package database 404s every install that resolves
+      # against it, and the way out is to take the database from the next
+      # mirror. That recovery lives in shedos-ci and is taken at the commit
+      # named here rather than at its main, because it runs as root in the job
+      # that holds the signing key and the bucket credentials — a push to
+      # shedos-ci must not be a push into this job. Before the checkout: the
+      # install is one of these scripts, and with no git in the image yet the
+      # action falls back to a REST tarball.
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      # The checkout below empties the workspace it lands in, and these
+      # scripts are in it.
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
       - name: Install the publisher toolchain
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --needed --noconfirm \
+          bash /opt/shedos-ci/scripts/install-packages.sh \
               base-devel git curl jq gnupg rclone github-cli
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
