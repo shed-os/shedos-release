@@ -78,9 +78,11 @@ reset_channel() {
 }
 
 serve() {
-    local name=$1 version=$2 body=$3
+    local name=$1 version=$2 body=$3 origin=${4:-}
     local file=$name-$version-any.pkg.tar.zst
     printf '%s' "$body" > "$PKGS/$file"
+    [[ -z $origin ]] || printf 'repo shed-os/x\nrun 1\ncommit %s\n' "$origin" \
+        > "$PKGS/$file.origin"
     printf '%s\t%s\t%s\t%s\n' "$name" "$version" "$file" \
         "$(sha256sum "$PKGS/$file" | cut -d' ' -f1)" >> "$ENTRIES"
 }
@@ -168,9 +170,9 @@ write_manifest() {
     {
         printf '[release]\nversion = "%s"\n' "${MANIFEST_VERSION:-2026.08.09}"
         while (( $# )); do
-            IFS=, read -r name repo tag pkgver pkgrel sum <<<"$1"
-            printf '\n[[package]]\nname = "%s"\nrepo = "%s"\ntag = "%s"\n' \
-                "$name" "$repo" "$tag"
+            IFS=, read -r name repo ref pkgver pkgrel sum <<<"$1"
+            printf '\n[[package]]\nname = "%s"\nrepo = "%s"\nref = "%s"\n' \
+                "$name" "$repo" "$ref"
             printf 'pkgver = "%s"\npkgrel = "%s"\nsha256 = "%s"\n' \
                 "$pkgver" "$pkgrel" "$sum"
             shift
@@ -268,8 +270,8 @@ write_manifest "$WORK/manifest.toml" \
     "gamma,multi,2.0,2.0,1,$(served_sum gamma)"
 resolve "$WORK/manifest.toml"
 check 'the resolver fails' test "$?" -eq 1
-check 'it names the entry, the axis and the tag' \
-    grep -qx 'alpha: tag: alpha carries no tag 1.1' "$WORK/last.out"
+check 'it names the entry, the axis and the ref' \
+    grep -qx 'alpha: ref: alpha carries no tag 1.1' "$WORK/last.out"
 
 section 'case 3b — a repository that cannot be read is not a missing tag'
 reset_fixture
@@ -278,7 +280,7 @@ write_manifest "$WORK/manifest.toml" \
 resolve "$WORK/manifest.toml"
 check 'the resolver fails' test "$?" -eq 1
 check 'it says the repository could not be read' \
-    grep -qx 'alpha: tag: nowhere could not be read' "$WORK/last.out"
+    grep -qx 'alpha: ref: nowhere could not be read' "$WORK/last.out"
 
 section 'case 3c — a branch sharing the tag name does not stand in for the tag'
 reset_fixture
@@ -290,9 +292,55 @@ git_in "$REPOS/alpha" branch 1.0
 resolve "$WORK/manifest.toml"
 check 'the resolver fails rather than reading the branch' test "$?" -eq 1
 check 'and it says it is the tag it could not get' \
-    grep -qx 'alpha: tag: alpha at 1.0 could not be read as tag 1.0' "$WORK/last.out"
+    grep -qx 'alpha: ref: alpha at 1.0 could not be read as tag 1.0' "$WORK/last.out"
 check 'nothing off the branch is reported as though it were the tag' \
     not grep -q '9\.9' "$WORK/last.out"
+
+section 'case 3d — a commit ref resolves against the commit rather than a tag'
+reset_channel
+reset_repos
+write_pkgbuild solo PKGBUILD solo 1.0 1 checkout
+built_at=$(git_in "$REPOS/solo" rev-parse HEAD)
+# The branch moves on afterwards, which is the whole point of pinning a commit:
+# what the manifest names is the tree the package was built from, not whatever
+# the repository holds now.
+write_pkgbuild solo PKGBUILD solo 2.0 1 checkout
+serve solo 1.0-1 'the solo package'
+seal_channel
+write_manifest "$WORK/manifest.toml" "solo,solo,$built_at,1.0,1,$(served_sum solo)"
+resolve "$WORK/manifest.toml"
+rc=$?
+check 'the resolver passes' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'it names the commit it resolved from' \
+    grep -qx "ok solo 1.0-1 from solo $built_at" "$WORK/last.out"
+
+section 'case 3e — a commit the repository does not carry is refused'
+reset_fixture
+missing_commit=$(printf 'b%.0s' {1..40})
+write_manifest "$WORK/manifest.toml" \
+    "alpha,alpha,$missing_commit,1.0,1,$(served_sum alpha)"
+resolve "$WORK/manifest.toml"
+check 'the resolver fails' test "$?" -eq 1
+check 'it names the entry, the axis and the commit' \
+    grep -qx "alpha: ref: alpha carries no commit $missing_commit" "$WORK/last.out"
+
+section 'case 3f — a commit that built another release is refused'
+reset_channel
+reset_repos
+write_pkgbuild solo PKGBUILD solo 1.0 1 checkout
+older=$(git_in "$REPOS/solo" rev-parse HEAD)
+write_pkgbuild solo PKGBUILD solo 1.0 2 checkout
+serve solo 1.0-2 'the solo package'
+seal_channel
+# A tag is allowed to sit behind the published release; a commit is not, because
+# a commit names the tree the package came out of.
+write_manifest "$WORK/manifest.toml" "solo,solo,$older,1.0,2,$(served_sum solo)"
+resolve "$WORK/manifest.toml"
+check 'the resolver fails' test "$?" -eq 1
+check 'it names the pkgrel axis and both releases' \
+    grep -qx "solo: pkgrel: solo at $older is at pkgrel 1 rather than the published 2" \
+    "$WORK/last.out"
 
 # --- case 4: the channel does not serve it ----------------------------------
 
@@ -390,7 +438,7 @@ version = "2026.08.09"
 [[package]]
 name = "alpha"
 repo = "alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"
@@ -409,7 +457,7 @@ pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"'
 check 'an entry short of a field stops the run' test "$?" -eq 2
-check 'and it names the field' grep -qx "package 'alpha' names no tag" "$WORK/last.out"
+check 'and it names the field' grep -qx "package 'alpha' names no ref" "$WORK/last.out"
 
 bad_manifest '[release]
 version = "2026.08.09"
@@ -417,7 +465,7 @@ version = "2026.08.09"
 [[package]]
 name = "alpha"
 repo = "alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "deadbeef"'
@@ -431,7 +479,7 @@ version = "2026.08.09"
 [[package]]
 name = "alpha"
 repo = "shed-os/alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"'
@@ -445,7 +493,7 @@ version = "2026.08.09"
 [[package]]
 name = "alpha"
 repo = "alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"
@@ -453,7 +501,7 @@ sha256 = "'"$(served_sum alpha)"'"
 [[package]]
 name = "alpha"
 repo = "alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"'
@@ -466,7 +514,7 @@ version = "next"
 [[package]]
 name = "alpha"
 repo = "alpha"
-tag = "1.0"
+ref = "1.0"
 pkgver = "1.0"
 pkgrel = "1"
 sha256 = "'"$(served_sum alpha)"'"'
@@ -528,7 +576,7 @@ check 'it takes the version and the release from the channel' \
 check 'it takes the repository from whichever one builds the package' \
     line_after 'name = "gamma"' 'repo = "multi"' "$WORK/last.out"
 check 'it takes the tag from the source the PKGBUILD pins' \
-    grep -qx 'tag = "2.0"' "$WORK/last.out"
+    grep -qx 'ref = "2.0"' "$WORK/last.out"
 check 'it takes the sha from the database' \
     grep -qx "sha256 = \"$(served_sum alpha)\"" "$WORK/last.out"
 
@@ -540,13 +588,13 @@ rc=$?
 check 'and what it drafted resolves' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
-section 'case 11 — a field the drafter cannot fill is a hole and not a guess'
+section 'case 11 — a package pinning no tag is placed by the commit it was built at'
 reset_channel
 reset_repos
 write_pkgbuild pinned PKGBUILD pinned 1.0 1 commit
-tag_repo pinned 1.0
 write_pkgbuild loose PKGBUILD loose 1.0 1 none
 write_pkgbuild bare PKGBUILD bare 1.0 1 checkout
+pinned_commit=$(git_in "$REPOS/pinned" rev-parse HEAD)
 serve pinned 1.0-1 'pinned'
 serve loose 1.0-1 'loose'
 serve bare 1.0-1 'bare'
@@ -554,29 +602,72 @@ serve orphan 1.0-1 'orphan'
 seal_channel
 printf 'shed-os/pinned\nshed-os/loose\nshed-os/bare\n' > "$WORK/allowlist.txt"
 SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
-check 'the drafter fails' test "$?" -eq 1
-check 'it says how much it could not fill' \
-    grep -qx 'drafted 4 package(s) with 5 field(s) this could not fill' "$WORK/last.out"
-check 'a source pinned to a commit is named as a commit' \
-    grep -qx '# tag: pinned/PKGBUILD pins commit 0000000000000000000000000000000000000000 rather than a tag' \
+check 'the drafter still fails, for the package no repository builds' test "$?" -eq 1
+check 'it derives the ref from the commit the release was built at' \
+    grep -qx "ref = \"$pinned_commit\"" "$WORK/last.out"
+check 'and it says the derivation is a derivation' \
+    grep -qx "# derived: the one commit on pinned whose PKGBUILD says 1.0-1" "$WORK/last.out"
+check 'a source pinned to a commit says the pin is the fork, not the tree' \
+    grep -qx '# its source pins 0000000000000000000000000000000000000000, which is the fork rather than this tree' \
     "$WORK/last.out"
 check 'a source pinning no ref says that' \
-    grep -qx '# tag: loose/PKGBUILD pins a source that names no ref' "$WORK/last.out"
+    grep -qx '# it builds from a source that names no ref' "$WORK/last.out"
 check 'a package with no source at all says that' \
-    grep -qx '# tag: bare/PKGBUILD declares no source and builds from the checkout' \
-    "$WORK/last.out"
-check 'a package no listed repository builds says that' \
+    grep -qx '# it builds from the checkout and declares no source' "$WORK/last.out"
+check 'and every derived entry says why it had to be derived' \
+    test "$(grep -c '^# this release predates the publisher recording what it was asked' \
+        "$WORK/last.out")" = 3
+check 'a package no listed repository builds is still a hole' \
     grep -qx '# repo: no repository on the publisher allowlist builds this' "$WORK/last.out"
-check 'the packages it could fill are still drafted' \
-    not grep -q '# tag: .*orphan' "$WORK/last.out"
+check 'and that is the only field it could not fill' \
+    grep -qx 'drafted 4 package(s) with 2 field(s) this could not fill' "$WORK/last.out"
 
-# A hole is a hole all the way through: the resolver must refuse what the
-# drafter could not finish rather than reading past the comment.
-grep -v '^drafted ' "$WORK/last.out" > "$WORK/holed.toml"
-resolve "$WORK/holed.toml"
-check 'and a draft with holes does not resolve' test "$?" -eq 2
-check 'it is refused for the field that is missing' \
-    grep -q 'names no tag' "$WORK/last.out"
+# What it derived has to resolve, or the derivation is decoration.
+grep -v '^drafted ' "$WORK/last.out" | grep -v 'no repository on the publisher' > "$WORK/derived.toml"
+python3 - "$WORK/derived.toml" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+blocks = text.split('[[package]]')
+keep = [b for b in blocks[1:] if 'name = "orphan"' not in b]
+open(path, 'w').write(blocks[0] + '[[package]]'.join([''] + keep))
+PYEOF
+resolve "$WORK/derived.toml"
+rc=$?
+check 'and the derived refs resolve' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+
+section 'case 11b — a recorded commit is used in preference to a derived one'
+reset_channel
+reset_repos
+write_pkgbuild bare PKGBUILD bare 1.0 1 checkout
+first=$(git_in "$REPOS/bare" rev-parse HEAD)
+# A second commit touching the PKGBUILD at the same release, so the branch
+# alone cannot say which of the two the package was built at. What the
+# publisher recorded is the only thing that knows.
+write_pkgbuild bare PKGBUILD bare 1.0 1 none
+serve bare 1.0-1 'bare' "$first"
+seal_channel
+printf 'shed-os/bare\n' > "$WORK/allowlist.txt"
+SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
+rc=$?
+check 'the draft is complete' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'it takes the commit the publisher recorded' \
+    grep -qx "ref = \"$first\"" "$WORK/last.out"
+check 'and says so rather than calling it derived' \
+    grep -qx '# the commit the publisher recorded for this release' "$WORK/last.out"
+check 'it does not also claim to have derived it' \
+    not grep -q '^# derived:' "$WORK/last.out"
+
+# The same channel without the record, to show the ambiguity was real and that
+# the drafter says so rather than picking quietly.
+rm -f "$PKGS"/bare-1.0-1-any.pkg.tar.zst.origin
+SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
+check 'without the record the draft is not complete' test "$?" -eq 1
+check 'and it says the branch cannot choose between them' \
+    grep -qx '# ref: 2 commits on bare build bare at 1.0-1 and this took the newest' \
+    "$WORK/last.out"
 
 section 'case 12 — the release version is the author'"'"'s and the drafter says so'
 reset_fixture

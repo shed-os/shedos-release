@@ -109,6 +109,13 @@ sha256 = "7e8b46343285326315b04128294212c0f0171eeb6bf25c20b5cafd9db193918e"
 
 `repo` is org-relative; the organisation is written once, in the resolver.
 
+`ref` is a tag name where a tag governs the build — the repositories whose
+PKGBUILD says `source=(...#tag=$pkgver)` — and otherwise the commit the build
+was made at. The two are not interchangeable and the resolver holds them to
+different rules, because a tag names the source a PKGBUILD pins while a commit
+names the tree the package came out of. Forty lowercase hex digits is read as a
+commit; anything else is a tag.
+
 `tools/resolve-manifest.sh <manifest>` checks every pin against the world and
 names the entry and the axis for anything that has moved:
 

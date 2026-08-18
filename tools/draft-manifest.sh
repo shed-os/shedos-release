@@ -48,12 +48,14 @@ while read -r entry; do
     repo=${entry##*/}
     dir=$WORK/repos/$repo
     mkdir -p "$WORK/repos"
-    if ! repo_clone "$repo" "$dir"; then
+    # With the history, because a package whose PKGBUILD pins no tag is
+    # placed by finding the commit its release was built at.
+    if ! repo_clone_history "$repo" "$dir"; then
         echo "draft: $repo could not be read" >&2
         exit 2
     fi
     while read -r path; do
-        repo_file "$dir" "$path" "$WORK/pkgbuild" || continue
+        repo_file "$dir" HEAD "$path" "$WORK/pkgbuild" || continue
         while read -r name; do
             [[ -n $name ]] || continue
             held=$(awk -F'\t' -v n="$name" '$1 == n { print $2; exit }' "$index")
@@ -64,7 +66,7 @@ while read -r entry; do
             fi
             printf '%s\t%s\t%s\n' "$name" "$repo" "$path" >> "$index"
         done < <(pkgbuild_names "$WORK/pkgbuild" 2> /dev/null)
-    done < <(repo_pkgbuilds "$dir")
+    done < <(repo_pkgbuilds "$dir" HEAD)
 done < <(awk 'NF && $1 !~ /^#/' "$ALLOWLIST")
 
 (( clashes == 0 )) || exit 2
@@ -74,6 +76,44 @@ done < <(awk 'NF && $1 !~ /^#/' "$ALLOWLIST")
 holes=0
 
 hole() { printf '# %s: %s\n' "$1" "$2"; holes=$((holes + 1)); }
+note() { printf '# %s\n' "$1"; }
+
+# The ref for a package whose PKGBUILD pins no usable tag: the commit its
+# release was built at, with where that came from written beside it. The
+# publisher records the commit of every request it serves, so a package
+# published since then is placed by what was recorded; one published before is
+# placed by reading the branch, and says so, because the two are not the same
+# quality of answer and the reader is the one who decides whether that matters.
+build_ref() {
+    local repo=$1 path=$2 name=$3 pkgver=$4 pkgrel=$5 kind=$6 pinned=$7 file=$8
+    local recorded='' matches='' commit=''
+
+    recorded=$(channel_origin_commit "$file")
+    if [[ -n $recorded ]]; then
+        printf 'ref = "%s"\n' "$recorded"
+        note "the commit the publisher recorded for this release"
+        return
+    fi
+
+    IFS=$'\t' read -r matches commit \
+        < <(repo_build_commit "$WORK/repos/$repo" "$path" "$pkgver" "$pkgrel")
+    if (( matches == 0 )); then
+        hole ref "no commit on $repo builds $name at $pkgver-$pkgrel"
+        return
+    fi
+    printf 'ref = "%s"\n' "$commit"
+    if (( matches > 1 )); then
+        hole ref "$matches commits on $repo build $name at $pkgver-$pkgrel and this took the newest"
+    else
+        note "derived: the one commit on $repo whose $path says $pkgver-$pkgrel"
+        case $kind in
+            commit) note "its source pins $pinned, which is the fork rather than this tree" ;;
+            none) note "it builds from a source that names no ref" ;;
+            nosource) note "it builds from the checkout and declares no source" ;;
+        esac
+        note "this release predates the publisher recording what it was asked"
+    fi
+}
 
 printf '# Drafted by tools/draft-manifest.sh from what the channel serves.\n'
 printf '# Read it before committing it: the manifest is authored state.\n\n'
@@ -84,7 +124,7 @@ else
     hole version 'the release names itself and this cannot read that off a channel'
 fi
 
-while IFS=$'\t' read -r name channel_version _ sum; do
+while IFS=$'\t' read -r name channel_version file sum; do
     pkgver=${channel_version%-*}
     pkgrel=${channel_version##*-}
     repo=$(awk -F'\t' -v n="$name" '$1 == n { print $2; exit }' "$index")
@@ -98,20 +138,16 @@ while IFS=$'\t' read -r name channel_version _ sum; do
         hole tag 'without a repository there is nothing to take a tag from'
     else
         printf 'repo = "%s"\n' "$repo"
-        repo_file "$WORK/repos/$repo" "$path" "$WORK/pkgbuild"
+        repo_file "$WORK/repos/$repo" HEAD "$path" "$WORK/pkgbuild"
         IFS=$'\t' read -r kind ref < <(pkgbuild_source_ref "$WORK/pkgbuild" "$pkgver")
-        case $kind in
-            tag)
-                if [[ $ref == *'$'* ]]; then
-                    hole tag "$repo/$path pins $ref which names something this cannot expand"
-                else
-                    printf 'tag = "%s"\n' "$ref"
-                fi
-                ;;
-            commit) hole tag "$repo/$path pins commit $ref rather than a tag" ;;
-            none) hole tag "$repo/$path pins a source that names no ref" ;;
-            *) hole tag "$repo/$path declares no source and builds from the checkout" ;;
-        esac
+        if [[ $kind == tag && $ref != *'$'* ]]; then
+            # A tag the PKGBUILD pins governs what gets built, so it is the ref
+            # and it needs nothing derived.
+            printf 'ref = "%s"\n' "$ref"
+        else
+            [[ $kind != tag ]] || note "$repo/$path pins $ref which names something this cannot expand"
+            build_ref "$repo" "$path" "$name" "$pkgver" "$pkgrel" "$kind" "$ref" "$file"
+        fi
     fi
 
     printf 'pkgver = "%s"\n' "$pkgver"

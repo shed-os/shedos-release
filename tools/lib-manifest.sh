@@ -88,6 +88,20 @@ channel_database() {
     ' "${descs[@]}" | LC_ALL=C sort
 }
 
+# The commit the publisher recorded for a published package, empty when it
+# recorded none. Every publish since the publisher learned to write these has
+# one; the packages that were on the channel before it did have nothing to
+# read, and that silence is the caller's to describe rather than to paper over.
+channel_origin_commit() {
+    local file=$1 out='' commit=''
+    out=$(mktemp)
+    if channel_fetch "$CHANNEL_URL" "$file.origin" "$out" 2> /dev/null; then
+        commit=$(awk '$1 == "commit" { print $2; exit }' "$out")
+    fi
+    rm -f "$out"
+    printf '%s\n' "$commit"
+}
+
 # --- the package repositories -----------------------------------------------
 
 # The commit a repository's tag names, on stdout. 0 it is there, 2 the
@@ -124,6 +138,37 @@ repo_clone() {
         "${branch[@]}" "$REPO_BASE/$repo" "$dir" 2> /dev/null
 }
 
+# The same, keeping the history, for the one question that needs it: which
+# commit a published release was built at.
+repo_clone_history() {
+    local repo=$1 dir=$2
+    [[ ! -d $dir ]] || return 0
+    git clone --quiet --filter=blob:none --no-checkout "$REPO_BASE/$repo" "$dir" 2> /dev/null
+}
+
+# The commit a published release was built at, as "<matches>\t<newest>".
+#
+# The pipeline moves pkgrel past whatever the channel already carries, commits
+# that move to the branch, and only then builds — so the tree a package was
+# built from is a commit on the branch whose PKGBUILD says exactly the release
+# that got published. The count comes back with it because one match is a
+# derivation and several are a choice, and a caller must not present the second
+# as the first.
+repo_build_commit() {
+    local dir=$1 path=$2 pkgver=$3 pkgrel=$4
+    local commit='' newest='' matches=0 work=''
+    work=$(mktemp)
+    while read -r commit; do
+        repo_file "$dir" "$commit" "$path" "$work" || continue
+        [[ $(pkgbuild_field "$work" pkgver) == "$pkgver" ]] || continue
+        [[ $(pkgbuild_field "$work" pkgrel) == "$pkgrel" ]] || continue
+        matches=$((matches + 1))
+        [[ -n $newest ]] || newest=$commit
+    done < <(git -C "$dir" log --format=%H HEAD -- "$path" 2> /dev/null)
+    rm -f "$work"
+    printf '%s\t%s\n' "$matches" "$newest"
+}
+
 # The same clone, held to the commit the tag names: --branch takes a branch of
 # that name in preference to the tag, and would then read a tree the manifest
 # never pinned.
@@ -133,14 +178,34 @@ repo_clone_tag() {
     [[ $(git -C "$dir" rev-parse HEAD 2> /dev/null) == "$commit" ]]
 }
 
-# Every PKGBUILD the clone holds, one path per line.
+# A clone holding one named commit. --branch cannot ask for a bare sha, so the
+# clone comes down at whatever the default branch is and the commit is fetched
+# by name afterwards; a commit that is not in the repository fails there rather
+# than resolving to something else.
+repo_clone_commit() {
+    local repo=$1 dir=$2 commit=$3
+    repo_clone "$repo" "$dir" || return 1
+    git -C "$dir" fetch --quiet --depth 1 origin "$commit" 2> /dev/null || return 1
+    git -C "$dir" cat-file -e "$commit^{commit}" 2> /dev/null
+}
+
+# What a manifest ref is: a commit when it is written as one, a tag otherwise.
+# Read off the shape rather than by asking the repository, so that the answer
+# does not change under the tools when somebody cuts a tag; forty lowercase hex
+# digits is not a name anybody gives a release.
+ref_kind() {
+    [[ $1 =~ ^[0-9a-f]{40}$ ]] && { printf 'commit\n'; return; }
+    printf 'tag\n'
+}
+
+# Every PKGBUILD the clone holds at a revision, one path per line.
 repo_pkgbuilds() {
-    git -C "$1" ls-tree -r --name-only HEAD | grep -E '(^|/)PKGBUILD$'
+    git -C "$1" ls-tree -r --name-only "$2" | grep -E '(^|/)PKGBUILD$'
 }
 
 # One file out of the clone, which is where the blob it skipped gets fetched.
 repo_file() {
-    git -C "$1" show "HEAD:$2" > "$3" 2> /dev/null
+    git -C "$1" show "$2:$3" > "$4" 2> /dev/null
 }
 
 # The names a PKGBUILD builds, one per line. pkgname is an array as often as it
@@ -152,17 +217,17 @@ pkgbuild_names() {
     tr -d '()' <<<"$raw" | tr ' ' '\n' | sed '/^$/d'
 }
 
-# Which PKGBUILD in a clone builds a package. The file lands in $3 and its path
-# within the repository goes to stdout; nothing is printed when no PKGBUILD
-# there builds it.
+# Which PKGBUILD in a clone builds a package, at a revision. The file lands in
+# $4 and its path within the repository goes to stdout; nothing is printed when
+# no PKGBUILD there builds it.
 repo_pkgbuild_for() {
-    local dir=$1 name=$2 out=$3 path=''
+    local dir=$1 rev=$2 name=$3 out=$4 path=''
     while read -r path; do
-        repo_file "$dir" "$path" "$out" || continue
+        repo_file "$dir" "$rev" "$path" "$out" || continue
         pkgbuild_names "$out" 2> /dev/null | grep -qxF "$name" || continue
         printf '%s\n' "$path"
         return 0
-    done < <(repo_pkgbuilds "$dir")
+    done < <(repo_pkgbuilds "$dir" "$rev")
     return 1
 }
 
@@ -209,13 +274,16 @@ manifest_read() {
     python3 - "$1" <<'PY'
 import re, sys, tomllib
 
-PACKAGE_KEYS = ("name", "repo", "tag", "pkgver", "pkgrel", "sha256")
+PACKAGE_KEYS = ("name", "repo", "ref", "pkgver", "pkgrel", "sha256")
 PATTERNS = {
     "name": r"[a-z0-9][a-z0-9._+-]*",
     # Org-relative: the organisation is the resolver's, written once there
     # rather than eighteen times here.
     "repo": r"[A-Za-z0-9][A-Za-z0-9._-]*",
-    "tag": r"[A-Za-z0-9][A-Za-z0-9._+/-]*",
+    # A tag name where a tag governs the build, and the commit the build used
+    # where none does. One pattern holds both; which one an entry is comes off
+    # its shape, in ref_kind above.
+    "ref": r"[A-Za-z0-9][A-Za-z0-9._+/-]*",
     "pkgver": r"[A-Za-z0-9][A-Za-z0-9._+]*",
     "pkgrel": r"[0-9]+(\.[0-9]+)?",
     "sha256": r"[0-9a-f]{64}",
