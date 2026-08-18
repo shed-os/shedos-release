@@ -1,15 +1,66 @@
-# What may differ between the monolith's calamares and the one shed-os/calamares builds.
-# Nothing here is a free pass: each path was opened and read before it was written down,
-# and an entry that stops matching fails the run.
+# What separates shed-os/calamares from the monolith it came out of. Nothing here is a
+# free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file rather than carried as an allowlist that goes stale on the next rebuild.
 
-# Reference: built from packaging/calamares at monolith commit 93d7442b, which was
-# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
-# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
-# PKGBUILD unmodified and matched the published 3.4.2-4, so nothing was patched to make
-# the two agree. Candidate: the artifact the staging database records.
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: calamares. This repository is not only the package — it is the ShedOS
+# fork of the installer itself, whose own history holds the root, so the carve map takes
+# the packaging directory one level down:
+#
+#   path packaging/calamares/
+#   rename packaging/calamares:packaging
+#
+# One file arrives that way, packaging/PKGBUILD, and the pipeline is pointed at
+# `packages: ["packaging"]`. The carve took packaging/calamares as the monolith held it at
+# 83d5c3d0, and the comparison below is against 8ce1763e, which is where the monolith
+# stands now.
 
-# Nothing differs. All 587 paths are byte-identical, build IDs included, so there is
-# nothing to allow and an entry appearing here later is a real difference.
+# --- (b) the one transformed package file -----------------------------------------
+#
+# The fork moved house. The PKGBUILD's source= pinned a commit on Theshedman/calamares
+# and now pins the same shape of commit on this repository, whose `main` is upstream's
+# history with the ShedOS patches on top; the maintenance notes above it were rewritten
+# to describe pushing the next upstream tag here rather than re-mirroring it elsewhere.
+# pkgrel moved 4 to 5, which is the pipeline's guard stepping past what staging carried.
+#
+# url= still names the fork's old home, deliberately: it is recorded in .PKGINFO, so
+# moving it changes what the package says it is rather than fixing a comment, and that is
+# a release decision rather than a carve.
+content packaging/PKGBUILD c149ee53bc7f8d925aacf9a5c06727ac53cf8725..f9afff95f76ef1d514278b89d2dcd93ba6444dcb — the installer source is fetched from this repository now and the pipeline's pkgrel guard moved pkgrel past what staging carries
+
+# --- (b2) the 1478 files with no monolith counterpart ------------------------------
+#
+# The fork's own tree: Calamares' upstream source with the ShedOS patches on top, plus
+# this repository's .gitignore and .github/workflows/ci.yml. The monolith never held any
+# of it — it fetched the fork at a pinned commit — so no carve map selects it and there
+# is nothing here to compare against. It is named as a class rather than a list of 1478
+# paths, and the count is what the walk holds.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 0 identical, 1 transformed             (the PKGBUILD, above)
+#   test tree:    the monolith has no out-of-tree suite for calamares
+#   no monolith counterpart: 1478                        (see (b2))
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from packaging/calamares
+# at monolith commit 93d7442b, which was origin/main at the time, under a scratch
+# MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the pipeline writes beside its own
+# config. Its pkgver-pkgrel came from that PKGBUILD unmodified and matched the published
+# 3.4.2-4, so nothing was patched to make the two agree. Candidate: the artifact the
+# staging database recorded.
+#
+# Nothing differed. All 587 paths were byte-identical, build IDs included.
 #
 # Reproducing that takes three properties of the build environment, and a reference that
 # skips any of them reports differences that belong to the builder rather than to the
@@ -32,3 +83,6 @@
 # character of the build path. Neither changes what the package does, and both would
 # report as a content difference on every ELF file in it if the reference were built
 # anywhere else.
+#
+# A byte difference found by a later comparison is a real difference, not a build that
+# drifted: this package's two builds have been equal once already, on the terms above.
