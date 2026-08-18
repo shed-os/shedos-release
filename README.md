@@ -80,6 +80,67 @@ the live repo is untouched. Both paths are built from that one variable: the
 cutover sets it to the empty string and the same publisher writes
 `test/x86_64/` and `shedos.gpg` for real. The test suite covers both settings.
 
+## What a release is
+
+`release-manifest.toml` is the release definition: the packages a release is
+made of, where each one's source came from, and the exact published file the
+name resolves to. It is authored state — a person writes it and a person reads
+it — because everything downstream cuts from it, and a file a machine keeps
+rewriting is one nobody checks.
+
+```toml
+[release]
+version = "2026.08.09"
+
+[[package]]
+name = "shedos-theme-engine"
+repo = "shedos-theme-engine"
+tag = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "1"
+sha256 = "7e8b46343285326315b04128294212c0f0171eeb6bf25c20b5cafd9db193918e"
+```
+
+`repo` is org-relative; the organisation is written once, in the resolver.
+
+`tools/resolve-manifest.sh <manifest>` checks every pin against the world and
+names the entry and the axis for anything that has moved:
+
+- `tag` — the repository carries the tag
+- `pkgbuild` — the tag builds a package by that name
+- `pkgver` — the PKGBUILD at the tag is at that pkgver
+- `pkgrel` — the tag is not *ahead* of the release the channel serves. Behind
+  is fine and normal: the pipeline moves pkgrel past whatever the channel
+  already carries every time it republishes, and the tag does not follow.
+- `channel` — the signed database serves that name at that version and sha256
+- `bytes` — the file the channel hands over hashes to that sha256
+
+The last two are separate on purpose. Agreeing with the database only says the
+manifest matches a record; what a later build fetches is the file, so the file
+is fetched and hashed. Exit 1 is a pin that does not hold, exit 2 is a check
+that could not be made — an unreadable channel must never read as a clean
+release definition. A package the channel serves that the manifest does not
+name is a note rather than a failure, because nothing is ever deleted from a
+channel and a release may leave a retired package behind.
+
+The manifest is refused rather than half-understood: a key nobody recognises,
+an entry short of a field, a value shaped wrong or a name written twice stops
+the run naming the entry.
+
+`tools/draft-manifest.sh [<version>]` drafts one from what the channel serves,
+so writing a manifest is reading eighteen entries rather than transcribing
+eighteen checksums. It refuses to draft from a database whose signature does
+not verify against the keyring the channel publishes, and a field it cannot
+fill is left as a comment saying why — never guessed. It exits non-zero while
+any field is still a hole, because a draft is not a manifest.
+
+The tag comes from the source the owning repository's PKGBUILD pins. Seven of
+the eighteen packages on the channel pin no tag at all — two pin a commit, one
+pins a source with no ref, and four declare no source and build from the
+checkout — so no manifest naming every published package can be written under
+this schema yet, and the first one is not committed. Run the drafter to see
+which seven and why.
+
 ## Is it the same package?
 
 `tools/compare-package.sh` answers the question the cutover turns on: did the
@@ -267,6 +328,7 @@ bash test/enumeration/run.sh
 bash test/trust-anchor/run.sh
 bash test/version-parity/run.sh
 bash test/build-reference/run.sh
+bash test/manifest/run.sh
 ```
 
 The first four take no root, no network and no R2. The bucket is a temporary
@@ -282,6 +344,12 @@ against fixtures of its own and stops short of the container; its end-to-end
 case rebuilds a published package and checks it against the sha its expectation
 pins, which needs docker and a monolith clone, and it names whichever is
 missing when it skips.
+
+The manifest suite builds a channel of its own — a directory of real files
+under a real signed database — and real git repositories with real tags, so the
+tools run against fixtures without a line of their own swapped out. Its last
+case resolves the committed manifest against the live channel and says so when
+there is none to resolve.
 
 `.github/workflows/ci.yml` runs every suite on every push and pull request,
 because this repo is the only thing in the org that can write to a channel.
