@@ -208,15 +208,34 @@ derive_pairs() {
 # 0 it is there, 3 there is no PKGBUILD at that path, 1 it could not be read.
 # A directory holding no package and a fetch that failed have to stay different
 # answers, or a caller goes blind exactly where it should stop.
+#
+# The version check makes some thirty of these fetches back to back, and one of
+# them coming back 429 or 5xx once is enough to fail a run that has nothing
+# wrong with it. Answering that with a re-run is the thing this repo has
+# already been bitten by: an intermittent failure that greens on the second try
+# stops being read as a failure at all. So a fetch that did not answer is tried
+# again, a handful of times, and a fetch that answered 404 is not — that is a
+# real answer and retrying it would only make it slower.
 read_pkgbuild() {
-    local dir=$1 key=$2 url=$3 out=$4 code
+    local dir=$1 key=$2 url=$3 out=$4
+    local attempts=${SHEDOS_FETCH_ATTEMPTS:-3} pause=${SHEDOS_FETCH_PAUSE:-2}
+    local attempt=1 code=''
     if [[ -n $dir ]]; then
         [[ -f $dir/$key/PKGBUILD ]] || return 3
         cp -- "$dir/$key/PKGBUILD" "$out" 2>/dev/null || return 1
         return 0
     fi
-    code=$(curl -sSL --max-time 60 -A "$USER_AGENT" -o "$out" -w '%{http_code}' "$url") \
-        || return 1
-    [[ $code == 404 ]] && return 3
-    [[ $code == 2?? ]]
+    while :; do
+        code=$(curl -sSL --max-time 60 -A "$USER_AGENT" -o "$out" -w '%{http_code}' "$url") \
+            || code=''
+        if [[ $code == 404 ]]; then
+            return 3
+        elif [[ $code == 2?? ]]; then
+            return 0
+        elif (( attempt >= attempts )); then
+            return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep "$pause"
+    done
 }

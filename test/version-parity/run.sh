@@ -358,6 +358,56 @@ check 'the check fails' test "$?" -eq 2
 check 'it names the member that is missing' \
     grep -qx 'could not read the PKGBUILD in multi/two' "$WORK/last.out"
 
+section 'case 17b — a fetch that does not answer is tried again'
+# Thirty sequential fetches into one host, and one 429 among them used to fail
+# the whole run. A stub curl on PATH is what makes the retry checkable without
+# waiting for the real thing to have a bad minute.
+STUB=$WORK/bin
+mkdir -p "$STUB"
+cat > "$STUB/curl" <<'STUBEOF'
+#!/usr/bin/env bash
+n=$(cat "$CURL_STUB_COUNT" 2> /dev/null || echo 0)
+n=$((n + 1))
+printf '%s' "$n" > "$CURL_STUB_COUNT"
+for ((i = 1; i <= $#; i++)); do
+    [[ ${!i} == -o ]] || continue
+    j=$((i + 1))
+    printf 'pkgname=example\npkgver=1.0\npkgrel=1\n' > "${!j}"
+done
+read -r -a codes <<< "$CURL_STUB_CODES"
+code=${codes[$((n - 1))]:-${codes[-1]}}
+[[ $code == curlfail ]] && exit 7
+printf '%s' "$code"
+STUBEOF
+chmod +x "$STUB/curl"
+
+read_over_stub() {
+    (
+        export CURL_STUB_COUNT=$WORK/curl.count CURL_STUB_CODES=$1
+        export SHEDOS_FETCH_PAUSE=0
+        : > "$WORK/curl.count"
+        PATH=$STUB:$PATH
+        read_pkgbuild '' key https://example.invalid/PKGBUILD "$WORK/fetched"
+    )
+}
+
+read_over_stub '500 200'
+check 'a fetch that answered 500 and then 200 reads the file' test "$?" -eq 0
+check 'and it took the second answer' \
+    grep -qx 'pkgver=1.0' "$WORK/fetched"
+
+read_over_stub 'curlfail 200'
+check 'a fetch that did not answer at all is tried again' test "$?" -eq 0
+
+read_over_stub '404 200'
+check 'a 404 is an answer and is not retried' test "$?" -eq 3
+check 'so only one request went out' test "$(cat "$WORK/curl.count")" = 1
+
+read_over_stub '500'
+check 'a host that keeps failing is still a failure' test "$?" -eq 1
+check 'and it gave up after the attempts it is allowed' \
+    test "$(cat "$WORK/curl.count")" = 3
+
 # --- case 18: the carves as they stand --------------------------------------
 
 section 'case 18 — every carved repository matches the monolith it came from'
