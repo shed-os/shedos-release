@@ -77,12 +77,21 @@ reset_channel() {
     : > "$ENTRIES"
 }
 
+# $4 is the tree the publisher recorded the package as built from, $5 the
+# commit it recorded the run at — the second is the parent of the first
+# whenever the pipeline bumped pkgrel, and they are written independently so a
+# case can put them at odds the way the pipeline really does.
 serve() {
-    local name=$1 version=$2 body=$3 origin=${4:-}
+    local name=$1 version=$2 body=$3 build=${4:-} run=${5:-}
     local file=$name-$version-any.pkg.tar.zst
     printf '%s' "$body" > "$PKGS/$file"
-    [[ -z $origin ]] || printf 'repo shed-os/x\nrun 1\ncommit %s\n' "$origin" \
-        > "$PKGS/$file.origin"
+    if [[ -n $build || -n $run ]]; then
+        {
+            printf 'repo shed-os/x\nrun 1\n'
+            [[ -z $run ]] || printf 'commit %s\n' "$run"
+            [[ -z $build ]] || printf 'build %s\n' "$build"
+        } > "$PKGS/$file.origin"
+    fi
     printf '%s\t%s\t%s\t%s\n' "$name" "$version" "$file" \
         "$(sha256sum "$PKGS/$file" | cut -d' ' -f1)" >> "$ENTRIES"
 }
@@ -637,7 +646,7 @@ rc=$?
 check 'and the derived refs resolve' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
-section 'case 11b — a recorded commit is used in preference to a derived one'
+section 'case 11b — a recorded build tree is used in preference to a derived one'
 reset_channel
 reset_repos
 write_pkgbuild bare PKGBUILD bare 1.0 1 checkout
@@ -653,14 +662,23 @@ SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.
 rc=$?
 check 'the draft is complete' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
-check 'it takes the commit the publisher recorded' \
+check 'it takes the tree the publisher recorded' \
     grep -qx "ref = \"$first\"" "$WORK/last.out"
 check 'and says so rather than calling it derived' \
-    grep -qx '# the commit the publisher recorded for this release' "$WORK/last.out"
+    grep -qx '# the tree the publisher recorded this package as built from' "$WORK/last.out"
 check 'it does not also claim to have derived it' \
     not grep -q '^# derived:' "$WORK/last.out"
-check 'and it says the record is the one thing here nothing signs' \
-    grep -qx '# that record is not signed, unlike the database beside it' "$WORK/last.out"
+check 'and it says the record was checked rather than trusted' \
+    grep -qx '# checked against 1.0-1 rather than taken on trust' "$WORK/last.out"
+
+# The drafting cases all round-trip, or the assistance is worth nothing — and
+# this is the one that did not, which is how a recorded ref the resolver must
+# refuse got shipped.
+grep -v '^drafted ' "$WORK/last.out" | grep -v '^draft: ' > "$WORK/recorded.toml"
+resolve "$WORK/recorded.toml"
+rc=$?
+check 'and what it drafted resolves' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
 # The same channel without the record, to show the ambiguity was real and that
 # the drafter says so rather than picking quietly.
@@ -670,6 +688,55 @@ check 'without the record the draft is not complete' test "$?" -eq 1
 check 'and it says the branch cannot choose between them' \
     grep -qx '# ref: 2 commits on bare build bare at 1.0-1 and this took the newest' \
     "$WORK/last.out"
+
+section 'case 11c — a recorded commit that built another release is discarded'
+reset_channel
+reset_repos
+# Exactly the shape the pipeline makes: the run is triggered at one commit, the
+# pkgrel guard bumps and commits, and the build happens on top of that. A
+# release pinning the commit the run started at names a tree carrying the
+# pkgrel before the bump.
+write_pkgbuild bumped PKGBUILD bumped 1.0 1 checkout
+triggered_at=$(git_in "$REPOS/bumped" rev-parse HEAD)
+write_pkgbuild bumped PKGBUILD bumped 1.0 2 checkout
+built_at=$(git_in "$REPOS/bumped" rev-parse HEAD)
+serve bumped 1.0-2 'bumped' '' "$triggered_at"
+seal_channel
+printf 'shed-os/bumped\n' > "$WORK/allowlist.txt"
+SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
+rc=$?
+check 'the draft is still complete' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'the recorded commit is not written down' \
+    not grep -qx "ref = \"$triggered_at\"" "$WORK/last.out"
+check 'the branch answers instead' grep -qx "ref = \"$built_at\"" "$WORK/last.out"
+check 'and the discard is said out loud' \
+    grep -q "the recorded commit $triggered_at does not build 1.0-2" "$WORK/last.out"
+
+grep -v '^drafted ' "$WORK/last.out" | grep -v '^draft: ' > "$WORK/discarded.toml"
+resolve "$WORK/discarded.toml"
+rc=$?
+check 'and what it drafted resolves' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+
+section 'case 11d — the build tree wins over the run commit when both are there'
+reset_channel
+reset_repos
+write_pkgbuild pair PKGBUILD pair 1.0 1 checkout
+pair_triggered=$(git_in "$REPOS/pair" rev-parse HEAD)
+write_pkgbuild pair PKGBUILD pair 1.0 2 checkout
+pair_built=$(git_in "$REPOS/pair" rev-parse HEAD)
+serve pair 1.0-2 'pair' "$pair_built" "$pair_triggered"
+seal_channel
+printf 'shed-os/pair\n' > "$WORK/allowlist.txt"
+SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
+rc=$?
+check 'the draft is complete' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'the tree it was built from is the ref' \
+    grep -qx "ref = \"$pair_built\"" "$WORK/last.out"
+check 'and nothing is discarded, because the right field was read first' \
+    not grep -q 'does not build' "$WORK/last.out"
 
 section 'case 12 — the release version is the author'"'"'s and the drafter says so'
 reset_fixture

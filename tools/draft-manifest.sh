@@ -77,6 +77,7 @@ holes=0
 
 hole() { printf '# %s: %s\n' "$1" "$2"; holes=$((holes + 1)); }
 note() { printf '# %s\n' "$1"; }
+warn() { printf 'draft: %s\n' "$1" >&2; }
 
 # The ref for a package whose PKGBUILD pins no usable tag: the commit its
 # release was built at, with where that came from written beside it. The
@@ -87,19 +88,38 @@ note() { printf '# %s\n' "$1"; }
 build_ref() {
     local repo=$1 path=$2 name=$3 pkgver=$4 pkgrel=$5 kind=$6 pinned=$7 file=$8
     local recorded='' matches='' commit=''
+    mkdir -p "$WORK/recorded"
 
-    recorded=$(channel_origin_commit "$file")
-    if [[ -n $recorded ]]; then
-        printf 'ref = "%s"\n' "$recorded"
-        note "the commit the publisher recorded for this release"
-        # Said out loud because it is the one input here that carries no
-        # signature: the database is verified before a version or a checksum is
-        # read off it, and this record is not. A reader weighing a recorded
-        # answer against a derived one should know which of the two the channel
-        # can vouch for.
-        note "that record is not signed, unlike the database beside it"
-        return
-    fi
+    # The build tree first, then the commit the run was triggered at. The
+    # second is the parent of the first whenever the pipeline bumped pkgrel,
+    # so it usually fails the check below and the derivation answers instead.
+    local field='' recorded_by=''
+    for field in build commit; do
+        recorded=$(channel_origin_commit "$file" "$field")
+        [[ -n $recorded ]] || continue
+        if ref_builds_release "$repo" "$WORK/recorded/$repo@$recorded" \
+                "$recorded" "$name" "$pkgver" "$pkgrel"; then
+            case $field in
+                build) recorded_by='the tree the publisher recorded this package as built from' ;;
+                *) recorded_by='the commit the publisher recorded the run at' ;;
+            esac
+            printf 'ref = "%s"\n' "$recorded"
+            note "$recorded_by"
+            # A record carries no signature, unlike the database beside it. It
+            # does not have to: nothing is written down on its word alone, and
+            # a record naming a tree that builds something else is discarded
+            # here rather than followed.
+            note "checked against $pkgver-$pkgrel rather than taken on trust"
+            return
+        fi
+        # Not a hole: the branch answers this correctly and the entry still
+        # gets a ref it can resolve. It goes to stderr rather than into the
+        # file because it is a fact about the record, not about the ref that
+        # ends up written down — but it is said every time, because a record
+        # that disagrees with the release it names is worth somebody's eye.
+        warn "$name: the recorded $field $recorded does not build $pkgver-$pkgrel — using the branch instead"
+        break
+    done
 
     IFS=$'\t' read -r matches commit \
         < <(repo_build_commit "$WORK/repos/$repo" "$path" "$pkgver" "$pkgrel")

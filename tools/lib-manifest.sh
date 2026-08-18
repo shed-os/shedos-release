@@ -108,14 +108,36 @@ channel_database() {
 # recorded none. Every publish since the publisher learned to write these has
 # one; the packages that were on the channel before it did have nothing to
 # read, and that silence is the caller's to describe rather than to paper over.
+# $2 picks the field: "build" is the tree a package was built from, which is
+# what a release pins, and "commit" is the commit the run was triggered at,
+# which is the parent of that tree whenever the pipeline bumped pkgrel.
 channel_origin_commit() {
-    local file=$1 out='' commit=''
+    local file=$1 field=${2:-build} out='' commit=''
     out=$(mktemp)
     if channel_fetch "$CHANNEL_URL" "$file.origin" "$out" 2> /dev/null; then
-        commit=$(awk '$1 == "commit" { print $2; exit }' "$out")
+        commit=$(awk -v k="$field" '$1 == k { print $2; exit }' "$out")
     fi
     rm -f "$out"
     printf '%s\n' "$commit"
+}
+
+# Does the tree at this ref build that package at exactly that release? This is
+# the resolver's commit rule, asked before a ref is written down rather than
+# after — a recorded commit that fails it is a commit the manifest must not
+# carry, whoever recorded it.
+ref_builds_release() {
+    local repo=$1 dir=$2 ref=$3 name=$4 pkgver=$5 pkgrel=$6 out=''
+    repo_clone_commit "$repo" "$dir" "$ref" || return 1
+    out=$(mktemp)
+    if ! repo_pkgbuild_for "$dir" "$ref" "$name" "$out" > /dev/null; then
+        rm -f "$out"
+        return 1
+    fi
+    [[ $(pkgbuild_field "$out" pkgver) == "$pkgver" ]] &&
+        [[ $(pkgbuild_field "$out" pkgrel) == "$pkgrel" ]]
+    local ok=$?
+    rm -f "$out"
+    return $ok
 }
 
 # --- the package repositories -----------------------------------------------
