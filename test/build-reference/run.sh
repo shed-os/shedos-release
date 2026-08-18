@@ -389,9 +389,13 @@ check 'the container network can be named' test "$rc" -eq 0
 section 'case 9 — a published package rebuilds to the sha its expectation pins'
 
 PIN_PACKAGE=shedos-power
-PIN_FILE=$ROOT/tools/expected-diffs/$PIN_PACKAGE.txt
+# Its expectations are the workspace's, and they enumerate a carved tree. The commit and
+# the sha this case runs on are the artifact comparison that file keeps as history, which
+# is the only place either is written down.
+PIN_FILE=$ROOT/tools/expected-diffs/shedos-ui.txt
 PIN_COMMIT=$(sed -n 's/.*at monolith commit \([0-9a-f]\{8\}\).*/\1/p' "$PIN_FILE" | head -1)
-PIN_SHA=$(sed -n "s|^content usr/bin/$PIN_PACKAGE \([0-9a-f]\{64\}\)\.\..*|\1|p" "$PIN_FILE")
+PIN_SHA=$(sed -n "s|^#[[:space:]]*content usr/bin/$PIN_PACKAGE \([0-9a-f]\{64\}\)\.\..*|\1|p" \
+    "$PIN_FILE")
 CANDIDATE_URL=https://repo.shedos.org/staging/test/x86_64
 
 # Read out of the repository rather than out of the environment, so losing it
@@ -427,7 +431,11 @@ else
     check 'its binary is the sha the expectation pins' \
         test "$(bsdtar -xOf "$reference" "usr/bin/$PIN_PACKAGE" | sha256sum | cut -d' ' -f1)" \
         = "$PIN_SHA"
-    bash "$ROOT/tools/compare-package.sh" "$reference" "$candidate" "$PIN_FILE" \
+    # The whole-package check needs an allowlist of installed bytes, which a tree-form
+    # enumeration is not: it is rebuilt here from the evidence that file keeps.
+    allowed=$WORK/$PIN_PACKAGE-allowed.txt
+    sed -n "s|^#[[:space:]]*\(content usr/bin/$PIN_PACKAGE .*\)|\\1|p" "$PIN_FILE" > "$allowed"
+    bash "$ROOT/tools/compare-package.sh" "$reference" "$candidate" "$allowed" \
         > "$WORK/e2e.compare" 2>&1
     check 'and the two packages are equivalent' test "$?" -eq 0
     [[ -s $WORK/e2e.compare ]] && sed 's/^/    /' "$WORK/e2e.compare"

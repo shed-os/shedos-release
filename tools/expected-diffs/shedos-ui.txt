@@ -1,0 +1,178 @@
+# What separates shed-os/shedos-ui from the monolith it came out of. Nothing here is a
+# free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# One file for one repository, where there used to be five for five packages. The
+# workspace is one tree with one history and its members share a dependency graph; a walk
+# of it answers for all of them at once, and the five package-form files could not see a
+# source file at all — six .gitignores, six Cargo.locks and a Cargo.toml left this tree
+# for the workspace root and no enumeration of installed bytes could say so. Section (e)
+# does.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The five packages' bytes are a separate question, asked on
+# demand with tools/build-reference.sh; the answers this repository got are kept at the
+# end of this file rather than carried as allowlists that go stale on the next rebuild —
+# and they did go stale, which is why they are history. A republish nobody asked for,
+# on an Arch toolchain that had moved underneath an unchanged tag, invalidated all five
+# candidate halves at once.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source packages: shedos-greeter, shedos-power, shedos-switcher, shedos-tour and
+# shedos-screensaver, plus shedos-prompt-ui, which is the library the other five link
+# against and builds no package of its own. Carve map: tools/carve-maps/shedos-ui.paths,
+# a `path` and a `rename` per packaging directory — six pairs — so every package keeps a
+# directory of its own, the crate paths between them still resolve, and each PKGBUILD
+# stays beside the crate it builds.
+#
+# 185 files carve that way. The carve took the six directories as the monolith held them
+# at 9141eca7, and the comparison below is against 8ce1763e, which is where the monolith
+# stands now.
+
+# --- (b) the 10 transformed package files ------------------------------------------
+#
+# The four member manifests dropped their own [profile.release]. A cargo workspace takes
+# the release profile from the root and ignores a member's, so leaving them in place
+# would have said one thing and done another; the root manifest carries the same
+# `lto = "thin"`, `codegen-units = 1` and `strip = "symbols"` the four had. shedos-prompt-
+# ui never had a profile table and is byte-identical, and shedos-screensaver's manifest
+# went to the root with the rest of the workspace (see (e)).
+content shedos-greeter/Cargo.toml 00ee153efe99bd4abfe1a94a621f217589ca904e..ca2218e048db19b9d8941a943e36b5bb30b4c0ba — the release profile is the workspace root's, which a member's own table cannot override
+content shedos-power/Cargo.toml 5f3cc12a9635570e680463b2fb3df183321072cd..8edc84dca15023d6e60813822ef63824e206e621 — the release profile is the workspace root's, which a member's own table cannot override
+content shedos-switcher/Cargo.toml 365e1c8dd3c56bf1c98980a4501d4e4a56b20cfb..6cfb5a22d9832b350699a02601f4889b5cd9b6df — the release profile is the workspace root's, which a member's own table cannot override
+content shedos-tour/Cargo.toml 6e7f3986b596b2c729ead03b27e6107e803c5802..c64af4f227f1a0b6b1d1343c25c0fa7b949002ac — the release profile is the workspace root's, which a member's own table cannot override
+#
+# The five PKGBUILDs build from this repository's tag rather than from the checkout they
+# sit in: source= clones shed-os/shedos-ui at #tag=$pkgver with sha256sums=('SKIP'),
+# because the integrity anchor is the tag rather than a tarball checksum. Each build()
+# then steps into its member under $srcdir/shedos-ui/ instead of $startdir, and each
+# package() installs out of the workspace's shared target/ rather than a target/ of its
+# own. pkgrel carries what the pipeline's guard moved past what staging held.
+#
+# shedos-screensaver's has one more change: it builds `-p 'shedos-screensaver-*'` where
+# it used to build --workspace, because --workspace in the shared tree would drag in the
+# other four members.
+content shedos-greeter/PKGBUILD 289825f7a0558b385065ca14c52530a3d366f4d0..7ad6f0cd6199c6842e0e2cf0bce3bf99ba42a98a — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-power/PKGBUILD af067d88bfda0041a0b34923c7849bb7683a9e1f..87952fefa1a144ff766ad813ebc407beea796bba — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-switcher/PKGBUILD 55bc16744f96d3553c785e2940c66134456cee25..08b56e0fc73986d9ee13039d6e0acd32d708e4f1 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-tour/PKGBUILD abd96dea72e8b11d63329726a88e7d448af02838..2f74ea855182d1af0893dcf229f26bcb1e8b2b62 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..4615fc1db51441821bc7674c3f1475d09283305f — builds from this repository's tag inside the workspace, selects its own eight crates rather than the whole workspace, and carries the pkgrel the pipeline's guard moved past what staging held
+#
+# The tenth is a test inside the screensaver's core crate. It checked the vendored ASCII
+# art against the branding package's copy by reaching out of the packaging directory —
+# concat!(env!("CARGO_MANIFEST_DIR"), "/../../../shedos-branding/tree/etc/shedos-ascii.txt")
+# — and that path does not exist in a repository holding only the UI. It reads the
+# installed file at DEFAULT_LOGO_PATH now, which is where shedos-branding puts it, so the
+# check still compares the vendored copy against the package rather than against itself.
+content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832bfca6203755f34549048ecf80e17302..6fafca22828c8195bbef447ae08a9346490c2873 — the vendored art is checked against the installed branding file, because the monolith-relative path it reached for is not in this repository
+
+# --- (b2) the 7 files with no monolith counterpart ---------------------------------
+#
+# The workspace itself: Cargo.toml, which declares the fourteen members, the shared
+# dependency versions, the release profile the members gave up and the [workspace.package]
+# metadata naming this repository, and Cargo.lock, the one lock the whole tree resolves
+# against.
+#
+# Two suites the pipeline runs from the checkout: test/cargo/run.sh, which holds the
+# workspace to `cargo build --locked` and the lock to the manifests, and
+# test/screensaver/run.sh, which runs the screensaver crates' own tests. Neither existed
+# in the monolith, where each crate was built on its own.
+#
+# Repository scaffolding the carve could not bring and no package ships: README.md,
+# .gitignore — which must not ignore `src/`, because in this repository `src/` is the
+# Rust code rather than makepkg's extraction directory — and .github/workflows/ci.yml,
+# which calls the shared pipeline in shed-os/shedos-ci.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 175 identical, 10 transformed
+#   test tree:    the two suites are this repository's own                (see (b2))
+#   no monolith counterpart: 7                                            (see (b2))
+#
+# 175 of 185 carved files are the monolith's bytes exactly — every source file of every
+# crate, the man pages, the i18n catalogues, the install scriptlets and the shipped tree.
+
+# --- (e) the 13 files the map selects and this tree does not hold -------------------
+#
+# The consolidation into one workspace. Six .gitignore files, six Cargo.lock files and
+# shedos-screensaver/Cargo.toml left their packaging directories for the repository root,
+# where one of each now does the work six did:
+#
+#   <member>/.gitignore    ×6   the monolith ignored makepkg byproducts per package
+#   <member>/Cargo.lock    ×6   one lock resolves the whole workspace
+#   shedos-screensaver/Cargo.toml   its crates are workspace members, listed at the root
+#
+# Nothing was lost — the walk names all thirteen and this file names them back, and the
+# root Cargo.toml and Cargo.lock in (b2) are where they went. The walk still exits 1 on
+# them, because the model has `content` and nothing else: a file that moved to a place no
+# carve map describes has no directive to be written as. Until it has one, this section
+# is the declaration and the exit code is the honest state of a tree that no longer holds
+# what its map selects.
+
+# --- the artifact comparisons, kept as history ---------------------------------------
+#
+# Five comparisons, one per package, run before this file took its tree form. Each
+# reference was built from the monolith's own packaging directory under a scratch
+# MAKEPKG_CONF carrying the BUILDENV and OPTIONS the pipeline writes beside its own
+# config, with pkgrel raised to the published one — the carve republished without a
+# monolith release behind it, and pkgrel is a .PKGINFO field. Each candidate was the
+# artifact the staging database recorded, and both .BUILDINFO package lists came out
+# equal in both directions every time.
+#
+# In all five, one path differed and it was the binary. The monolith builds each crate on
+# its own and the workspace builds its members from the root, so a source path the
+# monolith's build records as
+#
+#     src/render.rs
+#
+# the candidate records as
+#
+#     shedos-tour/src/render.rs
+#
+# and the crate the packages share is an absolute path on one side against a
+# workspace-relative one on the other. Read rather than assumed, per package: the source
+# paths in each binary, how many of them differ, and what that does to the sections —
+# .rodata carries the strings and grows, .relro_padding shrinks by as much because the
+# linker pads the segment back to the size it was, and .text is the same instructions
+# once addresses are masked, give or take one sixteen-byte run of int3 padding.
+#
+#   shedos-greeter       307 source paths, 13 differ; .rodata +512, .relro_padding -512;
+#                        620,051 instructions both sides
+#   shedos-tour          271 source paths, 7 differ; .rodata +256, .relro_padding -256;
+#                        547,612 instructions both sides
+#   shedos-power         221 source paths, 4 differ; .rodata +64, .relro_padding -48;
+#                        437,000 against 437,016 instructions, the padding the only
+#                        thing the two lists do not share
+#   shedos-switcher      287 source paths, 7 differ; .rodata +128, .relro_padding -112;
+#                        560,780 against 560,796 instructions, likewise
+#   shedos-screensaver   338 source paths, 28 differ; .rodata +264, .relro_padding -272;
+#                        868,162 against 868,146 instructions, likewise
+#
+# Making the strings match does not close it. A reference built with
+# --remap-path-prefix — through a rustc shim, so the flag stays out of what cargo hashes
+# into a package's metadata — comes out with every section exactly the candidate's size
+# and its source paths identical, and still differs, with constants that are not paths
+# moving too. What that measures is that the names rustc records and the order the
+# constants land in are coupled; which mechanism couples them was not isolated. No
+# reference-side flag makes these two builds the same bytes.
+#
+# The five pins, verbatim as they were written, each reference built from the package's
+# own directory at monolith commit 03404a92 against the release the channel then served:
+#
+#   content usr/bin/shedos-greeter 7296a980feca6658147f4851ea1a2aba82606896e0889f30c2ac0a576352099b..50643cdf5020a626633cd14268f7d53fd22f94fc4d5ac0724997fc36d0b629fa — the workspace records its members' source paths with the member directory in front
+#   content usr/bin/shedos-power 5ff4e961342e0eac5852c932adefa11a9d61ce8d527b7831c867436d110d568b..3488486e0cc0e24e75ee03b7f3a4b8dcf2eb146efa88b0da5160e6dfcdf655b3 — the workspace records its members' source paths with the member directory in front
+#   content usr/bin/shedos-switcher 9642f695440d311c148eb3f8fc6b2d0e3c409347431fc20ac15d7f99f4e0fc39..bad43aeff92ec72b90ee233cbba138e9a42365c197d7e3308dfc1734a63b26cb — the workspace records its members' source paths with the member directory in front
+#   content usr/bin/shedos-tour 4538989f982285c432ccc641b664cc9e2ea893f3bf82b39f832a5e3e33830e71..0a8d06e76db5dddc2ceb21743e3c99e8a3d502e669e7579478c7890b2019824f — the workspace records its members' source paths with the member directory in front
+#   content usr/bin/shedos-screensaver 63efea9f98ff5df6421693684468fdc82caea123ce2f34c819fe3a998e7d4111..1ddc44df474413366237e83dd666586229bb4876c902eb9055a045e4036f0ca4 — the workspace records its members' source paths with the member directory in front
+#
+# Both halves reproduced when they were written: two runs of each recipe produced the same
+# package sha256, build ID included. The candidate halves have since moved — a rebuild of
+# the unchanged tag on a newer gcc, glibc and binutils — so an allowlist carrying them
+# would fail on bytes nobody changed. Rebuilding one of these comparisons means building
+# the reference for the release the channel serves today and reading the result against
+# the account above; test/build-reference/run.sh does exactly that for shedos-power, and
+# it rebuilds the one-line allowlist it needs out of the five lines here.
