@@ -1,18 +1,85 @@
-# What may differ between the monolith's shedos-keyring and the one
-# shed-os/shedos-keyring builds. Nothing here is a free pass: each path was opened and
-# read before it was written down, and an entry that stops matching fails the run.
+# What separates shed-os/shedos-keyring from the monolith it came out of. Nothing here is
+# a free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file.
+#
+# This is the trust anchor, so the bar is higher than elsewhere: a difference on
+# tree/shedos.gpg, tree/shedos-trusted or tree/shedos-retired is the two repositories
+# disagreeing about what the fleet trusts, and it is never to be written down here. Fix
+# the divergence. All three are byte-identical and stay that way.
 
-# Reference: built from packaging/shedos-keyring at monolith commit 1303cdfb, which was
-# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
-# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
-# PKGBUILD unmodified and matched the published 2026.08.09-1, so nothing was patched to
-# make the two agree. Candidate: the artifact the staging database records.
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-keyring. Carve map: tools/carve-maps/shedos-keyring.paths, two
+# directives — `flatten packaging/shedos-keyring`, so the packaging directory is the
+# repository root, and `path test/rotation-drill/`, which keeps the offline drill for the
+# signing-key swap where the pipeline's `test/*/run.sh` looks for it.
+#
+# Nine package files carve: PKGBUILD, the install scriptlet, scripts/key-ceremony.sh,
+# README.md, the keyring and the two fingerprint lists under tree/, the trust-keys script
+# and its systemd unit. The drill brings run.sh and its needs-root marker.
+#
+# The carve took both directories as the monolith held them at 14e20946, and the
+# comparison below is against 8ce1763e, which is where the monolith stands now.
 
-# Nothing differs, and on this package nothing may. It is arch=any and its package()
+# --- (b) the one transformed package file -----------------------------------------
+#
+# README.md is the repository's front page now rather than a section of the monolith's,
+# so it says what the package ships and what it costs to get wrong, names the two repos
+# that build and publish it, and carries the build-out notice that production is still
+# the monolith. Its build instructions lost the `cd packaging/shedos-keyring` line — the
+# package is the root here — and the two links that reached monolith-relative paths
+# (docs/key-rotation.md, scripts/rotate-signing-key.sh) name the runbook on the web and
+# by name, because neither path exists in this repository.
+content README.md 57e301f7147f84a4b3be672a971470f1926331a3..7ae6d12bda777de55d397ed3c357307151a25092 — the repository's own front page, with the references pointed at paths that exist here
+
+# --- (b2) the 3 files with no monolith counterpart ---------------------------------
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# .gitignore — which keeps the monolith's `*-private.asc` guard, rewritten for the
+# flattened layout, because the key ceremony writes the private key next to the PKGBUILD
+# and one `git add -A` without it publishes the repository signing key — and
+# .github/workflows/ci.yml, which calls the shared pipeline in shed-os/shedos-ci.
+#
+# test/rotation-drill/needs-root is the third: the marker the pipeline reads to run this
+# suite as a root gate. The monolith gates the same drill from its own workflow rather
+# than from a file beside it.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 8 identical, 1 transformed
+#   test tree:    0 identical, 1 transformed                          (see (d))
+#   no monolith counterpart: 3                                        (see (b2))
+#
+# The PKGBUILD is one of the eight. It moved twice and came back: the pipeline's guard
+# bumped pkgrel past staging and a later commit caught the package version up with what
+# production ships, which is why the two repositories agree on it again.
+
+# --- (d) the one transformed test file ----------------------------------------------
+#
+# The drill is unchanged as a test — same phases, same assertions. Two comments named
+# monolith paths this repository does not carry, docs/key-rotation.md and
+# scripts/rotate-ceremony.sh, and they name the runbook and the key size instead.
+content test/rotation-drill/run.sh b240c98963e2ba76b4a73a0454860c6fb96bb861..bd118607c1de88f099f7cf62f961ed965305ed90 — two comments pointed at monolith paths this repository does not have
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from
+# packaging/shedos-keyring at monolith commit 1303cdfb, which was origin/main at the
+# time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the pipeline
+# writes beside its own config. Its pkgver-pkgrel came from that PKGBUILD unmodified and
+# matched the published 2026.08.09-1, so nothing was patched to make the two agree.
+# Candidate: the artifact the staging database recorded.
+#
+# Nothing differed, and on this package nothing may. It is arch=any and its package()
 # installs the keyring, the two fingerprint lists, a script and a unit straight out of
 # tree/ — it compiles nothing and downloads nothing, so a second build has nothing to
-# move.
-#
-# This is the trust anchor, so the bar is higher than elsewhere: a content finding on
-# shedos.gpg, shedos-trusted or shedos-retired is the two repositories disagreeing about
-# what the fleet trusts, and it is never to be allowlisted. Fix the divergence.
+# move. A content finding on a later comparison is the two trees having drifted apart,
+# and the answer is to converge them.
