@@ -1,98 +1,85 @@
-# What may differ between the monolith's shedos-nvim and the one shed-os/shedos-nvim
-# builds. Nothing here is a free pass: each path was opened and read before it was
-# written down, and an entry that stops matching fails the run.
+# What separates shed-os/shedos-nvim from the monolith it came out of. Nothing here is a
+# free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file rather than carried as an allowlist that goes stale on the next rebuild.
 
-# Everything below is one cause. materialize-plugins.sh stages the plugin set under
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-nvim — the preprovisioned Neovim: a runtime under
+# /usr/share/shedos/nvim, a thin shim in /etc/skel, the preprovision tool and its user
+# unit, and materialize-plugins.sh, which stages the locked plugin set at build time.
+# Carve map: tools/carve-maps/shedos-nvim.paths, two directives — `flatten
+# packaging/shedos-nvim`, so the packaging directory is the repository root, and `path
+# test/nvim/`, which keeps the suite where the pipeline's `test/*/run.sh` looks for it.
+#
+# 25 package files carve with the two suite files. The carve took both directories as the
+# monolith held them at 4f06e3ff, and the comparison below is against 8ce1763e, which is
+# where the monolith stands now.
+
+# --- (b) the one transformed package file -----------------------------------------
+#
+# The PKGBUILD is the pipeline's own bookkeeping and nothing else: the carve republished
+# nvim four times without a monolith release behind it, and each time the pkgrel guard
+# moved this repository's pkgrel past what staging already carried. The recipe, the
+# plugin lock and everything the package installs are the monolith's.
+content PKGBUILD 9f2bb41eeadbb94c9e995a71eaa300fb479bdc3a..33ec7425c619ebf4146e29b29481f280aeb69ab1 — the pipeline's pkgrel guard moved pkgrel past what staging carries
+
+# --- (b2) the 4 files with no monolith counterpart ---------------------------------
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore and .github/workflows/ci.yml, which calls the shared pipeline in
+# shed-os/shedos-ci.
+#
+# test/nvim-installed/run.sh is the fourth and is not scaffolding. It is the cold-start
+# check the monolith's suite carried as its fifth case: an empty HOME against the
+# installed read-only tree must not install, clone or fetch anything. That case reads
+# /usr/share/shedos/nvim, which is the package after pacman has put it there rather than
+# anything in this repository, so it became a suite of its own that says what it needs
+# instead of skipping quietly inside another one. The monolith still runs its copy.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 24 identical, 1 transformed
+#   test tree:    0 identical, 2 transformed                          (see (d))
+#   no monolith counterpart: 4                                        (see (b2))
+
+# --- (d) the 2 transformed test files -----------------------------------------------
+#
+# Both are the accommodation a carve makes: they reached the package through the
+# packaging/shedos-nvim/ prefix that `flatten` has just removed, and a suite still
+# spelling it out dies before its first fixture. Beyond the re-rooting, run.sh gave the
+# cold-start case its own suite (see (b2)) and both files dropped the N/M numbers from
+# their case names, which described the order they were written in rather than what they
+# check. No check was dropped that is not still running here or in the monolith's copy.
+content test/nvim/run.sh f81122a9083d123e7d11dc9e6cbf1a4ad5db4f8c..8fd4c459e835ca07703815ed8a53c0bb8d580da2 — re-rooted off the packaging/shedos-nvim/ prefix the carve removed, the cold-start case moved to test/nvim-installed, and the cases named for what they verify
+content test/nvim/migrate.sh dd83092fc323c8fb2e6495dd5e87fe0e036cddfd..6ff08d11c9a711059aa38ee0a6e1c5b7a0a3eedd — re-rooted off the packaging/shedos-nvim/ prefix the carve removed, and the cases named for what they verify
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form, and it found 84 differing paths, every
+# one of them inside
+# usr/share/shedos/nvim/plugins/blink.cmp/target: 51 dep-info files under
+# target/release/deps, the .fingerprint and build-script outputs beside them, four
+# compiled rlib/rmeta/so artifacts, and .rustc_info.json at the top.
+#
+# All 84 are one cause. materialize-plugins.sh stages the plugin set under
 # work=$(mktemp -d), so blink.cmp's cargo build runs in a directory with a different
 # absolute path on every build, and cargo writes that path into everything it leaves
 # behind. The bytes of the shipped library are the same; only the recorded paths move.
+# None of them could be pinned — the path is new on every build, so a pinned pair would go
+# stale on the next one — which is exactly the kind of expectation this file no longer
+# carries.
 #
-# None of these can be pinned: the path is new on every build, so a pinned pair would
-# go stale on the next one. They are also not the packaging being wrong twice — they
-# are the packaging shipping a build directory it has no reason to ship. Both the
-# entries and the ~40MB they cover disappear the moment the build stages into a fixed
-# directory, or drops target/ from the package and keeps the one library it needs.
-content usr/share/shedos/nvim/plugins/blink.cmp/target/.rustc_info.json — records the rustc invocation cargo ran, build directory included
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blake3-1f2f999fafecd825/lib-blake3 — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blake3-1f2f999fafecd825/lib-blake3.json — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blake3-b5b78b7e90a6f028/run-build-script-build-script-build — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blake3-b5b78b7e90a6f028/run-build-script-build-script-build.json — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blink-cmp-fuzzy-098c33d4d680157b/run-build-script-build-script-build — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blink-cmp-fuzzy-098c33d4d680157b/run-build-script-build-script-build.json — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blink-cmp-fuzzy-ac94e5c3a02bd693/dep-lib-blink_cmp_fuzzy — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blink-cmp-fuzzy-ac94e5c3a02bd693/lib-blink_cmp_fuzzy — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/.fingerprint/blink-cmp-fuzzy-ac94e5c3a02bd693/lib-blink_cmp_fuzzy.json — a cargo fingerprint of the build directory it was compiled in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blake3-3b6d0a112b13bfff/build_script_build-3b6d0a112b13bfff.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blake3-b5b78b7e90a6f028/out/flag_check — build script output holding the absolute OUT_DIR
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blake3-b5b78b7e90a6f028/output — build script output holding the absolute OUT_DIR
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blake3-b5b78b7e90a6f028/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blink-cmp-fuzzy-098c33d4d680157b/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/blink-cmp-fuzzy-e46cc3730413314c/build_script_build-e46cc3730413314c.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/libc-6fa6fbffcbb2673c/build_script_build-6fa6fbffcbb2673c.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/libc-c4cf5be2684e47a4/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/mlua-sys-102aaf3d4cf7c77f/build_script_main-102aaf3d4cf7c77f.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/mlua-sys-16d68334c9e642a2/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/num-traits-98204784dcee2f3d/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/num-traits-d467cc14c98ef8d9/build_script_build-d467cc14c98ef8d9.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/parking_lot_core-22b4a41c1db742c5/build_script_build-22b4a41c1db742c5.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/parking_lot_core-5a371312adaa35dc/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/proc-macro2-aad710270a7b8c86/build_script_build-aad710270a7b8c86.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/proc-macro2-f0a04776c908bc4c/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/quote-4a21970f147ae505/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/quote-d13d4efb7b0d9c85/build_script_build-d13d4efb7b0d9c85.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/rustversion-18abf732daae9783/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/rustversion-9693328020122579/build_script_build-9693328020122579.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/thiserror-a326a092c8b21c47/build_script_build-a326a092c8b21c47.d — build script binary compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/build/thiserror-c53af9dc745dd6d5/root-output — names the build script OUT_DIR by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/aho_corasick-f2e130ec74d8d426.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/arrayref-5d3f1ba2636bf9fb.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/arrayvec-677491c1743af723.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/autocfg-c82b11f55baf73f7.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/bincode-0ea322a00270ed1a.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/bincode_derive-90847553a783dfd1.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/bitflags-e62c6271cb790275.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/blake3-1f2f999fafecd825.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/blink_cmp_fuzzy.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/bstr-c1c80a8e4f0810d7.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/cc-a537f2ce7d2b0453.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/cfg_if-6e0ecdb4d125338d.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/cfg_if-a872611b5af87e5f.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/constant_time_eq-ccaa00ccc95fb5c2.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/cpufeatures-a11f79b04efed6b2.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/either-9727e5e72302bb7d.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/find_msvc_tools-aa8a0743e1055657.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/frizbee-973bcdd0ec4e7e6a.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/itertools-c0a13061c8028d2a.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/libc-d0ead66bc5a8e583.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/libmlua-3641479db9121d23.rlib — compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/libmlua-3641479db9121d23.rmeta — compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/librustversion-e917465e97b8ad2f.so — compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/libthiserror-8f26187722778204.rlib — compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/libthiserror-8f26187722778204.rmeta — compiled with the build directory baked in
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/lock_api-3c7093f7b8aaa41d.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/memchr-7911b2e61edc4f46.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/mlua-3641479db9121d23.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/mlua_derive-fd69faf731a09079.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/mlua_sys-5d4005bc5e1c73a9.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/num_traits-4672a336e6630441.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/parking_lot-0abe6b1bc6dadb69.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/parking_lot_core-f201d0c3aa027577.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/pkg_config-9f4a84ed3298985f.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/proc_macro2-166363e624291633.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/quote-013f8352788be375.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/raw_cpuid-51e7d3779725c74a.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/regex-257f438d0ddbbc7d.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/regex_automata-19817d6161423758.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/regex_syntax-024e23d38d98d5c8.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/rustc_hash-d27495b0cc231a13.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/rustversion-e917465e97b8ad2f.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/scopeguard-f037670ae4836dd5.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/shlex-d0d7e0fad7fb53f4.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/smallvec-2cb15ffa588dceec.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/syn-dd66d209af4b3ad0.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/thiserror-8f26187722778204.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/thiserror_impl-fdd1ab353905111a.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/unicode_ident-efbd61da364f85c7.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/unty-aa8128cb7f236bf1.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/deps/virtue-ee3fd2afff0bd8a2.d — dep-info listing every source by absolute path
-content usr/share/shedos/nvim/plugins/blink.cmp/target/release/libblink_cmp_fuzzy.d — dep-info listing every source by absolute path
+# They are also not the packaging being wrong twice. They are the packaging shipping a
+# build directory it has no reason to ship: roughly 40MB of cargo scratch inside the
+# package. Both the differences and the 40MB disappear the moment the build stages into a
+# fixed directory, or drops target/ from the package and keeps the one library it needs.
+# That is still open work, and it is why the finding is written down here rather than
+# left in a list of allowlisted paths nobody reads twice.
