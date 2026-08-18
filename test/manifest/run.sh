@@ -677,6 +677,49 @@ check 'a draft with no version given is not finished' test "$?" -eq 1
 check 'and it says which field it left' \
     grep -q '^# version: the release names itself' "$WORK/last.out"
 
+section 'case 12b — a channel read that does not answer is tried again'
+# Resolving the whole manifest is fifty-odd reads of one host and the committed
+# manifest is checked on every push, so one 503 among them must not be a red
+# release check. A stub curl is what makes that checkable on demand.
+CURL_STUB=$WORK/bin
+mkdir -p "$CURL_STUB"
+cat > "$CURL_STUB/curl" <<'STUBEOF'
+#!/usr/bin/env bash
+n=$(cat "$CURL_STUB_COUNT" 2> /dev/null || echo 0)
+n=$((n + 1))
+printf '%s' "$n" > "$CURL_STUB_COUNT"
+for ((i = 1; i <= $#; i++)); do
+    [[ ${!i} == -o ]] || continue
+    j=$((i + 1))
+    printf 'the body
+' > "${!j}"
+done
+read -r -a codes <<< "$CURL_STUB_CODES"
+printf '%s' "${codes[$((n - 1))]:-${codes[-1]}}"
+STUBEOF
+chmod +x "$CURL_STUB/curl"
+
+fetch_over_stub() {
+    (
+        export CURL_STUB_COUNT=$WORK/curl.count CURL_STUB_CODES=$1
+        export SHEDOS_FETCH_PAUSE=0
+        : > "$WORK/curl.count"
+        PATH=$CURL_STUB:$PATH
+        SHEDOS_MANIFEST_CHANNEL=https://example.invalid \
+            bash -c 'source tools/lib-manifest.sh; channel_fetch "$CHANNEL_URL" thing "$1"' \
+            _ "$WORK/fetched"
+    )
+}
+
+fetch_over_stub '503 200'
+check 'a read that answered 503 and then 200 succeeds' test "$?" -eq 0
+fetch_over_stub '404'
+check 'a 404 fails' test "$?" -ne 0
+check 'and is not retried, because it is an answer' test "$(cat "$WORK/curl.count")" = 1
+fetch_over_stub '503'
+check 'a host that keeps failing still fails' test "$?" -ne 0
+check 'after the attempts it is allowed' test "$(cat "$WORK/curl.count")" = 3
+
 # --- case 13: the manifest as it stands -------------------------------------
 
 section 'case 13 — the committed manifest resolves against the live channel'

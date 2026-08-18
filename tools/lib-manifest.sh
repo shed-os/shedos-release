@@ -27,12 +27,28 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-carve-maps.sh"
 # nothing has answered before.
 channel_fetch() {
     local base=$1 name=$2 out=$3
-    if [[ $base == http://* || $base == https://* ]]; then
-        curl -fsSL --max-time 300 -A "$USER_AGENT" -H 'Cache-Control: no-cache' \
-            -o "$out" "$base/$name?cb=$(date +%s)-$RANDOM"
-    else
+    local attempts=${SHEDOS_FETCH_ATTEMPTS:-3} pause=${SHEDOS_FETCH_PAUSE:-2}
+    local attempt=1 code=''
+    if [[ $base != http://* && $base != https://* ]]; then
         cp -- "$base/$name" "$out"
+        return
     fi
+    # Resolving a whole manifest is fifty-odd reads of one host, so a single
+    # 429 or 503 among them would fail a release check with nothing wrong with
+    # it. A 404 is not retried: it is a real answer, and the origin records are
+    # asked for speculatively.
+    while :; do
+        code=$(curl -sSL --max-time 300 -A "$USER_AGENT" -H 'Cache-Control: no-cache' \
+            -o "$out" -w '%{http_code}' "$base/$name?cb=$(date +%s)-$RANDOM") || code=''
+        if [[ $code == 2?? ]]; then
+            return 0
+        elif [[ $code == 404 ]] || (( attempt >= attempts )); then
+            rm -f "$out"
+            return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep "$pause"
+    done
 }
 
 # The database, its signature and the keyring the channel publishes, read into
