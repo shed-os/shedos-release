@@ -396,20 +396,36 @@ PIN_FILE=$ROOT/tools/expected-diffs/shedos-ui.txt
 PIN_COMMIT=$(sed -n 's/.*at monolith commit \([0-9a-f]\{8\}\).*/\1/p' "$PIN_FILE" | head -1)
 PIN_SHA=$(sed -n "s|^#[[:space:]]*content usr/bin/$PIN_PACKAGE \([0-9a-f]\{64\}\)\.\..*|\1|p" \
     "$PIN_FILE")
+PIN_RELEASE=$(sed -n "s|^#[[:space:]]*$PIN_PACKAGE \([0-9][0-9.]*-[0-9][0-9]*\)$|\1|p" \
+    "$PIN_FILE")
 CANDIDATE_URL=https://repo.shedos.org/staging/test/x86_64
 
 # Read out of the repository rather than out of the environment, so losing it
 # is a failure and never a skip: it is the only acceptance proof there is.
-check 'the expectation file still names the commit and the sha it was pinned against' \
-    test -n "$PIN_COMMIT" -a -n "$PIN_SHA"
+check 'the expectation file still names the commit the sha and the release' \
+    test -n "$PIN_COMMIT" -a -n "$PIN_SHA" -a -n "$PIN_RELEASE"
 
 skip_reason=
-[[ -n $PIN_COMMIT && -n $PIN_SHA ]] \
+[[ -n $PIN_COMMIT && -n $PIN_SHA && -n $PIN_RELEASE ]] \
     || skip_reason="$PIN_FILE no longer names them"
 [[ -n $skip_reason || -n ${SHEDOS_REFERENCE_MONOLITH:-} ]] \
     || skip_reason='SHEDOS_REFERENCE_MONOLITH does not name a monolith clone'
 [[ -n $skip_reason ]] || command -v docker > /dev/null \
     || skip_reason='there is no docker on this machine'
+
+# A pin is written against one build of one release, and the reference is built
+# from the candidate's own recorded environment. Compare a later release against
+# this sha and the run reddens for a toolchain that moved underneath an unchanged
+# tag rather than for anything the carve did, which is the most misleading red
+# there is. So the release is part of what the file has to name, and a channel
+# that has moved past it is said out loud instead.
+file=$PIN_PACKAGE-$PIN_RELEASE-x86_64.pkg.tar.zst
+if [[ -z $skip_reason ]]; then
+    served=$(curl -sSL -A 'shedos-release (+https://shedos.org)' \
+        "$CANDIDATE_URL/shedos.db.tar.gz" | bsdtar -xOf - --include '*/desc' \
+        | grep -xE "$PIN_PACKAGE-[^-]+-[^-]+-x86_64\.pkg\.tar\.zst" | head -1)
+    [[ $served == "$file" ]] || skip_reason="the channel serves ${served:-nothing}, past the $file the pin was written for"
+fi
 
 if [[ -n $skip_reason ]]; then
     printf '  skip %s\n' "the end-to-end reference build — $skip_reason"
@@ -417,10 +433,10 @@ else
     version=$(git -C "$SHEDOS_REFERENCE_MONOLITH" show \
         "$PIN_COMMIT:packaging/$PIN_PACKAGE/PKGBUILD" \
         | sed -n 's/^pkgver=//p' | tr -d "\"'")
+    check 'the pinned release is the version the monolith had at that commit' \
+        test "${PIN_RELEASE%-*}" = "$version"
+
     candidate=$WORK/$PIN_PACKAGE.pkg.tar.zst
-    file=$(curl -sSL -A 'shedos-release (+https://shedos.org)' \
-        "$CANDIDATE_URL/shedos.db.tar.gz" | bsdtar -xOf - --include '*/desc' \
-        | grep -xE "$PIN_PACKAGE-$version-[^-]+-x86_64\.pkg\.tar\.zst" | head -1)
     curl -fsSL -A 'shedos-release (+https://shedos.org)' -o "$candidate" \
         "$CANDIDATE_URL/$file"
     check 'the channel still serves the candidate the pin was written for' test -s "$candidate"

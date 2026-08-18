@@ -163,12 +163,18 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 # reference-side flag makes these two builds the same bytes.
 #
 # The five pins, verbatim as they were written, each reference built from the package's
-# own directory at monolith commit 03404a92 against the release the channel then served:
+# own directory at monolith commit 03404a92 against the release named above it, which is
+# what the channel served at the time:
 #
+#   shedos-greeter 2026.08.09-2
 #   content usr/bin/shedos-greeter 7296a980feca6658147f4851ea1a2aba82606896e0889f30c2ac0a576352099b..50643cdf5020a626633cd14268f7d53fd22f94fc4d5ac0724997fc36d0b629fa — the workspace records its members' source paths with the member directory in front
+#   shedos-power 2026.08.09-2
 #   content usr/bin/shedos-power 5ff4e961342e0eac5852c932adefa11a9d61ce8d527b7831c867436d110d568b..3488486e0cc0e24e75ee03b7f3a4b8dcf2eb146efa88b0da5160e6dfcdf655b3 — the workspace records its members' source paths with the member directory in front
+#   shedos-switcher 2026.08.09-2
 #   content usr/bin/shedos-switcher 9642f695440d311c148eb3f8fc6b2d0e3c409347431fc20ac15d7f99f4e0fc39..bad43aeff92ec72b90ee233cbba138e9a42365c197d7e3308dfc1734a63b26cb — the workspace records its members' source paths with the member directory in front
+#   shedos-tour 2026.08.09-2
 #   content usr/bin/shedos-tour 4538989f982285c432ccc641b664cc9e2ea893f3bf82b39f832a5e3e33830e71..0a8d06e76db5dddc2ceb21743e3c99e8a3d502e669e7579478c7890b2019824f — the workspace records its members' source paths with the member directory in front
+#   shedos-screensaver 2026.08.09-3
 #   content usr/bin/shedos-screensaver 63efea9f98ff5df6421693684468fdc82caea123ce2f34c819fe3a998e7d4111..1ddc44df474413366237e83dd666586229bb4876c902eb9055a045e4036f0ca4 — the workspace records its members' source paths with the member directory in front
 #
 # Both halves reproduced when they were written: two runs of each recipe produced the same
