@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# What a carve map says about a package, for the two things that ask: the
-# version check and the reference build. Sourced, never run.
+# What a carve map says about a package, for the things that ask: the version
+# check, the reference build, the carve itself and the walk that measures its
+# result. Sourced, never run.
 
 MONOLITH_RAW=https://raw.githubusercontent.com/Theshedman/shedos/main
 CARVED_RAW=https://raw.githubusercontent.com/shed-os
@@ -16,6 +17,115 @@ pkgbuild_field() {
     value=$(sed -n "s/^$2=//p" "$1" | head -1 | tr -d "\"'")
     [[ -n $value ]] || return 1
     printf '%s\n' "$value"
+}
+
+# What a maps file selects, read once for every tool that has to agree about
+# it. MAP_PAIRS gets one "<src>\t<dst>" per selecting directive, MAP_EXCEPTS
+# the paths left behind, MAP_ARGS the filter-repo arguments the pairs stand
+# for, and MAP_NEW the name of a package the monolith does not build. A
+# malformed file sets MAP_ERROR and returns 2 instead of exiting, so each
+# caller keeps its own voice.
+#
+# The `|| [[ -n $kind ]]` picks up a last line with no newline after it.
+# Without it that directive vanishes, and a maps file down to no directives at
+# all selects the entire monolith instead of failing.
+read_map() {
+    local maps=$1 kind rest lineno=0 old new dir
+    MAP_PAIRS=() MAP_EXCEPTS=() MAP_ARGS=()
+    MAP_NEW='' MAP_ERROR=''
+
+    while read -r kind rest || [[ -n $kind ]]; do
+        lineno=$((lineno + 1))
+        case $kind in
+            '' | '#'*) continue ;;
+            path | rename | flatten | except | new-package) ;;
+            *) MAP_ERROR="unknown directive '$kind' on line $lineno of $maps"; return 2 ;;
+        esac
+        # An empty value reaches filter-repo as --path '', which matches every
+        # path in the monolith.
+        [[ -n $rest ]] || { MAP_ERROR="$kind on line $lineno of $maps has no value"; return 2; }
+
+        case $kind in
+            path)
+                MAP_ARGS+=(--path "$rest")
+                MAP_PAIRS+=("$rest"$'\t'"$rest")
+                ;;
+            rename)
+                [[ ${rest//[^:]/} == ':' ]] || {
+                    MAP_ERROR="rename on line $lineno of $maps needs exactly one colon: '$rest'"
+                    return 2
+                }
+                old=${rest%%:*}
+                new=${rest#*:}
+                [[ -n $old ]] || {
+                    MAP_ERROR="rename on line $lineno of $maps has no source: '$rest'"
+                    return 2
+                }
+                # --path-rename on its own is not a filter: it renames what it
+                # matches and keeps everything else, so the whole monolith comes
+                # along. Naming the source as a path too is what makes it a
+                # filter, and it is also what keeps the commits from before the
+                # move — matching only the destination silently starts the
+                # history at the rename.
+                MAP_ARGS+=(--path "$old" --path-rename "$old:$new")
+                MAP_PAIRS+=("$old"$'\t'"$new")
+                ;;
+            flatten)
+                dir=${rest%/}
+                MAP_ARGS+=(--path "$dir/" --path-rename "$dir/:")
+                MAP_PAIRS+=("$dir/"$'\t')
+                ;;
+            except)
+                MAP_EXCEPTS+=("${rest%/}")
+                ;;
+            # Nothing to select: it is addressed to the version check.
+            new-package) MAP_NEW=$rest ;;
+        esac
+    done < "$maps"
+}
+
+# Every path on stdin that <src> matches, printed as "<path>\t<where it lands
+# once <dst> has been applied>". filter-repo matches whole path components
+# rather than raw string prefixes — `path old` takes `old/` and a file named
+# exactly `old`, and leaves `oldies/` alone — so this does too, and every
+# expectation built on it stays exactly as tight as the filter it describes.
+map_move_from() {
+    local src=${1%/} dst=${2%/} line rest
+    while IFS= read -r line; do
+        if [[ $line == "$src" ]]; then rest=
+        elif [[ $line == "$src"/* ]]; then rest=${line#"$src"/}
+        else continue
+        fi
+        if [[ -z $rest ]]; then printf '%s\t%s\n' "$line" "$dst"
+        elif [[ -z $dst ]]; then printf '%s\t%s\n' "$line" "$rest"
+        else printf '%s\t%s/%s\n' "$line" "$dst" "$rest"
+        fi
+    done
+}
+
+# The same match for the callers that only want the destination.
+map_move() { map_move_from "$@" | cut -f2; }
+
+# Where each of the sorted paths in $1 lands, as "<path>\t<destination>", given
+# the pairs read_map last read. filter-repo renames what survives the filter
+# and the first --path-rename that matches a path is the one that moves it, so
+# a `path` beside a `rename` of the same directory selects the files while the
+# rename alone says where they go. A path no rename matches stays where it is.
+map_place() {
+    local remaining=$1 pair src dst matched
+    for pair in "${MAP_PAIRS[@]}"; do
+        src=${pair%%$'\t'*}
+        dst=${pair#*$'\t'}
+        [[ $src != "$dst" ]] || continue
+        [[ -n $remaining ]] || return 0
+        matched=$(map_move_from "$src" "$dst" <<<"$remaining")
+        [[ -n $matched ]] || continue
+        printf '%s\n' "$matched"
+        remaining=$(LC_ALL=C comm -23 <(printf '%s\n' "$remaining") \
+            <(cut -f1 <<<"$matched" | LC_ALL=C sort -u))
+    done
+    [[ -n $remaining ]] || return 0
+    awk -F'\n' '{ printf "%s\t%s\n", $0, $0 }' <<<"$remaining"
 }
 
 rename_dest() {

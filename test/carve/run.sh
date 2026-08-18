@@ -281,18 +281,22 @@ section 'the pre-push check catches a subtraction that did not happen'
 # The stray check measures the carve against what the maps file selected, and
 # an excepted path is selected by the directive it is being subtracted from —
 # so it cannot see this one. Break the subtraction and the carve must still die.
-BLIND=$WORK/carve-blind.sh
+# The library comes along with the copy, because carve.sh reads the maps file
+# through it and a lone script would find nothing to read it with.
+BLIND=$WORK/blind-tools
+mkdir -p "$BLIND"
+cp "$CARVE" "$ROOT/tools/lib-carve-maps.sh" "$BLIND/"
 # shellcheck disable=SC2016  # matching carve.sh's text, not expanding it
-sed 's|filter-repo --invert-paths "${excepts\[@\]}"|filter-repo --version >/dev/null|' \
-    "$CARVE" > "$BLIND"
+sed -i 's|filter-repo --invert-paths "${excepts\[@\]}"|filter-repo --version >/dev/null|' \
+    "$BLIND/carve.sh"
 # shellcheck disable=SC2016
-if grep -q -- '--invert-paths "${excepts\[@\]}"' "$BLIND"; then
+if grep -q -- '--invert-paths "${excepts\[@\]}"' "$BLIND/carve.sh"; then
     bad 'fault injection did not take — the harness is not testing what it thinks'
 else
     ok 'fault injection took'
     rm -rf "$(bare_of blind)"
     git init -q --bare "$(bare_of blind)"
-    SHEDOS_CARVE_REMOTE=$(bare_of blind) bash "$BLIND" "$MONO" blind \
+    SHEDOS_CARVE_REMOTE=$(bare_of blind) bash "$BLIND/carve.sh" "$MONO" blind \
         "$(maps blind $'flatten packaging/cage\nexcept packaging/cage/0001.patch\n')" \
         > "$WORK/blind.out" 2>&1
     blind_rc=$?
@@ -308,19 +312,22 @@ section 'the pre-push check catches a carve that overreaches'
 
 # Nothing a maps file can say gets past the argument builder, so the builder
 # is broken here instead: a rename that renames without also filtering, which
-# keeps the entire monolith.
-BROKEN=$WORK/carve-broken.sh
-# shellcheck disable=SC2016  # matching carve.sh's text, not expanding it
-sed 's|args+=(--path "$old" --path-rename "$old:$new")|args+=(--path-rename "$old:$new")|' \
-    "$CARVE" > "$BROKEN"
+# keeps the entire monolith. It lives in the library now, so that is where the
+# injection goes.
+BROKEN=$WORK/broken-tools
+mkdir -p "$BROKEN"
+cp "$CARVE" "$ROOT/tools/lib-carve-maps.sh" "$BROKEN/"
+# shellcheck disable=SC2016  # matching the library's text, not expanding it
+sed -i 's|MAP_ARGS+=(--path "$old" --path-rename "$old:$new")|MAP_ARGS+=(--path-rename "$old:$new")|' \
+    "$BROKEN/lib-carve-maps.sh"
 # shellcheck disable=SC2016
-if grep -q -- '--path "$old"' "$BROKEN"; then
+if grep -q -- '--path "$old"' "$BROKEN/lib-carve-maps.sh"; then
     bad 'fault injection did not take — the harness is not testing what it thinks'
 else
     ok 'fault injection took'
     rm -rf "$(bare_of overreach)"
     git init -q --bare "$(bare_of overreach)"
-    SHEDOS_CARVE_REMOTE=$(bare_of overreach) bash "$BROKEN" "$MONO" overreach \
+    SHEDOS_CARVE_REMOTE=$(bare_of overreach) bash "$BROKEN/carve.sh" "$MONO" overreach \
         "$(maps overreach $'rename old:new\n')" > "$WORK/overreach.out" 2>&1
     broken_rc=$?
     check 'the broken carve is refused' [ "$broken_rc" -ne 0 ]

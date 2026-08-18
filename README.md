@@ -191,22 +191,79 @@ because taking it from the channel compares the carved repo against itself.
 `pkgrel` is patched to the candidate's, because the carve republishes past the
 monolith without a release behind it and `pkgrel` is a `.PKGINFO` field.
 
+## Is the enumeration still true?
+
+`tools/compare-package.sh` answers for a built package. For a package that was
+split rather than moved there is no monolith package to build, and the question
+becomes one about trees: does the carved repository still hold what the monolith
+holds, and is everything that differs written down?
+`tools/verify-enumeration.sh` answers that, and every enumeration acceptance
+from here on cites it.
+
+```
+tools/verify-enumeration.sh repo tools/carve-maps/<name>.paths \
+    /path/to/shedos <commit> /path/to/<carved-repo> <ref> \
+    tools/expected-diffs/<name>.txt
+```
+
+It reads the maps file, maps every carved path back to the monolith path it was
+taken from, and sorts the tree three ways: identical, transformed, and holding
+no monolith counterpart. The expected-diffs file is optional — without one it
+classifies and stops, which is the only thing to do for a repository whose
+enumeration describes a built package. With one it reconciles the transformed
+set in both directions and re-derives every pin, on the same terms the package
+comparison uses: an entry that has stopped matching fails the run.
+
+The pins here are git blobs rather than installed bytes, so a file's entry
+survives a rebuild and stops matching only when the file itself moves. An
+expectation file pinning sha256s is refused rather than reconciled — the two
+questions cannot be answered out of one file.
+
+The monolith is read with `git ls-tree` and never checked out, against the tree
+at the named commit rather than the history. That is one place this differs
+from `carve.sh` on purpose: an `except` naming a path only the history carries
+is noted here and refused there, because the carve is what reads the history.
+
+### The split, held together
+
+A walk of one repository cannot answer the question a split raises. When files
+leave a package for a sibling, each side ends up holding exactly what its own
+map asked for — and a file that left and arrived nowhere looks the same from
+either side as a file that arrived safely.
+
+```
+tools/verify-enumeration.sh set tools/carve-maps \
+    /path/to/shedos <commit> packaging/<the directory that split> \
+    <name>=/path/to/<repo> ...
+```
+
+Every file under that directory has to be claimed by exactly one map and held
+by the repository that map belongs to. A file no map claims is a file the split
+deleted in silence. The members are derived from the maps rather than from the
+command line, so leaving one repository out is refused by name instead of
+turning its share of the split into a pile of unclaimed files.
+
 ## Running the tests
 
 ```
 bash test/publisher/run.sh
 bash test/carve/run.sh
 bash test/compare/run.sh
+bash test/enumeration/run.sh
 bash test/trust-anchor/run.sh
 bash test/version-parity/run.sh
 bash test/build-reference/run.sh
 ```
 
-The first three take no root, no network and no R2. The bucket is a temporary
+The first four take no root, no network and no R2. The bucket is a temporary
 directory that rclone reads with its local backend, the signing key is
 generated and thrown away with it, and every package involved is built with
-makepkg from the fixtures beside each suite. The trust anchor and version
-checks read what they compare over HTTP. The reference suite plans real builds
+makepkg from the fixtures beside each suite. The enumeration suite builds its
+monolith and the repositories a carve of it would produce with git in the same
+temporary directory; the three cases at its end re-derive the figures the
+carves were accepted on, which needs clones of the monolith and two carved
+repositories, and it names whichever is missing when it skips. The trust anchor
+and version checks read what they compare over HTTP. The reference suite plans real builds
 against fixtures of its own and stops short of the container; its end-to-end
 case rebuilds a published package and checks it against the sha its expectation
 pins, which needs docker and a monolith clone, and it names whichever is

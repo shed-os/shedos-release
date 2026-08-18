@@ -24,6 +24,10 @@
 # the remote where the only way out is a force-push.
 set -euo pipefail
 
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=tools/lib-carve-maps.sh
+source "$HERE/lib-carve-maps.sh"
+
 die() { printf 'carve: %s\n' "$*" >&2; exit 1; }
 
 (( $# == 3 )) || die 'usage: carve.sh <monolith> <target-repo> <maps-file>'
@@ -35,79 +39,16 @@ remote=${SHEDOS_CARVE_REMOTE:-git@github.com:shed-os/$target.git}
 # Each directive becomes filter-repo arguments plus one src->dst prefix pair.
 # The pairs are a model of what filter-repo was asked to do, and the check
 # before the push measures the real result against them.
-args=()
-pairs=()
+read_map "$maps" || die "$MAP_ERROR"
+args=("${MAP_ARGS[@]}")
+pairs=("${MAP_PAIRS[@]}")
+excepted=("${MAP_EXCEPTS[@]}")
 excepts=()
-excepted=()
-lineno=0
-
-# The `|| [[ -n $kind ]]` picks up a last line with no newline after it.
-# Without it that directive vanishes, and a maps file down to no directives at
-# all carves the entire monolith instead of failing.
-while read -r kind rest || [[ -n $kind ]]; do
-    lineno=$((lineno + 1))
-    case $kind in
-        '' | '#'*) continue ;;
-        path | rename | flatten | except | new-package) ;;
-        *) die "unknown directive '$kind' on line $lineno of $maps" ;;
-    esac
-    # An empty value reaches filter-repo as --path '', which matches every
-    # path in the monolith.
-    [[ -n $rest ]] || die "$kind on line $lineno of $maps has no value"
-
-    case $kind in
-        path)
-            args+=(--path "$rest")
-            pairs+=("$rest"$'\t'"$rest")
-            ;;
-        rename)
-            [[ ${rest//[^:]/} == ':' ]] \
-                || die "rename on line $lineno of $maps needs exactly one colon: '$rest'"
-            old=${rest%%:*}
-            new=${rest#*:}
-            [[ -n $old ]] || die "rename on line $lineno of $maps has no source: '$rest'"
-            # --path-rename on its own is not a filter: it renames what it
-            # matches and keeps everything else, so the whole monolith comes
-            # along. Naming the source as a path too is what makes it a
-            # filter, and it is also what keeps the commits from before the
-            # move — matching only the destination silently starts the
-            # history at the rename.
-            args+=(--path "$old" --path-rename "$old:$new")
-            pairs+=("$old"$'\t'"$new")
-            ;;
-        flatten)
-            dir=${rest%/}
-            args+=(--path "$dir/" --path-rename "$dir/:")
-            pairs+=("$dir/"$'\t')
-            ;;
-        except)
-            excepts+=(--path "${rest%/}")
-            excepted+=("${rest%/}")
-            ;;
-        # Nothing to select: it is addressed to the version check.
-        new-package) ;;
-    esac
-done < "$maps"
+for path in "${excepted[@]}"; do
+    excepts+=(--path "$path")
+done
 
 (( ${#args[@]} > 0 )) || die "$maps selects nothing"
-
-# Where <src> lands once <dst> has been applied, for every monolith path on
-# stdin. filter-repo matches whole path components rather than raw string
-# prefixes — `path old` leaves `oldies/` alone — so this does too, and the
-# expectation stays exactly as tight as the filter it is checking.
-move() {
-    local src=${1%/} dst=${2%/} line rest
-    while IFS= read -r line; do
-        if [[ $line == "$src" ]]; then rest=
-        elif [[ $line == "$src"/* ]]; then rest=${line#"$src"/}
-        else continue
-        fi
-        if [[ -z $rest ]]; then printf '%s\n' "$dst"
-        elif [[ -z $dst ]]; then printf '%s\n' "$rest"
-        else printf '%s/%s\n' "$dst" "$rest"
-        fi
-    done
-}
 
 paths_of() { git -C "$1" log --format= --name-only | sed '/^$/d' | LC_ALL=C sort -u; }
 
@@ -134,7 +75,7 @@ mono_paths=$(paths_of "$mono")
 # a directive may have named.
 excepted_files=()
 for path in "${excepted[@]}"; do
-    mapfile -t hits < <(move "$path" "$path" <<<"$mono_paths")
+    mapfile -t hits < <(map_move "$path" "$path" <<<"$mono_paths")
     (( ${#hits[@]} > 0 )) \
         || die "$maps excepts $path, which the monolith does not have"
     excepted_files+=("${hits[@]}")
@@ -167,7 +108,7 @@ commits=$(git -C "$work/src" rev-list --count HEAD 2>/dev/null) || commits=0
 
 expected=$(
     for pair in "${pairs[@]}"; do
-        move "${pair%%$'\t'*}" "${pair#*$'\t'}" <<<"$mono_paths"
+        map_move "${pair%%$'\t'*}" "${pair#*$'\t'}" <<<"$mono_paths"
     done | LC_ALL=C sort -u
 )
 actual=$(paths_of "$work/src")
@@ -186,7 +127,7 @@ fi
 kept=$(
     for path in "${excepted_files[@]}"; do
         for pair in "${pairs[@]}"; do
-            move "${pair%%$'\t'*}" "${pair#*$'\t'}" <<<"$path"
+            map_move "${pair%%$'\t'*}" "${pair#*$'\t'}" <<<"$path"
         done
     done | LC_ALL=C sort -u | LC_ALL=C comm -12 - <(printf '%s\n' "$actual")
 )
