@@ -1,20 +1,61 @@
-# What may differ between the monolith's shedos-branding and the one
-# shed-os/shedos-branding builds. Nothing here is a free pass: each path was opened and
-# read before it was written down, and an entry that stops matching fails the run.
+# What separates shed-os/shedos-branding from the monolith it came out of. Nothing here
+# is a free pass: each path was opened and read before it was written down, and an entry
+# that stops matching fails the run.
+#
+# This is a tree-form enumeration: it governs the source, path by path, against the
+# monolith tree the package came from. There is nothing to enumerate — the two trees are
+# the same bytes — and that is the whole content of this file. The two builds' bytes are
+# a separate question, asked on demand with tools/build-reference.sh; the answer this
+# repository got is kept at the end.
 
-# Reference: built from packaging/shedos-branding at monolith commit 02b34be9, which was
-# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
-# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
-# PKGBUILD unmodified and matched the published 2026.07.03-1, so nothing was patched to
-# make the two agree. Candidate: the artifact the staging database records.
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-branding — the wallpapers, the plymouth theme, the wordmarks,
+# the ASCII art and the font, with a PKGBUILD that copies them into place. Carve map:
+# tools/carve-maps/shedos-branding.paths, one directive, `flatten packaging/shedos-
+# branding`, so the packaging directory is the repository root.
+#
+# This repository was imported rather than carved: the package is mostly art that has
+# been redrawn many times and nobody needed that history in every clone, so no rewrite
+# ever ran against the monolith for it. The import took the monolith's tracked tree
+# unmodified — packaging/shedos-branding as it stood at 378dec04 — and the comparison
+# below is against 8ce1763e, which is where the monolith stands now.
 
-# Nothing differs, and on this package there is nothing that could. It is arch=any and
+# --- (b) nothing is transformed ----------------------------------------------------
+#
+# No package file differs, the PKGBUILD included: this package has never been rebuilt
+# past the monolith's release, so not even pkgrel has moved. A `content` line appearing
+# here later is a real difference and the answer is to converge the two trees, not to
+# write the line.
+
+# --- (b2) the 3 files with no monolith counterpart ---------------------------------
+#
+# Repository scaffolding the import did not bring and the package does not ship:
+# README.md, .gitignore and .github/workflows/ci.yml, which calls the shared pipeline in
+# shed-os/shedos-ci.
+
+# --- (c) the whole tree is byte-identical -------------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 45 identical, 0 transformed
+#   test tree:    the monolith has no out-of-tree suite for branding
+#   no monolith counterpart: 3                                        (see (b2))
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from
+# packaging/shedos-branding at monolith commit 02b34be9, which was origin/main at the
+# time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and OPTIONS the pipeline
+# writes beside its own config. Its pkgver-pkgrel came from that PKGBUILD unmodified and
+# matched the published 2026.07.03-1, so nothing was patched to make the two agree.
+# Candidate: the artifact the staging database recorded.
+#
+# Nothing differed, and on this package there is nothing that could. It is arch=any and
 # its package() copies images, a font, two scripts and a text file out of tree/ — it
 # compiles nothing, downloads nothing and generates nothing, so a second build has no
-# room to move. This repository was imported rather than carved, and the import took the
-# monolith's tracked tree unmodified, so both sides build the same bytes from the same
-# PKGBUILD.
+# room to move, and both sides build the same bytes from the same PKGBUILD.
 #
-# A content finding here is therefore not a build difference to be forgiven. It means the
-# two trees have drifted apart, and the answer is to converge them rather than to add a
-# line to this file.
+# Because nothing is expected either way, this file is still an answer the package
+# comparison can read: handed to tools/compare-package.sh it allows nothing at all, which
+# is the right allowlist for a package whose two builds have to be identical.
