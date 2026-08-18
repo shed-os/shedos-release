@@ -56,6 +56,18 @@ build_commit=$(jq -r '.sha // empty' "$payload")
 build_run=$(jq -r '.run_id // empty' "$payload")
 [[ $build_run =~ ^[0-9]+$ ]] || die "'$build_run' is not a run id"
 
+# The tree each package was built from, which is not the commit above whenever
+# the pipeline bumped pkgrel: that bump is a commit of its own and the build
+# happens on top of it. Both get recorded — the run's commit is how a build is
+# looked up, the build's is what a release pins. A request that carries none is
+# still taken; it is a pipeline that has not learned to send them yet.
+build_trees=$(jq -r '.packages[] | "\(.file) \(.build_sha // "")"' "$payload") \
+    || die 'payload has no usable package list'
+while read -r file tree; do
+    [[ -n $tree ]] || continue
+    [[ $tree =~ ^[0-9a-f]{40}$ ]] || die "'$tree' is not a commit for $file"
+done <<<"$build_trees"
+
 entries=$(jq -r '.packages[] | "\(.file) \(.sha256)"' "$payload") \
     || die 'payload has no usable package list'
 [[ -n $entries ]] || die 'payload lists no packages'
@@ -238,7 +250,7 @@ for file in "${files[@]}"; do
         -u "$GPG_FP" --output "$work/$file.sig" "$work/$file"
 done
 
-# --- 9. fold the new packages into the channel db ---------------------------
+# --- 11. fold the new packages into the channel db --------------------------
 
 (
     cd "$work"
@@ -254,19 +266,21 @@ done
     cp shedos.files.tar.gz.sig shedos.files.sig
 )
 
-# --- 10. upload, packages first ----------------------------------------------
+# --- 12. upload, packages first ---------------------------------------------
 
 # A box that pulls the db mid-publish must never see an entry whose file
 # isn't up yet.
 # Each record stands on its own rather than pointing at a shared one: an
 # object store has no directory to read a sibling out of, and a package that
 # outlives the request that brought it should still say where it came from.
-printf 'repo %s\nrun %s\ncommit %s\n' "$repo" "$build_run" "$build_commit" \
-    > "$work/origin"
-
 for file in "${files[@]}"; do
     channel_put "$work/$file" "$file"
     channel_put "$work/$file.sig" "$file.sig"
+    {
+        printf 'repo %s\nrun %s\ncommit %s\n' "$repo" "$build_run" "$build_commit"
+        tree=$(awk -v f="$file" '$1 == f { print $2; exit }' <<<"$build_trees")
+        [[ -z $tree ]] || printf 'build %s\n' "$tree"
+    } > "$work/origin"
     channel_put "$work/origin" "$file.origin"
 done
 channel_put_root "$keyring" shedos.gpg
@@ -276,7 +290,7 @@ for name in shedos.db.tar.gz shedos.db.tar.gz.sig \
     channel_put "$work/$name" "$name"
 done
 
-# --- 11. mirror the db as [shedostest] so stable boxes can opt into the canary ---
+# --- 13. mirror the db as [shedostest] so stable boxes can opt into the canary ---
 
 for ext in db db.sig files files.sig; do
     channel_put "$work/shedos.$ext" "shedostest.$ext"

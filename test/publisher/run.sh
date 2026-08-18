@@ -241,6 +241,32 @@ check 'and the repository it came from' \
     grep -qx 'repo shed-os/shedman' "$CHANNEL/$ALPHA_BASE.origin"
 check 'the record uploads before the db, like the package it describes' \
     ordered_before '^up .*\.origin' '^up shedos\.db'
+# The run's commit is the parent of the build whenever the pipeline bumped
+# pkgrel, so a release pinning it would name a tree carrying the pkgrel before
+# the bump. The request carries both and so does the record.
+check 'a request that names no build tree still publishes' \
+    not grep -q '^build ' "$CHANNEL/$ALPHA_BASE.origin"
+
+section 'case 1c — the tree a package was built from is recorded beside it'
+tree_dir=$(stage_artifact tree "$ALPHA")
+PAYLOAD_BUILD=2222222222222222222222222222222222222222
+jq --arg t "$PAYLOAD_BUILD" '.packages |= map(. + {build_sha: $t})' \
+    "$WORK/alpha.json" > "$WORK/withtree.json"
+run_publish "$WORK/withtree.json" "$tree_dir"
+rc=$?
+check 'publish succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'the build tree is recorded' \
+    grep -qx "build $PAYLOAD_BUILD" "$CHANNEL/$ALPHA_BASE.origin"
+check 'and the run commit is kept beside it rather than replaced' \
+    grep -qx "commit $PAYLOAD_COMMIT" "$CHANNEL/$ALPHA_BASE.origin"
+
+jq '.packages |= map(. + {build_sha: "deadbeef"})' "$WORK/alpha.json" \
+    > "$WORK/badtree.json"
+run_publish "$WORK/badtree.json" "$tree_dir"
+check 'a build tree that is not a commit is refused' test "$?" -ne 0
+check 'and it says which package it was for' \
+    grep -q "'deadbeef' is not a commit for $ALPHA_BASE" "$WORK/last.out"
 
 section 'case 1b — a request that names no commit is not published'
 nocommit_dir=$(stage_artifact nocommit "$ALPHA")
