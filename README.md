@@ -141,6 +141,37 @@ checkout — so no manifest naming every published package can be written under
 this schema yet, and the first one is not committed. Run the drafter to see
 which seven and why.
 
+## When a publish goes missing
+
+Every publish request in the org queues behind one concurrency group, and
+GitHub keeps a single pending run per group: a request that arrives while
+another is waiting takes the waiting one's place, and the waiting one is
+cancelled. Fourteen repositories rebuilding at once is exactly that shape. The
+build is green, the artifact is there, and the package never reaches the
+channel — with nothing anywhere saying so, because the publisher keeps no
+record of what it was asked.
+
+`tools/reconcile-publishes.sh` asks from the other end. For every repository on
+the publisher allowlist it reads the newest successful build on `main` that
+still has its artifact, takes the packages out of that build's own `SHA256SUMS`
+and asks whether the channel serves them. Anything missing has its publish
+requested again on the ordinary `repository_dispatch` path — the publisher
+stays the only writer, and every gate it has still runs. A channel already past
+a build is not a dropped publish and is left alone.
+
+`--dispatch` is what makes it ask; without it, it reports and requests nothing.
+`.github/workflows/publish-reconcile.yml` runs it four times a day with
+`--dispatch`, in its own concurrency group, because a reconcile queued behind a
+publish would be cancelled by the next publish. Not hourly: reading a build
+means downloading its artifact, and two of the fourteen repositories ship
+packages north of fifty megabytes.
+
+Its one blind spot is stated rather than solved: the publisher downloads the
+packages from the run, so a build whose artifact has aged out cannot be
+republished from by anything. The reconcile names every such run it steps over,
+because falling back quietly to an older build that *is* in the channel is how
+a dropped publish would disappear for good.
+
 ## Is it the same package?
 
 `tools/compare-package.sh` answers the question the cutover turns on: did the
@@ -329,6 +360,7 @@ bash test/trust-anchor/run.sh
 bash test/version-parity/run.sh
 bash test/build-reference/run.sh
 bash test/manifest/run.sh
+bash test/reconcile/run.sh
 ```
 
 The first four take no root, no network and no R2. The bucket is a temporary
@@ -345,11 +377,13 @@ case rebuilds a published package and checks it against the sha its expectation
 pins, which needs docker and a monolith clone, and it names whichever is
 missing when it skips.
 
-The manifest suite builds a channel of its own — a directory of real files
-under a real signed database — and real git repositories with real tags, so the
-tools run against fixtures without a line of their own swapped out. Its last
-case resolves the committed manifest against the live channel and says so when
-there is none to resolve.
+The manifest and reconcile suites build a channel of their own — a directory of
+real files under a real signed database — and real git repositories with real
+tags, so the tools run against fixtures without a line of their own swapped
+out. The reconcile suite puts a stub `gh` on `PATH` that answers out of files
+each case writes and keeps every dispatch it is handed, so a case can read what
+was actually asked for. The manifest suite's last case resolves the committed
+manifest against the live channel and says so when there is none to resolve.
 
 `.github/workflows/ci.yml` runs every suite on every push and pull request,
 because this repo is the only thing in the org that can write to a channel.

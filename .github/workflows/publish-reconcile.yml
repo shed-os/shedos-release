@@ -1,0 +1,70 @@
+name: Publish reconcile
+
+# Every publish in the org queues behind one concurrency group and GitHub keeps
+# a single pending run per group, so a burst of rebuilds loses all but the last
+# request. Nothing notices: the build is green and the publisher was never
+# asked twice. This asks the channel instead.
+#
+# Four times a day rather than hourly: reading a build means downloading its
+# artifact, and two of the fourteen repositories ship packages north of fifty
+# megabytes. A drop heals within six hours, which is well inside the window a
+# release cares about, and the workflow_dispatch is there for when it isn't.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+# It reads the channel over HTTPS and asks the publisher through the ordinary
+# dispatch, so it needs no bucket credentials and no signing key. Its own token
+# reads this checkout and nothing else.
+permissions:
+  contents: read
+
+# Not the publisher's group. A reconcile waiting behind a publish would be
+# cancelled by the next publish, which is the failure it exists to catch.
+concurrency:
+  group: publish-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    environment: SHEDOS_ENV
+    container:
+      image: archlinux:latest
+    steps:
+      # Same reason as the other two workflows: a CDN can hand out a package
+      # database its pool has moved past, and the recovery lives in shedos-ci
+      # at the commit this repo names.
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
+      - name: Install the reconcile toolchain
+        run: |
+          bash /opt/shedos-ci/scripts/install-packages.sh \
+              git curl jq gnupg github-cli
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      # The builds it reads belong to the repositories that made them, which
+      # this job's GITHUB_TOKEN cannot see; and a dispatch sent with that token
+      # would not start a workflow at all.
+      - name: Mint a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHEDOS_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SHEDOS_CI_APP_PRIVATE_KEY }}
+          owner: shed-os
+
+      - name: Reconcile the channel against the builds
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: tools/reconcile-publishes.sh --dispatch
