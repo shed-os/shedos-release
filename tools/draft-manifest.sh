@@ -92,6 +92,12 @@ build_ref() {
     if [[ -n $recorded ]]; then
         printf 'ref = "%s"\n' "$recorded"
         note "the commit the publisher recorded for this release"
+        # Said out loud because it is the one input here that carries no
+        # signature: the database is verified before a version or a checksum is
+        # read off it, and this record is not. A reader weighing a recorded
+        # answer against a derived one should know which of the two the channel
+        # can vouch for.
+        note "that record is not signed, unlike the database beside it"
         return
     fi
 

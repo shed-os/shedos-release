@@ -659,6 +659,8 @@ check 'and says so rather than calling it derived' \
     grep -qx '# the commit the publisher recorded for this release' "$WORK/last.out"
 check 'it does not also claim to have derived it' \
     not grep -q '^# derived:' "$WORK/last.out"
+check 'and it says the record is the one thing here nothing signs' \
+    grep -qx '# that record is not signed, unlike the database beside it' "$WORK/last.out"
 
 # The same channel without the record, to show the ambiguity was real and that
 # the drafter says so rather than picking quietly.
