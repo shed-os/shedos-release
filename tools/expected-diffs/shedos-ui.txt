@@ -32,18 +32,27 @@
 # The carve took the six directories as the monolith held them at 9141eca7, and the
 # comparison below is against 8ce1763e, which is where the monolith stands now.
 
-# --- (b) the 10 transformed package files ------------------------------------------
+# --- (b) the 11 transformed package files ------------------------------------------
 #
-# The four member manifests dropped their own [profile.release]. A cargo workspace takes
-# the release profile from the root and ignores a member's, so leaving them in place
-# would have said one thing and done another; the root manifest carries the same
-# `lto = "thin"`, `codegen-units = 1` and `strip = "symbols"` the four had. shedos-prompt-
-# ui never had a profile table and is byte-identical, and shedos-screensaver's manifest
-# went to the root with the rest of the workspace (see (e)).
-content shedos-greeter/Cargo.toml 00ee153efe99bd4abfe1a94a621f217589ca904e..ca2218e048db19b9d8941a943e36b5bb30b4c0ba — the release profile is the workspace root's, which a member's own table cannot override
-content shedos-power/Cargo.toml 5f3cc12a9635570e680463b2fb3df183321072cd..8edc84dca15023d6e60813822ef63824e206e621 — the release profile is the workspace root's, which a member's own table cannot override
-content shedos-switcher/Cargo.toml 365e1c8dd3c56bf1c98980a4501d4e4a56b20cfb..6cfb5a22d9832b350699a02601f4889b5cd9b6df — the release profile is the workspace root's, which a member's own table cannot override
-content shedos-tour/Cargo.toml 6e7f3986b596b2c729ead03b27e6107e803c5802..c64af4f227f1a0b6b1d1343c25c0fa7b949002ac — the release profile is the workspace root's, which a member's own table cannot override
+# All five member manifests differ, and two changes account for them. Four dropped their
+# own [profile.release]: a cargo workspace takes the release profile from the root and
+# ignores a member's, so leaving them in place would have said one thing and done
+# another, and the root manifest carries the same `lto = "thin"`, `codegen-units = 1` and
+# `strip = "symbols"` the four had. shedos-prompt-ui never had a profile table and was
+# byte-identical until the second change reached it.
+#
+# That second change is the repository field. All five named the monolith, which is not
+# where their source is, and they inherit the root's `repository.workspace = true` now —
+# the form the eight screensaver crates already used, so one line answers for the whole
+# workspace. It reaches no built artifact: nothing in the tree reads
+# CARGO_PKG_REPOSITORY, and a forced rebuild of shedos-power with and without it produced
+# the same binary. shedos-screensaver's manifest went to the root with the rest of the
+# workspace and is section (e)'s.
+content shedos-greeter/Cargo.toml 00ee153efe99bd4abfe1a94a621f217589ca904e..6ebb2a71d489afe5ef0783feaf7ecfd404e9c656 — the release profile is the workspace root's and so is the repository this crate names
+content shedos-power/Cargo.toml 5f3cc12a9635570e680463b2fb3df183321072cd..834df10a0f806fff1e4515889577fe2e2d163096 — the release profile is the workspace root's and so is the repository this crate names
+content shedos-switcher/Cargo.toml 365e1c8dd3c56bf1c98980a4501d4e4a56b20cfb..eb3d6436f3a97ac93144bcebe2c9ad748776b5fc — the release profile is the workspace root's and so is the repository this crate names
+content shedos-tour/Cargo.toml 6e7f3986b596b2c729ead03b27e6107e803c5802..7e50b0ec71e2c4c631345c98813814a4b96e57c9 — the release profile is the workspace root's and so is the repository this crate names
+content shedos-prompt-ui/Cargo.toml 63ef5d5e23fd3b2c6366716ec7a2ca7abcda12a9..c0f04fd72229b3286a0e70926e88fb002f791893 — the repository this crate names is the workspace root's
 #
 # The five PKGBUILDs build from this repository's tag rather than from the checkout they
 # sit in: source= clones shed-os/shedos-ui at #tag=$pkgver with sha256sums=('SKIP'),
@@ -55,13 +64,13 @@ content shedos-tour/Cargo.toml 6e7f3986b596b2c729ead03b27e6107e803c5802..c64af4f
 # shedos-screensaver's has one more change: it builds `-p 'shedos-screensaver-*'` where
 # it used to build --workspace, because --workspace in the shared tree would drag in the
 # other four members.
-content shedos-greeter/PKGBUILD 289825f7a0558b385065ca14c52530a3d366f4d0..7ad6f0cd6199c6842e0e2cf0bce3bf99ba42a98a — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-power/PKGBUILD af067d88bfda0041a0b34923c7849bb7683a9e1f..87952fefa1a144ff766ad813ebc407beea796bba — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-switcher/PKGBUILD 55bc16744f96d3553c785e2940c66134456cee25..08b56e0fc73986d9ee13039d6e0acd32d708e4f1 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-tour/PKGBUILD abd96dea72e8b11d63329726a88e7d448af02838..2f74ea855182d1af0893dcf229f26bcb1e8b2b62 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..4615fc1db51441821bc7674c3f1475d09283305f — builds from this repository's tag inside the workspace, selects its own eight crates rather than the whole workspace, and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-greeter/PKGBUILD 289825f7a0558b385065ca14c52530a3d366f4d0..b41ff8303c760c0c9cb83a96073b91dae3f14cb0 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-power/PKGBUILD af067d88bfda0041a0b34923c7849bb7683a9e1f..685756acd0b8ba0b54fcd20abaec7df69ce8d0dd — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-switcher/PKGBUILD 55bc16744f96d3553c785e2940c66134456cee25..2ba0b412c27937a2b0efecdd31fa81b44f428f10 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-tour/PKGBUILD abd96dea72e8b11d63329726a88e7d448af02838..64abdaeb663b0bdc9f040815238fa86de387092d — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..c098b8cda68bf453adb1ccee2fec3d4e34713490 — builds from this repository's tag inside the workspace, selects its own eight crates rather than the whole workspace, and carries the pkgrel the pipeline's guard moved past what staging held
 #
-# The tenth is a test inside the screensaver's core crate. It checked the vendored ASCII
+# The eleventh is a test inside the screensaver's core crate. It checked the vendored ASCII
 # art against the branding package's copy by reaching out of the packaging directory —
 # concat!(env!("CARGO_MANIFEST_DIR"), "/../../../shedos-branding/tree/etc/shedos-ascii.txt")
 # — and that path does not exist in a repository holding only the UI. It reads the
@@ -91,11 +100,11 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 #
 # Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
 #
-#   package tree: 175 identical, 10 transformed
+#   package tree: 174 identical, 11 transformed
 #   test tree:    the two suites are this repository's own                (see (b2))
 #   no monolith counterpart: 7                                            (see (b2))
 #
-# 175 of 185 carved files are the monolith's bytes exactly — every source file of every
+# 174 of 185 carved files are the monolith's bytes exactly — every source file of every
 # crate, the man pages, the i18n catalogues, the install scriptlets and the shipped tree.
 
 # --- (e) the 13 files the map selects and this tree does not hold -------------------
@@ -178,9 +187,11 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 #   content usr/bin/shedos-screensaver 63efea9f98ff5df6421693684468fdc82caea123ce2f34c819fe3a998e7d4111..1ddc44df474413366237e83dd666586229bb4876c902eb9055a045e4036f0ca4 — the workspace records its members' source paths with the member directory in front
 #
 # Both halves reproduced when they were written: two runs of each recipe produced the same
-# package sha256, build ID included. The candidate halves have since moved — a rebuild of
-# the unchanged tag on a newer gcc, glibc and binutils — so an allowlist carrying them
-# would fail on bytes nobody changed. Rebuilding one of these comparisons means building
+# package sha256, build ID included. The candidate halves have since moved twice — first a
+# rebuild of the unchanged tag on a newer gcc, glibc and binutils, then the re-cut that
+# carried the repository field into the packages — so an allowlist carrying them would
+# fail on bytes nobody changed. The channel serves 2026.08.09-4 for four of them and -5
+# for the screensaver now. Rebuilding one of these comparisons means building
 # the reference for the release the channel serves today and reading the result against
 # the account above; test/build-reference/run.sh does exactly that for shedos-power, and
 # it rebuilds the one-line allowlist it needs out of the five lines here.
