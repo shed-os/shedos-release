@@ -268,6 +268,27 @@ check 'a build tree that is not a commit is refused' test "$?" -ne 0
 check 'and it says which package it was for' \
     grep -q "'deadbeef' is not a commit for $ALPHA_BASE" "$WORK/last.out"
 
+# One request, two packages, two trees. A repository building several bumps
+# them one at a time, so the record beside each package has to be that
+# package's — one shared record would name the wrong tree for all but one.
+both_dir=$(stage_artifact both "$ALPHA" "$BETA")
+ALPHA_TREE=3333333333333333333333333333333333333333
+BETA_TREE=4444444444444444444444444444444444444444
+make_payload "$WORK/both.json" shed-os/shedman "$both_dir"
+jq --arg a "$ALPHA_BASE" --arg at "$ALPHA_TREE" --arg bt "$BETA_TREE" \
+    '.packages |= map(. + {build_sha: (if .file == $a then $at else $bt end)})' \
+    "$WORK/both.json" > "$WORK/bothtrees.json"
+run_publish "$WORK/bothtrees.json" "$both_dir"
+rc=$?
+check 'publish succeeds' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'each package records its own tree' \
+    grep -qx "build $ALPHA_TREE" "$CHANNEL/$ALPHA_BASE.origin"
+check 'and the other records the other' \
+    grep -qx "build $BETA_TREE" "$CHANNEL/$BETA_BASE.origin"
+check 'neither carries the tree of the one beside it' \
+    not grep -qx "build $BETA_TREE" "$CHANNEL/$ALPHA_BASE.origin"
+
 section 'case 1b — a request that names no commit is not published'
 nocommit_dir=$(stage_artifact nocommit "$ALPHA")
 jq 'del(.sha)' "$WORK/alpha.json" > "$WORK/nocommit.json"
