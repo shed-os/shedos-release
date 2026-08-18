@@ -1,35 +1,73 @@
-# What may differ between the monolith's cage and the one shed-os/cage builds.
-# Nothing here is a free pass: each path was opened and read before it was
-# written down, and an entry that stops matching fails the run.
+# What separates shed-os/cage from the monolith it came out of. Nothing here is a free
+# pass: each path was opened and read before it was written down, and an entry that stops
+# matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file rather than carried as an allowlist that goes stale on the next rebuild.
 
-# Reference: built from packaging/cage at monolith commit 03404a92, then
-# origin/main, with pkgrel raised from 2 to the published 4 — the carve
-# republished without a monolith release behind it, and pkgrel is a .PKGINFO
-# field. Candidate: the artifact the staging database records. The two
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: cage, the monolith's downstream build of the Wayland kiosk compositor
+# with touchpad tap-to-click patched on. Carve map: tools/carve-maps/cage.paths, one
+# directive — `flatten packaging/cage` — so the packaging directory is the repository
+# root. Two files: PKGBUILD and 0001-enable-touchpad-tap-by-default.patch.
+#
+# The carve took packaging/cage as the monolith held it at 55bae135, and the comparison
+# below is against 8ce1763e, which is where the monolith stands now.
+
+# --- (b) the one transformed package file -----------------------------------------
+#
+# The patch is untouched. The PKGBUILD is the pipeline's own bookkeeping and nothing
+# else: the carve republished cage without a monolith release behind it, so the pkgrel
+# guard moved this repository's pkgrel past what staging already carried, twice. Neither
+# the source URL nor the build changed — cage's upstream tarball is fetched the same way
+# from the same place, which is why the two builds still produce the same compositor.
+content PKGBUILD daced45d33b64a8b919e3d3f81cf64821e6fdd74..9eb0bd46368e930edcaf2e7d122b7ca6eab75732 — the pipeline's pkgrel guard moved pkgrel past what staging carries
+
+# --- (b2) the 3 files with no monolith counterpart ---------------------------------
+#
+# Repository scaffolding the carve could not bring and the package does not ship:
+# README.md, .gitignore and .github/workflows/ci.yml, which calls the shared pipeline in
+# shed-os/shedos-ci.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 1 identical, 1 transformed
+#   test tree:    the monolith has no out-of-tree suite for cage and neither does this
+#   no monolith counterpart: 3                                        (see (b2))
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from packaging/cage at
+# monolith commit 03404a92, then origin/main, with pkgrel raised from 2 to the published
+# 4 — the carve republished without a monolith release behind it, and pkgrel is a
+# .PKGINFO field. Candidate: the artifact the staging database recorded. The two
 # .BUILDINFO package lists came out equal in both directions.
 #
-# The reference is the same bytes the monolith's own build published: the cage
-# the channels serve as 0.3.0-2 carries this exact usr/bin/cage. So what is
-# below is a difference between the two repositories and not between two ways of
-# building.
-
-# One path differs and it is the binary, and what differs inside it is the
-# version string. cage builds that string out of git: meson.build asks git for
-# the short commit and the branch of whatever repository the build tree sits in
-# and falls back to the plain project version when there is none. The pipeline
-# builds inside its checkout of shed-os/cage, so the answer is that repository's
-# HEAD —
+# The reference was the same bytes the monolith's own build published: the cage the
+# channels served as 0.3.0-2 carried that exact usr/bin/cage. So what follows was a
+# difference between the two repositories and not between two ways of building.
+#
+# One path differed and it was the binary, and what differed inside it was the version
+# string. cage builds that string out of git: meson.build asks git for the short commit
+# and the branch of whatever repository the build tree sits in and falls back to the
+# plain project version when there is none. The pipeline builds inside its checkout of
+# shed-os/cage, so the answer is that repository's HEAD —
 #
 #     Cage version 0.3.0-579273d (branch 'main')
 #
-# where 579273d is a commit of the carved repository. The reference is laid out
-# with git archive, which the recipe requires, so no repository sits above it and
-# the string stays
+# where 579273d is a commit of the carved repository. The reference is laid out with git
+# archive, which the recipe requires, so no repository sits above it and the string stays
 #
 #     Cage version 0.3.0
 #
-# which is also what the monolith's published build says. That is the whole
-# difference, read rather than assumed:
+# which is also what the monolith's published build says. That was the whole difference,
+# read rather than assumed:
 #
 #   CAGE_VERSION is interpolated in two places and .rodata is 48 bytes longer,
 #   exactly twice the 24 characters the suffix adds
@@ -40,7 +78,13 @@
 #   .text is the same size and, with addresses masked, the same 4913
 #   instructions in the same order — the same code reaching constants that moved
 #
-# Pinned, and the candidate half moves whenever shed-os/cage's HEAD does, so the
-# next rebuild has to re-derive this entry against itself rather than widen it to
-# the unpinned form.
-content usr/bin/cage 02524fe3df513766cacae676d74f3ecf208a2e4f914121ebe198b3a8b672c9d1..3f4ce2bd919463fb1251c5004f99f16d5a252fa0cb2655b996981a79c55b0f2e — cage stamps its version with the commit of the repository it is built in
+# The pair it was pinned to:
+#
+#   usr/bin/cage
+#     02524fe3df513766cacae676d74f3ecf208a2e4f914121ebe198b3a8b672c9d1
+#     3f4ce2bd919463fb1251c5004f99f16d5a252fa0cb2655b996981a79c55b0f2e
+#
+# The candidate half of that pin moves whenever shed-os/cage's HEAD does, which is why it
+# is history here rather than an expectation: anyone comparing the artifacts again builds
+# the reference with tools/build-reference.sh and reads the difference against the
+# account above.
