@@ -1,33 +1,82 @@
-# What may differ between the monolith's shedos-hyprland-plugin-hyprspace and the one
-# shed-os/hyprspace builds. Nothing here is a free pass: each path was opened and read
-# before it was written down, and an entry that stops matching fails the run.
+# What separates shed-os/hyprspace from the monolith it came out of. Nothing here is a
+# free pass: each path was opened and read before it was written down, and an entry that
+# stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way the carved repository
+# holds it and every `content` line is pinned <monolith blob>..<carved blob>. What it
+# governs is the source. The two builds' bytes are a separate question, asked on demand
+# with tools/build-reference.sh; the answer this repository got is kept at the end of this
+# file rather than carried as an allowlist that goes stale on the next rebuild.
 
-# Reference: built from packaging/shedos-hyprland-plugin-hyprspace at monolith commit
-# 93d7442b, which was origin/main at the time, under a scratch MAKEPKG_CONF carrying the
-# same BUILDENV and OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel
-# came from that PKGBUILD unmodified and matched the published 2026.07.03-1, so nothing
-# was patched to make the two agree. Candidate: the artifact the staging database
-# records.
+# --- (a) where the content came from ----------------------------------------------
+#
+# Source package: shedos-hyprland-plugin-hyprspace. This repository is the ShedOS fork of
+# the plugin as well as its package, and the fork's own history holds the root, so the
+# carve map takes the packaging directory one level down:
+#
+#   path packaging/shedos-hyprland-plugin-hyprspace/
+#   rename packaging/shedos-hyprland-plugin-hyprspace:packaging
+#
+# One file arrives that way, packaging/PKGBUILD, and the pipeline is pointed at
+# `packages: ["packaging"]`. The carve took the packaging directory as the monolith held
+# it at 378dec04, and the comparison below is against 8ce1763e, which is where the
+# monolith stands now.
 
-# The plugin is one shared library and the two builds of it are not the same bytes. The
-# cause was chased down rather than assumed, and it is not the toolchain: the two builds
-# ran on the same gcc, the same hyprland and the same versions of every package the
-# other one had installed — .BUILDINFO puts 280 packages on both sides with no version
-# apart.
+# --- (b) the one transformed package file -----------------------------------------
+#
+# The fork moved house. source= pinned a commit on Theshedman/Hyprspace and now pins the
+# same commit here, named `Hyprspace::` so the checkout keeps the directory the build
+# reaches for — makepkg would otherwise follow the URL and land on `hyprspace`, which the
+# recipe does not know. The comment above it says the fixes live at this root now.
+# pkgrel moved 1 to 2, which is the pipeline's guard stepping past what staging carried.
+#
+# url= still names the fork's old home, deliberately: it is recorded in .PKGINFO, so
+# moving it changes what the package says it is rather than fixing a comment, and that is
+# a release decision rather than a carve.
+content packaging/PKGBUILD 1d8b36a373a366880c068e601e2c0d01f1887e18..56a402c99b2fb4cfb2f1c2cf8a4643bc34ea9343 — the plugin source is fetched from this repository under the directory name the build expects and the pipeline's pkgrel guard moved pkgrel past what staging carries
+
+# --- (b2) the 18 files with no monolith counterpart --------------------------------
+#
+# The fork's own tree: the plugin sources under src/, its Makefile, meson.build, the nix
+# flake, hyprpm.toml, the editor settings, LICENSE and README.md, plus this repository's
+# .gitignore and .github/workflows/ci.yml. The monolith never held any of it — it fetched
+# the fork at a pinned commit — so no carve map selects it and there is nothing here to
+# compare against.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 0 identical, 1 transformed             (the PKGBUILD, above)
+#   test tree:    the monolith has no out-of-tree suite for the plugin
+#   no monolith counterpart: 18                          (see (b2))
+
+# --- the artifact comparison, kept as history ---------------------------------------
+#
+# Run once, before this file took its tree form. Reference: built from
+# packaging/shedos-hyprland-plugin-hyprspace at monolith commit 93d7442b, which was
+# origin/main at the time, under a scratch MAKEPKG_CONF carrying the same BUILDENV and
+# OPTIONS the pipeline writes beside its own config. Its pkgver-pkgrel came from that
+# PKGBUILD unmodified and matched the published 2026.07.03-1, so nothing was patched to
+# make the two agree. Candidate: the artifact the staging database recorded.
+#
+# The plugin is one shared library, usr/lib/hyprland/Hyprspace.so, and the two builds of
+# it were not the same bytes. The cause was chased down rather than assumed, and it is
+# not the toolchain: the two builds ran on the same gcc, the same hyprland and the same
+# versions of every package the other one had installed — .BUILDINFO put 280 packages on
+# both sides with no version apart.
 #
 # The Makefile compiles $(wildcard src/*.cpp) in one command, and that list arrives in
 # the builder's collation order. The pipeline's container runs in the C locale, where
 # main.cpp sorts after Render.cpp; a desktop running a UTF-8 locale sorts it between
 # Layout.cpp and Overview.cpp. Same sources, different order on the command line,
-# different code layout — .text 39 bytes shorter one way and .rodata 12 longer the
-# other. Rebuilding the reference here with LC_ALL=C reproduces the published artifact
-# to within its 20-byte build ID, which is what proves the reading.
+# different code layout — .text 39 bytes shorter one way and .rodata 12 longer the other.
+# Rebuilding the reference with LC_ALL=C reproduced the published artifact to within its
+# 20-byte build ID, which is what proves the reading.
 #
-# Left unpinned, for the same reason cage's man page is: the difference regenerates. The
-# GNU build ID alone changes on every build — two runs on one machine with everything
+# That difference was carried as an unpinned allowlist entry and could never be pinned:
+# the GNU build ID alone changes on every build — two runs on one machine with everything
 # else equal differ in those 20 bytes and nothing more — so a pinned pair would name a
-# reference that cannot be built twice, and the next person to reproduce this compare
-# would get a failure that means nothing. The way to close the entry is to sort the
-# wildcard in the plugin's Makefile and to give the build a fixed build ID, and then to
-# move the pinned commit so a build actually picks the change up.
-content usr/lib/hyprland/Hyprspace.so — the source file order follows the builder's locale, and the build ID is fresh on every build
+# reference that cannot be built twice. It is history here, and the way to close it is
+# still open work: sort the wildcard in the plugin's Makefile, give the build a fixed
+# build ID, and move the pinned commit so a build actually picks the change up.
