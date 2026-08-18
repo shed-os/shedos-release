@@ -1,0 +1,178 @@
+# The release definition: what this release is made of, where each package's
+# source came from, and the exact published file its name resolves to.
+#
+# Authored state. tools/draft-manifest.sh helps write it and
+# tools/resolve-manifest.sh checks it, but neither may quietly repair it —
+# what is written here is what the release is.
+#
+# ref is the tag where a tag governs the build, and otherwise the commit the
+# release was built at. The comments on the derived entries say where that
+# commit came from and are part of the record, not decoration.
+
+[release]
+version = "2026.08.09"
+
+[[package]]
+name = "cage"
+repo = "cage"
+ref = "579273d2f47e9204f8c615c863723ae48f433d4c"
+# derived: the one commit on cage whose PKGBUILD says 0.3.0-4
+# it builds from a source that names no ref
+# this release predates the publisher recording what it was asked
+pkgver = "0.3.0"
+pkgrel = "4"
+sha256 = "76193455efebd5fa6a841e99f12556f9766496071680f22000efe893cc52c039"
+
+[[package]]
+name = "calamares"
+repo = "calamares"
+ref = "fd431949b666c359241d940ddb64ac7f0d7e8ddc"
+# derived: the one commit on calamares whose packaging/PKGBUILD says 3.4.2-5
+# its source pins d6b9a734bc32d57773b7eee6fb0dd8fe270cca49, which is the fork rather than this tree
+# this release predates the publisher recording what it was asked
+pkgver = "3.4.2"
+pkgrel = "5"
+sha256 = "4f8061eab111e2e8109abcb1d45934e8782858825fb021d5692ae209619a18c3"
+
+[[package]]
+name = "shedman"
+repo = "shedman"
+ref = "2026.08.13.1"
+pkgver = "2026.08.13.1"
+pkgrel = "2"
+sha256 = "0e14fe7ecdaad6e393913d7f7dbf70cb8cc9d0a614137a91ea419df1b9932a1a"
+
+[[package]]
+name = "shedos-branding"
+repo = "shedos-branding"
+ref = "af2158c93a746eb380567173f2ddaf91e146551e"
+# derived: the one commit on shedos-branding whose PKGBUILD says 2026.07.03-1
+# it builds from the checkout and declares no source
+# this release predates the publisher recording what it was asked
+pkgver = "2026.07.03"
+pkgrel = "1"
+sha256 = "950e6af349ec44657dd2126013ac78517a11e738e6bf3ae73b1c7b7b159e11dc"
+
+[[package]]
+name = "shedos-greeter"
+repo = "shedos-ui"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "4"
+sha256 = "ebe0ae63bb53621b966781af25cda63ae67aa14176ad9f7d305b7bc2db192216"
+
+[[package]]
+name = "shedos-hyprland"
+repo = "shedos-hyprland"
+ref = "2026.07.03"
+pkgver = "2026.07.03"
+pkgrel = "4"
+sha256 = "7ba2c17fdaae6e6f2bff007239ad1a563c72a5efb1e5da86ff4c5423b531d79b"
+
+[[package]]
+name = "shedos-hyprland-plugin-hyprspace"
+repo = "hyprspace"
+ref = "1b139f7d3175e8305a31208f6dcd099e398872ca"
+# derived: the one commit on hyprspace whose packaging/PKGBUILD says 2026.07.03-2
+# its source pins 2728b7000bc6da2dbcb4e83d4708db3210d2ed4f, which is the fork rather than this tree
+# this release predates the publisher recording what it was asked
+pkgver = "2026.07.03"
+pkgrel = "2"
+sha256 = "46440fb4ab58a695152f41869f30f263b9ddaad21b2a77d69baff30460224e40"
+
+[[package]]
+name = "shedos-installer"
+repo = "shedos-installer"
+ref = "2026.08.09.1"
+pkgver = "2026.08.09.1"
+pkgrel = "1"
+sha256 = "7c22d8826f295f65f70518a70529598a1ae061f7872dcac9f404b4a3abcd95ac"
+
+[[package]]
+name = "shedos-keyring"
+repo = "shedos-keyring"
+ref = "80a8c638e93cd24e0e08cd3123014f239a393312"
+# derived: the one commit on shedos-keyring whose PKGBUILD says 2026.08.09-2
+# it builds from the checkout and declares no source
+# this release predates the publisher recording what it was asked
+pkgver = "2026.08.09"
+pkgrel = "2"
+sha256 = "5fa826b308d7958d708b6461c4d11bd958212300e60700a1a298828ecddc1c60"
+
+[[package]]
+name = "shedos-migrate-to-packaged"
+repo = "shedos-migrate"
+ref = "d6cbe8d01f74cc5bfe5a64b0a361e6eeab12aae3"
+# derived: the one commit on shedos-migrate whose PKGBUILD says 2026.08.09-2
+# it builds from the checkout and declares no source
+# this release predates the publisher recording what it was asked
+pkgver = "2026.08.09"
+pkgrel = "2"
+sha256 = "9399af31002103ae51b65d98f63f81c9b54c9933c0f5ffa1130e080fc3d7bee7"
+
+[[package]]
+name = "shedos-nvim"
+repo = "shedos-nvim"
+ref = "61f79ad192c325ea664b8728c52d15adf0f1e670"
+# derived: the one commit on shedos-nvim whose PKGBUILD says 2026.07.03-6
+# it builds from the checkout and declares no source
+# this release predates the publisher recording what it was asked
+pkgver = "2026.07.03"
+pkgrel = "6"
+sha256 = "7e9758db9459a58466023032023cd62d0bfb7563b65b553c301095ca0e4dfde9"
+
+[[package]]
+name = "shedos-power"
+repo = "shedos-ui"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "4"
+sha256 = "73ab440ceda8cd409d47db7ddcd2b727c7a599b7b630f1bb1c11e0dacaaef6fb"
+
+[[package]]
+name = "shedos-screensaver"
+repo = "shedos-ui"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "5"
+sha256 = "13f296ec1306bfb0a35eafb88e47ecde7e7d0a8531169889d2340340c79459e3"
+
+[[package]]
+name = "shedos-switcher"
+repo = "shedos-ui"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "4"
+sha256 = "738367ecd82cecd7fa637a7a5e9deeaf4be05f0c91097b4fcebecaef7bba82bc"
+
+[[package]]
+name = "shedos-system"
+repo = "shedos-system"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "7"
+sha256 = "4999ad26f3f735acbe5090f6480f65ffef059af658246f8245bfe3b14d77db5c"
+
+[[package]]
+name = "shedos-theme-catppuccin"
+repo = "shedos-theme-catppuccin"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "1"
+sha256 = "08933703da6f9cb95fdbb54fe70e01fd8b85c73cc2244bd753a34663eace6b96"
+
+[[package]]
+name = "shedos-theme-engine"
+repo = "shedos-theme-engine"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "1"
+sha256 = "7e8b46343285326315b04128294212c0f0171eeb6bf25c20b5cafd9db193918e"
+
+[[package]]
+name = "shedos-tour"
+repo = "shedos-ui"
+ref = "2026.08.09"
+pkgver = "2026.08.09"
+pkgrel = "4"
+sha256 = "941ab0e1aa2de34aafb098be8704d6b8644d5c327f06d4b181192a0395b45178"
