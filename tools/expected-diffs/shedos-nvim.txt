@@ -64,10 +64,11 @@ content test/nvim/migrate.sh dd83092fc323c8fb2e6495dd5e87fe0e036cddfd..6ff08d11c
 # --- the artifact comparison, kept as history ---------------------------------------
 #
 # Run once, before this file took its tree form, and it found 84 differing paths, every
-# one of them inside
-# usr/share/shedos/nvim/plugins/blink.cmp/target: 51 dep-info files under
-# target/release/deps, the .fingerprint and build-script outputs beside them, four
-# compiled rlib/rmeta/so artifacts, and .rustc_info.json at the top.
+# one of them inside usr/share/shedos/nvim/plugins/blink.cmp/target: 47 dep-info files, 46
+# of them under target/release/deps and one at target/release/libblink_cmp_fuzzy.d; 22
+# build-script outputs under target/release/build, ten of which are dep-info of their own;
+# 9 cargo fingerprints; five compiled artifacts, two rlib and two rmeta and one shared
+# library, all under deps; and .rustc_info.json at the top.
 #
 # All 84 are one cause. materialize-plugins.sh stages the plugin set under
 # work=$(mktemp -d), so blink.cmp's cargo build runs in a directory with a different

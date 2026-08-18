@@ -71,15 +71,16 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 
 # --- (b2) the 7 files with no monolith counterpart ---------------------------------
 #
-# The workspace itself: Cargo.toml, which declares the fourteen members, the shared
+# The workspace itself: Cargo.toml, which declares the thirteen members, the shared
 # dependency versions, the release profile the members gave up and the [workspace.package]
 # metadata naming this repository, and Cargo.lock, the one lock the whole tree resolves
 # against.
 #
-# Two suites the pipeline runs from the checkout: test/cargo/run.sh, which holds the
-# workspace to `cargo build --locked` and the lock to the manifests, and
-# test/screensaver/run.sh, which runs the screensaver crates' own tests. Neither existed
-# in the monolith, where each crate was built on its own.
+# Two suites the pipeline runs from the checkout: test/cargo/run.sh, which runs every
+# crate's unit tests at once against the committed lock — `cargo test --locked
+# --workspace`, so the lock is held to the manifests as well — and test/screensaver/run.sh,
+# which drives the built shedos-screensaver binary through its read-only modes. Neither
+# existed in the monolith, where each crate was built on its own.
 #
 # Repository scaffolding the carve could not bring and no package ships: README.md,
 # .gitignore — which must not ignore `src/`, because in this repository `src/` is the

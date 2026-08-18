@@ -22,7 +22,8 @@
 #
 # Nine package files carve: PKGBUILD, the install scriptlet, scripts/key-ceremony.sh,
 # README.md, the keyring and the two fingerprint lists under tree/, the trust-keys script
-# and its systemd unit. The drill brings run.sh and its needs-root marker.
+# and its systemd unit. The drill brings its run.sh; the needs-root marker beside it is
+# this repository's own (see (b2)).
 #
 # The carve took both directories as the monolith held them at 14e20946, and the
 # comparison below is against 8ce1763e, which is where the monolith stands now.
