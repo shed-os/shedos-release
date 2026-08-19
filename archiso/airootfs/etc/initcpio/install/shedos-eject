@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-only
+
+build() {
+    add_binary cp
+    add_binary lsblk
+    add_binary findmnt
+    add_binary umount
+    add_binary losetup
+    add_binary "/usr/lib/initcpio/shutdown-shedos" "/shutdown" 755
+
+    add_runscript
+}
+
+help() {
+    cat <<HELPEOF
+Live-ISO eject hook. Like the stock 'shutdown' hook it stages the initramfs
+into /run/initramfs so it can be reused at poweroff, but it installs a
+/shutdown that pauses for the user to remove the installation medium before
+the machine reboots.
+HELPEOF
+}
+
+# vim: set ft=sh ts=4 sw=4 et:

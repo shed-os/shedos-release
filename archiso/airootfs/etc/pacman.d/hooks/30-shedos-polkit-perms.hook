@@ -1,0 +1,16 @@
+# remove from airootfs!
+# Some upstream packages ship polkit rules with stricter perms than
+# polkit accepts; normalize to 644 after any package that drops files
+# into /etc/polkit-1/rules.d/.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = etc/polkit-1/rules.d/*.rules
+
+[Action]
+Description = Normalizing /etc/polkit-1/rules.d/*.rules permissions...
+When = PostTransaction
+Depends = coreutils
+Exec = /bin/sh -c 'chmod 644 /etc/polkit-1/rules.d/*.rules 2>/dev/null || true'

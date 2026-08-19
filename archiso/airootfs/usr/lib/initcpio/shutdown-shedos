@@ -1,0 +1,33 @@
+#!/usr/bin/ash
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# ShedOS live-ISO shutdown init. systemd-shutdown execs this from
+# /run/initramfs after the real root is already unmounted, so the install USB
+# is free by the time we ask for it. The live image has no stacked storage to
+# tear down (just the squashfs loop and its cow overlay), so this stays small
+# next to the stock initcpio /shutdown. Its one extra job is to hold the boot
+# until the medium is pulled, so a reboot after install doesn't drop straight
+# back into the installer.
+
+cd /sys/class/block 2>/dev/null
+
+printf '%s\n' 'Unmounting all devices.'
+umount --recursive /oldroot 2>/dev/null
+
+printf '%s\n' 'Detaching loop devices.'
+for loop in loop*/loop; do
+    [ -e "$loop" ] && losetup -d "${loop%/loop}" 2>/dev/null
+done
+
+# The squashfs and its loop are gone now, so the USB is no longer in use.
+printf '\n\n  Please remove the installation medium, then press ENTER to %s.\n\n' "${1:-reboot}" > /dev/console
+read -r _ < /dev/console
+
+case "$1" in
+    poweroff | shutdown | halt)
+        "$1" -f
+        ;;
+    *)
+        reboot -f
+        ;;
+esac

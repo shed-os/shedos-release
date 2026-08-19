@@ -1,0 +1,5 @@
+# Live ISO marker: pre-seeded so shedos-tour.service's
+# ConditionPathExists=!%h/.local/state/shedos/tour-shown suppresses the
+# first-run tour on the installer. The installed system's user gets a fresh
+# home from /etc/skel (no marker) and shows the tour normally. (Content is
+# ignored — only the file's existence matters.)

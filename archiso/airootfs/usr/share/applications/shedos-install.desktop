@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Install ShedOS
+GenericName=System Installer
+Comment=Install ShedOS to your computer
+Exec=sh -c "xhost +SI:localuser:root && sudo -E QT_QPA_PLATFORM=xcb calamares"
+Icon=calamares
+Terminal=false
+Categories=System;
+Keywords=install;installer;calamares;shedos;

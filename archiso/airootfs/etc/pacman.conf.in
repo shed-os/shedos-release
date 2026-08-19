@@ -1,0 +1,23 @@
+# Live ISO pacman.conf; used at runtime by the live shell. The
+# [shedos] block is added on first install/upgrade by shedos-system's
+# post-install hook, so it has a single source of truth and survives
+# upgrades cleanly. See archiso/pacman.conf.in for the BUILD-time variant
+# used by mkarchiso.
+
+[options]
+HoldPkg     = pacman glibc
+Architecture = x86_64
+Color
+CheckSpace
+ParallelDownloads = 10
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+
+[multilib]
+Include = /etc/pacman.d/mirrorlist

@@ -1,0 +1,28 @@
+# remove from airootfs!
+# Drop the pacman package cache from the live-ISO airootfs so the
+# squashfs doesn't ship ~600 MiB of downloaded .pkg.tar.zst archives.
+# We deliberately do NOT strip locales, man pages, doc dirs, or info
+# files: those are tracked in every package's local-db file list, and
+# stripping them while leaving the db intact makes pacman warn on
+# every `pacman -Syu` on the installed system ("could not get file
+# information for usr/share/locale/...") and breaks application i18n.
+# Other Arch derivatives (EndeavourOS, Manjaro, Garuda) all ship the
+# full set; ShedOS now matches.
+#
+# Idempotent; runs at every transaction's PostTransaction during
+# pacstrap. zzzz99-remove-custom-hooks-from-airootfs.hook strips this
+# file from the squashfs (matches the marker on line 1), so it does
+# not run on installed systems.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Dropping the pacman package cache from the live-ISO airootfs...
+When = PostTransaction
+Depends = sh
+Exec = /bin/sh -c "rm -f /var/cache/pacman/pkg/*.pkg.tar.zst* 2>/dev/null; true"

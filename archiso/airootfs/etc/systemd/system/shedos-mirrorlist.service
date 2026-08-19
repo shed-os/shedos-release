@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh /etc/pacman.d/mirrorlist via reflector (live ISO only)
+After=network-online.target NetworkManager-wait-online.service
+Wants=network-online.target
+ConditionPathExists=/usr/bin/reflector
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/shedos/refresh-mirrorlist.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
