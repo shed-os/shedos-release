@@ -17,6 +17,10 @@ META_CLOSURE=$META_PACKAGES/.meta-closure.txt
 META_CONFLICTS=$META_PACKAGES/meta-conflicts.txt
 META_MANIFEST=$META_ROOT/release-manifest.toml
 META_PKGBUILD=$META_ROOT/packaging/shedos-meta/PKGBUILD
+# The package being generated. Written once because two places need it and
+# they must not drift: the PKGBUILD's own pkgname, and the name the generator
+# has to keep out of the depends it builds from the manifest.
+META_PKGNAME=shedos-meta
 
 # shellcheck source=tools/lib-manifest.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib-manifest.sh"

@@ -44,7 +44,8 @@
 # rather than from a VERSION file, takes the ShedOS packages from the manifest's entries
 # rather than from a nine-name array written inside it, pins each of them to the exact
 # release the channel serves, and refuses a closure and a manifest that disagree about a
-# replaced name in either direction. It reads each list it excludes on into a variable
+# replaced name in either direction. It also keeps the metapackage out of its own depends:
+# the manifest names every package the channel serves and that now includes shedos-meta. It reads each list it excludes on into a variable
 # first, because a list read through a process substitution takes its failure with it and
 # a missing aur-norepublish.txt would come back as no names at all. Its heredocs name the
 # org.
@@ -62,7 +63,7 @@
 # when the monolith is next open for edits.
 content packages/installer-only.txt a6b6f4897f939e7d577d81f33aa68f517a5f0052..39905c33f0b0da0584fdda2c07cc83b228527041 — calamares added; the manifest names it and the monolith's inputs never did
 content packages/.meta-closure.txt 3fc9a61dd783fdd102b4fda042e05144e87019f3..071ce565019be26cb05308ee49a43a8658816804 — the same package set with the replaced marker and a new header
-content tools/render-meta-depends.sh 4faa458d829bb6b10517f59f5ca5be0a96aaf5d9..c09cc01846884c1f72e75128b1298f3a68ddbad4 — manifest-driven pkgver and package set with exact pins
+content tools/render-meta-depends.sh 4faa458d829bb6b10517f59f5ca5be0a96aaf5d9..bf3193882c513b45718f21ee065405a8c59a333e — manifest-driven pkgver and package set with exact pins
 content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..f23c20b4e2061c171f3a27f05ac26e30c89899b2 — the conflicts come from a file and the closure records what the channel replaces
 
 # --- (b2) the 72 files with no monolith counterpart --------------------------------

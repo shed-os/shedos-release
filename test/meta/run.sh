@@ -149,6 +149,35 @@ check 'the render fails' not render
 check 'and names the package' \
     grep -q 'the closure marks bash replaced and the manifest does not name it' "$WORK/last.err"
 
+section 'case 3d — the metapackage is not a dependency of itself'
+# The manifest names every package the channel serves, and once the
+# metapackage has been published that includes the metapackage. pacman takes a
+# self-dependency without complaint, so nothing downstream would say a word —
+# and the first pkgrel bump after a render then ships a package pinning its own
+# name at the version before it, which nothing in the channel can satisfy.
+fixture
+python3 - "$FIX/release-manifest.toml" <<'PYEOF'
+import sys
+path = sys.argv[1]
+open(path, "a").write("""
+[[package]]
+name = "shedos-meta"
+repo = "shedos-release"
+ref = "2026.09.01"
+pkgver = "2026.09.01"
+pkgrel = "1"
+sha256 = "4444444444444444444444444444444444444444444444444444444444444444"
+""")
+PYEOF
+check 'the render succeeds' render
+[[ -s $WORK/last.err ]] && cat "$WORK/last.err"
+check 'the metapackage does not depend on itself' \
+    not has depends 'shedos-meta=2026.09.01-1'
+check 'nor under its bare name' not has depends shedos-meta
+check 'and the other packages are still there' has depends 'alpha=2026.09.01-3'
+check 'the name it excludes is the name it builds' \
+    grep -qx 'pkgname=shedos-meta' "$(PKGBUILD)"
+
 # --- case 4: pkgrel across renders -------------------------------------------
 
 section 'case 4 — a re-render at the same release keeps the pkgrel it had'
@@ -214,6 +243,66 @@ fixture
 SHEDOS_META_ROOT=$FIX bash "$RESOLVE" > "$WORK/last.out" 2> "$WORK/last.err"
 check 'it stops' test "$?" -ne 0
 check 'and names the reason' grep -q 'must be run as root' "$WORK/last.err"
+
+# --- case 5c: the conflicts list itself ---------------------------------------
+
+section 'case 5c — the conflicts the metapackage ships are pinned by name'
+# The script that reads this file against the repositories reports and does not
+# fail, and it cannot fail on a name going missing without somebody first
+# deciding which alternatives a metapackage should forbid. So the file's
+# contents are pinned here instead: every name is written down, and one
+# disappearing is a change somebody has to make on purpose.
+#
+# jack2 is the reason the file exists. pacstrap picks alphabetically when it
+# has a choice, jack2 beats pipewire-jack, and the transaction then dies on a
+# conflict with the provider we do ship.
+expected_conflicts=(
+    jack2 iptables-legacy booster dracut jdk21-openjdk jdk25-openjdk
+    qt6-multimedia-gstreamer pipewire-media-session gnu-free-fonts
+    ttf-bitstream-vera ttf-croscore ttf-droid ttf-ibm-plex ttf-input
+    ttf-input-nerd ttf-roboto virtualbox-guest-modules-arch
+    virtualbox-host-modules-arch
+)
+shipped_conflicts=$(awk 'NF && $1 !~ /^#/ { print $1 }' "$ROOT/packages/meta-conflicts.txt")
+check 'the file names exactly what is written down here' \
+    test "$(printf '%s\n' "${expected_conflicts[@]}" | sort | tr '\n' ' ')" \
+       = "$(printf '%s\n' "$shipped_conflicts" | sort | tr '\n' ' ')"
+shipped_carries() {
+    local file=$1 name
+    shift
+    for name in "$@"; do
+        grep -qxF "    '$name'" "$file" || return 1
+    done
+}
+check 'and the metapackage this repository ships carries every one' \
+    shipped_carries "$ROOT/packaging/shedos-meta/PKGBUILD" "${expected_conflicts[@]}"
+
+# --- case 8: the committed PKGBUILD is still what the inputs render ----------
+
+section 'case 8 — rendering the committed inputs reproduces the committed PKGBUILD'
+# Every case above runs against a fixture, so none of them notices when the
+# real inputs and the real output stop agreeing. That is exactly how the
+# self-dependency above got in: the manifest gained an entry, the committed
+# PKGBUILD was already written, and nothing read the two together. This renders
+# what this repository ships and compares it byte for byte.
+#
+# The committed PKGBUILD is copied in because the render reads it back for the
+# pkgrel, which is what the real run does too.
+REGEN=$WORK/regen
+rm -rf "$REGEN"
+mkdir -p "$REGEN/packages/official" "$REGEN/packaging/shedos-meta"
+cp "$ROOT/release-manifest.toml" "$REGEN/"
+cp "$ROOT/packages/.meta-closure.txt" "$ROOT"/packages/*.txt "$REGEN/packages/"
+cp "$ROOT"/packages/official/*.txt "$REGEN/packages/official/"
+cp "$ROOT/packaging/shedos-meta/PKGBUILD" "$REGEN/packaging/shedos-meta/PKGBUILD"
+SHEDOS_META_ROOT=$REGEN bash "$RENDER" > "$WORK/last.out" 2> "$WORK/last.err"
+check 'the render succeeds' test "$?" -eq 0
+[[ -s $WORK/last.err ]] && cat "$WORK/last.err"
+check 'and what it wrote is what is committed' \
+    cmp -s "$REGEN/packaging/shedos-meta/PKGBUILD" "$ROOT/packaging/shedos-meta/PKGBUILD"
+[[ -f $REGEN/packaging/shedos-meta/PKGBUILD ]] &&
+    diff "$ROOT/packaging/shedos-meta/PKGBUILD" \
+        "$REGEN/packaging/shedos-meta/PKGBUILD" | head -5
 
 # --- result ------------------------------------------------------------------
 

@@ -81,11 +81,17 @@ for p in $installer_raw; do installer_only[$p]=1; done
 # whatever mixture the channel happens to hold at that moment, and the
 # half-update the single shedos-hyprland version floor was written for is the
 # general case of that.
+#
+# The manifest names this package too, from the release it was published into,
+# and a package may not depend on itself: pacman takes it, and the first pkgrel
+# bump after a render then ships a metapackage pinning its own name at the
+# version before it, which nothing in the channel can satisfy.
 shedos_pkgs=()
 declare -A shedos_names=()
 while IFS=$'\t' read -r name pkgver pkgrel; do
     [[ -n $name ]] || continue
     shedos_names[$name]=1
+    [[ $name == "$META_PKGNAME" ]] && continue
     [[ -n ${installer_only[$name]:-} ]] && continue
     shedos_pkgs+=("$name=$pkgver-$pkgrel")
 done < <(manifest_entries "$META_MANIFEST")
@@ -162,7 +168,7 @@ fi
 # package a default ShedOS install needs. This is the source of truth for
 # "what's on a fresh install".
 
-pkgname=shedos-meta
+pkgname=$META_PKGNAME
 pkgver=$version
 pkgrel=$pkgrel
 pkgdesc='ShedOS meta-package — installs the full default ShedOS environment'
