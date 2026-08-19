@@ -323,6 +323,28 @@ check 'a file that left and never arrived is named with where it went' \
 
 # --- the figures the wave published -----------------------------------------
 
+# The one enumeration in this repository that describes this repository. Every
+# other one needs a clone of the repository it describes and skips without it,
+# and that is how a pin here goes stale unnoticed: the file is written, the
+# file it pins is edited two commits later, and no suite reads the two
+# together. This does, and it needs nothing but the checkout.
+section 'the enumeration of this repository still pins what this repository holds'
+
+stale=0
+checked=0
+while read -r _ path pins _; do
+    [[ $pins == *..* ]] || continue
+    checked=$((checked + 1))
+    have=$(git -C "$ROOT" rev-parse "HEAD:$path" 2> /dev/null) || have=''
+    [[ ${pins#*..} == "$have" ]] && continue
+    printf '       %s is pinned at %s and HEAD holds %s\n' \
+        "$path" "${pins#*..}" "${have:-nothing}"
+    stale=$((stale + 1))
+done < <(grep '^content ' "$ROOT/tools/expected-diffs/shedos-release.txt")
+
+check 'it pins something' test "$checked" -gt 0
+check 'and every carved-side pin is what HEAD holds' test "$stale" -eq 0
+
 section 'the figures Wave 3 measured, re-derived'
 
 skip_reason=
