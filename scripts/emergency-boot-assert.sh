@@ -41,21 +41,29 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# The recovery tool comes out of the published shedos-system, at the release the
+# The recovery tool comes out of the published packages, at the release the
 # manifest names. It used to be read out of a working tree, which proved that
 # the working tree recovers a box and said nothing about the release — and this
-# runs beside an ISO built out of that release. SHEDOS_SYSTEM_TREE points at an
-# unpacked tree instead, for the local flow where the point is to try a change
-# before it is published.
+# runs beside an ISO built out of that release.
+#
+# Two packages, into one directory, because that is what an install is: the
+# tool is shedos-system's and the apply_core it imports is shedman's, which the
+# split moved and shedos-system declares a dependency on. Unpacking only the
+# one that owns the file gives a /usr/lib/shedos the tool cannot run out of.
+# SHEDOS_SYSTEM_TREE points at a prepared tree instead, for the local flow where
+# the point is to try a change before it is published.
 tree=${SHEDOS_SYSTEM_TREE:-}
 if [[ -z $tree ]]; then
-    tree=$work/shedos-system
-    bash "$repo/tools/extract-package.sh" "$repo/release-manifest.toml" \
-        shedos-system "$tree" > /dev/null \
-        || _skip "could not read shedos-system out of the channel"
+    tree=$work/release
+    for pkg in shedos-system shedman; do
+        bash "$repo/tools/extract-package.sh" "$repo/release-manifest.toml" \
+            "$pkg" "$tree" > /dev/null \
+            || _skip "could not read $pkg out of the channel"
+    done
 fi
 lib=$tree/usr/lib/shedos
 [[ -f $lib/emergency-recovery-ui.py ]] || _skip "$lib holds no emergency-recovery-ui.py"
+[[ -f $lib/apply_core.py ]] || _skip "$lib holds no apply_core.py for the tool to import"
 
 overlay=$work/disk.qcow2
 qemu-img create -f qcow2 -F qcow2 -b "$base" "$overlay" >/dev/null

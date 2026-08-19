@@ -175,9 +175,11 @@ content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b
 # of the change: a harness that injects a working tree proves the working tree works,
 # and what runs beside it is an ISO built out of the release.
 #
-# emergency-boot-assert.sh and lib/encrypt-harness.sh unpack shedos-system at the
-# manifest's pin — the recovery tool for the first, the reencryption code and its units
-# for the second — into their own workdir, and skip with a reason when the channel will
+# emergency-boot-assert.sh unpacks shedos-system AND shedman at the manifest's pin, into
+# one directory, because that is what an install is: the recovery tool is shedos-system's
+# and the apply_core it imports is shedman's, which the split moved. Unpacking only the
+# owner of the file gave a library directory the tool could not run out of, and the first
+# real ISO found it in step 2. lib/encrypt-harness.sh unpacks shedos-system at the same pin — all eleven files it injects are that one package's — into their own workdir, and skip with a reason when the channel will
 # not answer. SHEDOS_SYSTEM_TREE points either at an unpacked tree instead, which is
 # how a change gets tried before it is published.
 #
@@ -189,7 +191,7 @@ content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b
 # about the login shell said zsh and the line beneath it has said bash since the shell
 # switch.
 content scripts/build-base-image.sh e87821c371343f71bd46b5693698dc22428c6745..471b87616ba2e4c2c4454d57bf53444935ee4cf6 — the exclusion list and the installer come out of the rootfs being built
-content scripts/emergency-boot-assert.sh 981a4cc34f9d63bd46080ddec0fee19a1ee48893..50845101cb744a2ef8d4cc4b8f3362781576a145 — the recovery tool is unpacked from the released shedos-system
+content scripts/emergency-boot-assert.sh 981a4cc34f9d63bd46080ddec0fee19a1ee48893..af0edffe6217668ac3a5646ece1b00f532d0fe61 — the recovery tool is unpacked from the released shedos-system
 content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297..202cf32ac6bdb98a01648f6273bb183d262bdd0f — the injected reencryption code is the released shedos-system's
 
 # --- (b2) the 87 files with no monolith counterpart --------------------------------

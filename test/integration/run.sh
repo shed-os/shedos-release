@@ -86,6 +86,10 @@ check 'no path is claimed by two packages' test ! -s "$WORK/claimed-twice.txt"
 printf '       %d files across %d packages\n' \
     "$(wc -l < "$WORK/files.tsv")" "$(find "$PKGS" -name '*.pkg.tar.zst' | wc -l)"
 
+owns() {  # which package ships $1, empty when none does
+    awk -F'\t' -v p="$1" '$1 == p { print $2; exit }' "$WORK/files.tsv"
+}
+
 LIBEXEC=$MERGED/usr/libexec/shedman
 export SHEDOS_LIB_ROOT=$MERGED/usr/lib/shedos
 
@@ -320,6 +324,62 @@ EOF
     check 'and the tool disarms itself' \
         grep -q 'disable shedos-shell-migrate' "$sm/systemctl.log"
 fi
+
+# --- what the boot harnesses reach for --------------------------------------
+#
+# The QEMU harnesses inject shipped code into a guest, and they name the files
+# by path. A carve that moves one to another package does not break the harness
+# where anyone can see it — it breaks forty minutes into an ISO build, once,
+# and only for whoever reads that log. The emergency harness found exactly that
+# the first time it ran on a real image: its recovery tool imports apply_core,
+# which the split moved to shedman.
+#
+# The paths are parsed out of the harnesses rather than copied here, so a file
+# added to one of them is checked without anybody remembering to.
+
+section 'every file the boot harnesses inject is in the release'
+harness_paths=$(
+    # encrypt-harness: the `for f in …; do` list, the esp-state install, and the
+    # unit names its `for s in …` loop expands under /usr/lib/systemd/system.
+    awk '/^ *for f in usr\//,/; do/' "$ROOT/scripts/lib/encrypt-harness.sh" \
+        | tr ' \\' '\n\n' | grep '^usr/'
+    grep -oE '"\$tree/[^"]+"' "$ROOT/scripts/lib/encrypt-harness.sh" \
+        | sed 's|"\$tree/||; s|"$||' | grep -v '\$'
+    awk '/^ *for s in shedos-/,/; do/' "$ROOT/scripts/lib/encrypt-harness.sh" \
+        | tr ' ' '\n' | grep '^shedos-' | sed 's/;$//' \
+        | sed 's|^|usr/lib/systemd/system/|; s|$|.service|'
+    # emergency: the library directory it runs the tool out of.
+    printf 'usr/lib/shedos/emergency-recovery-ui.py\nusr/lib/shedos/apply_core.py\n'
+) 
+# The `; do` that ends each list arrives glued to its last element.
+harness_paths=$(printf '%s\n' "$harness_paths" \
+    | sed 's/;$//' | grep -vE '^(do|)$' | LC_ALL=C sort -u)
+count=$(printf '%s\n' "$harness_paths" | grep -c .)
+check 'the harnesses name files at all' test "$count" -ge 12
+
+missing=0
+while read -r rel; do
+    [[ -n $rel ]] || continue
+    if [[ -n $(owns "/$rel") ]]; then
+        continue
+    fi
+    printf '       /%s is injected by a harness and no package ships it\n' "$rel"
+    missing=$((missing + 1))
+done <<< "$harness_paths"
+check "all $count of them are shipped by the release" test "$missing" -eq 0
+
+# The recovery tool and the module it imports are in two different packages,
+# and the harness unpacks both because an install has both. That is only safe
+# because the dependency is declared — otherwise a box could have the tool and
+# not the module, in the one situation the tool exists for.
+section 'the recovery tool can import what it needs'
+check 'the tool is shedos-system'"'"'s' \
+    test "$(owns /usr/lib/shedos/emergency-recovery-ui.py)" = shedos-system
+check 'apply_core is shedman'"'"'s' \
+    test "$(owns /usr/lib/shedos/apply_core.py)" = shedman
+bsdtar -xOf "$PKGS"/shedos-system-*.pkg.tar.zst .PKGINFO > "$WORK/sys.pkginfo"
+check 'and shedos-system declares the dependency' \
+    grep -qx 'depend = shedman' "$WORK/sys.pkginfo"
 
 # --- the kernel wiring, and the package that is not there -------------------
 
