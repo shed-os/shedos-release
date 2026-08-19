@@ -30,7 +30,7 @@ permissions:
 jobs:
   iso:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 360
     container:
       image: archlinux:latest
       # Privileged: mkarchiso wants loop devices and mount, and the boot
@@ -97,6 +97,21 @@ jobs:
       - name: Trust workspace for git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      # A cold build compiles ~100 AUR packages, and walker's GTK4 Rust tree
+      # alone is most of an hour. The key is the list they are built from, so
+      # a run that changes nothing about that list reuses every one of them.
+      # The release's own packages share the directory and are fetched rather
+      # than built, so a cached copy of one is simply refetched if its sha has
+      # moved.
+      - name: Restore the AUR package cache
+        id: aur-cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: out/shedos-repo
+          key: aur-${{ runner.os }}-${{ hashFiles('packages/aur.txt') }}
+          restore-keys: |
+            aur-${{ runner.os }}-
+
       # The build is offline from the point pacstrap starts, so everything the
       # ISO installs is fetched, built and frozen first. The work tree goes on
       # /mnt (~74G) rather than the workspace volume (~43G, already holding the
@@ -111,6 +126,15 @@ jobs:
           SHEDOS_WORK_DIR=/mnt/archiso-work bash tools/build-iso.sh
           ls -la out/
           echo "ISO_NAME=$(cd out && ls shedos-*.iso | head -1)" >> "$GITHUB_ENV"
+
+      # Saved on a miss even when a later step fails, so an hour of AUR builds
+      # is not thrown away because the ISO did not boot.
+      - name: Save the AUR package cache
+        if: always() && steps.aur-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: out/shedos-repo
+          key: aur-${{ runner.os }}-${{ hashFiles('packages/aur.txt') }}
 
       # --- the two gates a release does not ship without --------------------
 
@@ -162,6 +186,23 @@ jobs:
           # Exit 77 is a SKIP — a prerequisite is missing, not a failure — so
           # it is mapped to success rather than red-annotating an advisory gate.
           SHEDOS_EMERGENCY_TEST_IMAGE=/mnt/base.qcow2 scripts/emergency-boot-assert.sh \
+            || { rc=$?; [ "$rc" -eq 77 ] && exit 0 || exit "$rc"; }
+
+      - name: In-place encryption gate
+        # Wired rather than carried across unwired: these two were orphans in
+        # the monolith and the split is where that gets settled. On a runner
+        # they skip at the nbd module, which the Azure kernel has not got —
+        # a harness that skips for a stated reason, not one nothing calls.
+        continue-on-error: true
+        run: |
+          pacman -S --needed --noconfirm cryptsetup
+          SHEDOS_ENCRYPT_TEST_IMAGE=/mnt/base.qcow2 scripts/encrypt-boot-assert.sh \
+            || { rc=$?; [ "$rc" -eq 77 ] && exit 0 || exit "$rc"; }
+
+      - name: Power-cut gate
+        continue-on-error: true
+        run: |
+          SHEDOS_ENCRYPT_TEST_IMAGE=/mnt/base.qcow2 scripts/encrypt-powercut-assert.sh \
             || { rc=$?; [ "$rc" -eq 77 ] && exit 0 || exit "$rc"; }
 
       - name: Live and installed lock gate

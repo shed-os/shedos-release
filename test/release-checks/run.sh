@@ -65,6 +65,24 @@ owns() {  # which package ships $1, empty when none does
     awk -F'\t' -v p="$1" '$1 == p { print $2; exit }' "$WORK/files.tsv"
 }
 
+# Two of the copies below are only readable as source — a Rust constant folded
+# into a binary is not a string any more — and they are read at the ref the
+# manifest pins rather than at main. Reading main would hold this release
+# against a tree it was not built from, and a push over there would red a
+# release check about a release nobody touched.
+UI_REF=$(python3 - "$MANIFEST" <<'EOF'
+import sys, tomllib
+with open(sys.argv[1], "rb") as fh:
+    doc = tomllib.load(fh)
+for entry in doc["package"]:
+    if entry["repo"] == "shedos-ui":
+        print(entry["ref"])
+        break
+EOF
+)
+check 'the manifest pins shedos-ui' test -n "$UI_REF"
+UI_RAW=https://raw.githubusercontent.com/shed-os/shedos-ui/$UI_REF
+
 # --- 1. the ownership map ---------------------------------------------------
 
 section 'every shared-namespace file has a declared owner'
@@ -169,7 +187,7 @@ check 'every colour hyprland.lua hardcodes is one of the palette' test -z "$stra
 # person edits and therefore the copy that drifts.
 promptui=$WORK/theme.rs
 if curl -fsSL --max-time 60 -A 'shedos-release (+https://shedos.org)' \
-    "https://raw.githubusercontent.com/shed-os/shedos-ui/main/shedos-prompt-ui/src/theme.rs" \
+    "$UI_RAW/shedos-prompt-ui/src/theme.rs" \
     -o "$promptui" 2> /dev/null && [[ -s $promptui ]]
 then
     # Two of the ten disagree, and the engine's own comment says they cannot:
@@ -221,7 +239,7 @@ check 'and it is that package that ships it' test "$(owns /etc/shedos-ascii.txt)
 vendored=$WORK/shedos-ascii.txt
 ascii_src=shedos-screensaver/crates/shedos-screensaver-core/assets/shedos-ascii.txt
 if curl -fsSL --max-time 60 -A 'shedos-release (+https://shedos.org)' \
-    "https://raw.githubusercontent.com/shed-os/shedos-ui/main/$ascii_src" \
+    "$UI_RAW/$ascii_src" \
     -o "$vendored" 2> /dev/null && [[ -s $vendored ]]
 then
     check 'the vendored copy is byte-identical' cmp -s "$canonical" "$vendored"

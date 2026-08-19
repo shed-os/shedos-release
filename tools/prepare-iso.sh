@@ -51,7 +51,10 @@ LOCAL_PACKAGES=${SHEDOS_LOCAL_PACKAGES:-}
 [[ -f $MANIFEST ]] || { echo "prepare-iso: $MANIFEST does not exist" >&2; exit 2; }
 
 RELEASE=$(awk -F'"' '/^version = /{ print $2; exit }' "$MANIFEST")
+# A tag is written v2026.08.09-rc1 and the ISO is called shedos-2026.08.09-rc1;
+# the v belongs to git and not to a filename.
 ISO_VER=${SHEDOS_ISO_TAG:-$RELEASE}
+ISO_VER=${ISO_VER#v}
 CHANNEL=${SHEDOS_CHANNEL:-test}
 [[ $CHANNEL == test || $CHANNEL == stable ]] \
     || { echo "prepare-iso: channel must be test or stable, not $CHANNEL" >&2; exit 2; }
@@ -115,7 +118,9 @@ say 'registering everything in the ISO repository'
 say 'checking the release packages can be satisfied'
 bash "$HERE/verify-shedos-deps.sh" "$ISO_REPO" "$MANIFEST"
 
-say 'checking the overlay against what pacstrap installs'
+# The committed profile first, because a collision there is a collision in
+# whatever the build makes of it and this is thirty minutes before mkarchiso.
+say 'checking the committed overlay against what pacstrap installs'
 bash "$HERE/check-airootfs-overlaps.sh" "$ISO_REPO" "$PROFILE_DIR/airootfs"
 
 say 'checking every package the list names is here'
@@ -205,6 +210,12 @@ sed -i "s|^XferCommand.*|XferCommand = $BUILD_DIR/scripts/pacman-offline-downloa
 
 say 'baking Claude Code into /etc/skel'
 bash "$HERE/bake-claude-code.sh" "$CLAUDE_CODE_VERSION" "$BUILD_DIR/airootfs/etc/skel"
+
+# And again over what the layout actually produced. The build adds files the
+# committed profile has not got — the channel marker, the rendered pacman.conf,
+# the baked skel — and those are what pacstrap runs into.
+say 'checking the assembled overlay against what pacstrap installs'
+bash "$HERE/check-airootfs-overlaps.sh" "$ISO_REPO" "$BUILD_DIR/airootfs"
 
 printf '\nprepare-iso: %s ready for mkarchiso (release %s, channel %s)\n' \
     "$BUILD_DIR" "$ISO_VER" "$CHANNEL"
