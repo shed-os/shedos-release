@@ -178,6 +178,13 @@ tools/carve.sh /path/to/shedos <target-repo> tools/carve-maps/<target>.paths
 Needs `git-filter-repo` installed. `SHEDOS_CARVE_REMOTE` overrides the push
 target, which defaults to `git@github.com:shed-os/<target-repo>.git`.
 
+That push writes `main`, so it only works into a repository that has none.
+Carving into one that already exists — `shedos-release` took the package lists
+and the metapackage generators that way — points `SHEDOS_CARVE_REMOTE` at a
+local bare repository, fetches that into the clone, and merges it with
+`--allow-unrelated-histories`. Everything before the push still runs, which is
+the part that measures the carve against the maps file.
+
 ## .gitignore rules a carve has to carry over
 
 The monolith's `.gitignore` covers every package at once. A carved repo needs
