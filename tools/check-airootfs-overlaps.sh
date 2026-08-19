@@ -11,7 +11,7 @@
 # would break the ISO with nothing in their own repository saying so. That is
 # the collision this exists to catch, and today there are none.
 #
-# The Arch-owned half is reported rather than failed. Ten of them exist and
+# The Arch-owned half is reported rather than failed. Eleven of them exist and
 # have for as long as the profile has, pacstrap has never refused one, and why
 # it does not is not a thing this repository knows — pacman's rule is that a
 # file on disk that no package owns is a conflict. What is written down here is
