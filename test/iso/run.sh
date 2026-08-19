@@ -287,6 +287,77 @@ rc=$?
 [[ $rc -eq 0 ]] || sed 's/^/       /' "$WORK/last.out"
 check 'every script in this repository passes' test "$rc" -eq 0
 
+# --- case 4d: the sweep reads the verb and not its wrapper ------------------
+#
+# The first ISO that ever built failed this sweep 35 times out of 35, every one
+# of them on --help-summary, every one with rc=0. The verbs were right and the
+# harness was wrong: it merged the chroot wrapper's stderr into what it treated
+# as the verb's output, and arch-chroot says the airootfs is not a mountpoint
+# every single time it is called.
+
+section 'case 4d — the chroot wrapper does not speak for the verb'
+SWEEP=$ROOT/tools/verb-sweep.sh
+
+sweep_root=$WORK/sweeproot
+mkdir -p "$sweep_root/usr/libexec/shedman" "$sweep_root/usr/bin"
+# The sweep proves it can enter the root before it blames a verb for anything,
+# and it does that by running true in there. A real airootfs has one.
+printf '#!/usr/bin/env bash\nexit 0\n' > "$sweep_root/usr/bin/true"
+chmod +x "$sweep_root/usr/bin/true"
+cat > "$sweep_root/usr/libexec/shedman/demo" <<'EOF'
+#!/usr/bin/env bash
+case ${1:-} in
+    --help-summary) echo 'one line, as the contract says' ;;
+    --help) echo 'Usage: shedman demo' ;;
+    --complete-*) ;;
+    *) exit 2 ;;
+esac
+EOF
+chmod +x "$sweep_root/usr/libexec/shedman/demo"
+
+# A stand-in for arch-chroot that is noisy on stderr exactly the way it is.
+cat > "$WORK/chatty-chroot" <<'EOF'
+#!/usr/bin/env bash
+echo "==> WARNING: $1 is not a mountpoint. This may have undesirable side effects." >&2
+r=$1; shift
+exec "$r$1" "${@:2}"
+EOF
+chmod +x "$WORK/chatty-chroot"
+
+SHEDOS_CHROOT=$WORK/chatty-chroot bash "$SWEEP" "$sweep_root" > "$WORK/last.out" 2>&1
+rc=$?
+check 'a verb that answers correctly passes through a noisy wrapper' test "$rc" -eq 0
+check 'and its one-line summary is read as one line' said 'ok   demo --help-summary'
+
+section 'case 4d1 — a verb that really does print two lines still fails'
+cat > "$sweep_root/usr/libexec/shedman/demo" <<'EOF'
+#!/usr/bin/env bash
+case ${1:-} in
+    --help-summary) printf 'first line\nsecond line\n' ;;
+    --help) echo 'Usage: shedman demo' ;;
+    --complete-*) ;;
+    *) exit 2 ;;
+esac
+EOF
+chmod +x "$sweep_root/usr/libexec/shedman/demo"
+SHEDOS_CHROOT=$WORK/chatty-chroot bash "$SWEEP" "$sweep_root" > "$WORK/last.out" 2>&1
+rc=$?
+check 'it fails'                    test "$rc" -eq 1
+check 'and it is the summary check' said 'FAIL demo --help-summary'
+
+section 'case 4d2 — a chroot nobody can enter is not thirty-five broken verbs'
+cat > "$WORK/dead-chroot" <<'EOF'
+#!/usr/bin/env bash
+echo '==> ERROR: failed to setup chroot' >&2
+exit 1
+EOF
+chmod +x "$WORK/dead-chroot"
+SHEDOS_CHROOT=$WORK/dead-chroot bash "$SWEEP" "$sweep_root" > "$WORK/last.out" 2>&1
+rc=$?
+check 'it is a could-not-check rather than a did-not-hold' test "$rc" -eq 2
+check 'and it says which root'  said 'could not enter'
+check 'without blaming a verb'  bash -c '! grep -q "FAIL" "$1"' _ "$WORK/last.out"
+
 # --- case 5: what the profile no longer ships ------------------------------
 
 section 'case 5 — the dead pam file is not in the profile'
