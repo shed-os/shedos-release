@@ -392,8 +392,14 @@ reset_fixture
 # successful run on main would fill the lookback window with them, push the
 # build out of it, and report a repository that is perfectly fine as one with
 # no usable build at all.
+#
+# None of them carries a packages artifact, because a docs deploy does not
+# build one. That is what makes the third check below say something: a scan of
+# every workflow would step over each of these as a build whose artifact is
+# gone, and with the workflow named it never sees them at all.
 for id in 900 901 902 903 904 905 906 907 908 909; do
     add_run shed-os/alpha "$id" "$SHA_C" docs.yml
+    expire_artifact shed-os/alpha "$id"
 done
 reconcile --dispatch
 rc=$?
