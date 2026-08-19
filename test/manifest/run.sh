@@ -597,6 +597,24 @@ rc=$?
 check 'and what it drafted resolves' test "$rc" -eq 0
 [[ $rc -eq 0 ]] || cat "$WORK/last.out"
 
+section 'case 10b — a suite fixture is not a package the channel serves'
+# A repository that publishes a package and also holds package fixtures under
+# its suite. shedos-release is exactly that: it builds the metapackage, and its
+# publisher harness builds a fixture called shedos-keyring because that is the
+# name the keyring gate is about. Reading fixtures as packages makes two
+# repositories claim one name, and the drafter then refuses to draft anything
+# at all — the whole manifest, over a file nobody publishes.
+reset_fixture
+write_pkgbuild multi test/publisher/fixtures/alpha/PKGBUILD alpha 9.9 1
+SHEDOS_MANIFEST_ALLOWLIST=$WORK/allowlist.txt with_fixture bash "$DRAFTER" 2026.08.09
+rc=$?
+check 'the draft still happens' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'nothing is reported as built twice' \
+    not grep -q 'both build alpha' "$WORK/last.out"
+check 'and the real repository still owns the name' \
+    line_after 'name = "alpha"' 'repo = "alpha"' "$WORK/last.out"
+
 section 'case 11 — a package pinning no tag is placed by the commit it was built at'
 reset_channel
 reset_repos

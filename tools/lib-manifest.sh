@@ -236,9 +236,16 @@ ref_kind() {
     printf 'tag\n'
 }
 
-# Every PKGBUILD the clone holds at a revision, one path per line.
+# Every PKGBUILD the clone holds at a revision, one path per line, except the
+# ones under its suite. A repository that publishes a package and also holds
+# package fixtures is not a contradiction — this one builds the metapackage and
+# its publisher suite builds a fixture called shedos-keyring, because that is
+# the name the keyring gate is about. Reading those as packages the channel
+# serves makes two repositories claim one name and the drafter refuse to draft
+# anything at all. A fixture is not a release.
 repo_pkgbuilds() {
-    git -C "$1" ls-tree -r --name-only "$2" | grep -E '(^|/)PKGBUILD$'
+    git -C "$1" ls-tree -r --name-only "$2" \
+        | grep -E '(^|/)PKGBUILD$' | grep -v '^test/'
 }
 
 # One file out of the clone, which is where the blob it skipped gets fetched.
