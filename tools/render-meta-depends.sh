@@ -59,9 +59,16 @@ norepublish_raw=$(list_names "$META_PACKAGES/aur-norepublish.txt") || exit 1
 installer_raw=$(list_names "$META_PACKAGES/installer-only.txt") || exit 1
 conflicts_raw=$(list_names "$META_CONFLICTS") || exit 1
 
-mapfile -t official < <(cut -f1 <<<"$closure_raw" | sort -u)
-mapfile -t replaced < <(awk -F'\t' '$2 == "replaced" { print $1 }' <<<"$closure_raw" | sort -u)
-mapfile -t aur < <(sort -u <<<"$aur_raw")
+# LC_ALL=C on every sort, because the order these produce is the order the
+# generated PKGBUILD ships and a collation is not the same everywhere: en_US
+# ignores the punctuation and puts atk before at-spi2-core, C does the
+# opposite. Without it the file a desk renders and the file CI renders differ
+# by a reordering, and the committed one stops being reproducible depending on
+# who ran the script.
+mapfile -t official < <(cut -f1 <<<"$closure_raw" | LC_ALL=C sort -u)
+mapfile -t replaced < <(awk -F'\t' '$2 == "replaced" { print $1 }' <<<"$closure_raw" \
+    | LC_ALL=C sort -u)
+mapfile -t aur < <(LC_ALL=C sort -u <<<"$aur_raw")
 [[ -n $conflicts_raw ]] \
     || { echo "ERROR: $META_CONFLICTS names nothing." >&2; exit 1; }
 mapfile -t conflicts <<<"$conflicts_raw"

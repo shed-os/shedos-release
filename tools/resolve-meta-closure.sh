@@ -45,7 +45,7 @@ echo "=========================================="
 declare -A aur_set
 while IFS= read -r p; do
     [[ -n "$p" ]] && aur_set[$p]=1
-done < <(list_names "$PACKAGES_DIR/aur.txt" | sort -u)
+done < <(list_names "$PACKAGES_DIR/aur.txt" | LC_ALL=C sort -u)
 
 # Every package the release manifest names is served by the channel. Those
 # that are also Arch roots stay roots — resolving Arch's cage is how cage's
@@ -72,10 +72,10 @@ done < <(
     find "$PACKAGES_DIR/official" -maxdepth 1 -type f -name '*.txt' \
         ! -name 'installer.txt' -print0 \
         | xargs -0 grep -hEv '^\s*(#|$)' \
-        | sort -u
+        | LC_ALL=C sort -u
 )
 
-mapfile -t ARCH_ROOTS < <(printf '%s\n' "${ARCH_ROOTS[@]}" | sort -u)
+mapfile -t ARCH_ROOTS < <(printf '%s\n' "${ARCH_ROOTS[@]}" | LC_ALL=C sort -u)
 echo "Arch roots: ${#ARCH_ROOTS[@]} packages"
 
 TMPDIR=$(mktemp -d)
@@ -118,7 +118,7 @@ pacman -Sp --noconfirm \
     "${ARCH_ROOTS[@]}" \
     | grep -vE '^shedos-' \
     | grep -vE '^(virtualbox-guest-modules-arch|virtualbox-host-modules-arch)$' \
-    | sort -u > "$TMPDIR/closure.txt"
+    | LC_ALL=C sort -u > "$TMPDIR/closure.txt"
 
 # The marker. A closure name the manifest also names is one Arch and the
 # channel both have, and the channel's is the one a ShedOS box installs. Said
@@ -203,7 +203,7 @@ awk 'NR == FNR { closure[$1] = 1; next }
              v = $i; sub(/[=<>].*/, "", v)
              if (v != "") print v
          }
-     }' "$TMPDIR/closure.txt" "$TMPDIR/depends.txt" | sort -u > "$TMPDIR/wanted.txt"
+     }' "$TMPDIR/closure.txt" "$TMPDIR/depends.txt" | LC_ALL=C sort -u > "$TMPDIR/wanted.txt"
 
 # Inverted: "<name>\t<provider>", every provider the repositories have.
 awk 'NR == FNR { want[$1] = 1; next }
