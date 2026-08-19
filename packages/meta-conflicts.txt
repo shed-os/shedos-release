@@ -5,11 +5,14 @@
 # dies on a conflict nobody asked for.
 #
 # This list is data because two tools read it. render-meta-depends.sh writes
-# it into the metapackage and resolve-meta-closure.sh checks it against the
-# virtual-provider landscape the Arch repositories actually have, and the
-# check used to read the renderer's source with awk to find out what the
-# renderer would emit. One file both read is the same coupling without the
-# parsing.
+# it into the metapackage and resolve-meta-closure.sh reports it against the
+# virtual-provider landscape the Arch repositories actually have; the check
+# used to read the renderer's source with awk to find out what the renderer
+# would emit, and one file both read is the same coupling without the parsing.
+#
+# What is written here is pinned by test/meta rather than derived, because the
+# report cannot decide for anybody which of a virtual's other providers a
+# metapackage ought to forbid.
 #
 # One package per line. Comments with '#' are ignored.
 

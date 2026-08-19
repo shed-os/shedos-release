@@ -33,12 +33,18 @@
 # The two generators are rewritten rather than edited, and the two files they read are
 # their output or their input. Everything else came across byte-identical.
 #
-# resolve-meta-closure.sh keeps its method — an isolated pacman database in a tempdir, a
-# broad-root -Sp, and the virtual-provider cross-check afterwards — and changes what it
-# reads and what it writes. It used to run awk over the renderer's source to find the
-# shedos_conflicts array the renderer would emit; both read packages/meta-conflicts.txt
-# now. And it writes a marker beside any closure name the release manifest also names,
-# which today is cage and nothing else.
+# resolve-meta-closure.sh keeps its method — an isolated pacman database in a tempdir and
+# a broad-root -Sp — and changes what it reads, what it writes, and what it claims. It
+# used to run awk over the renderer's source to find the shedos_conflicts array the
+# renderer would emit; both read packages/meta-conflicts.txt now. It writes a marker
+# beside any closure name the release manifest also names, which today is cage and
+# nothing else. And the virtual-provider check became a report: the monolith's version
+# asks pacman to resolve each virtual and reads the install chain that comes back as the
+# provider set, so it passed with jack2 removed from the conflicts file; this one inverts
+# what every package declares it provides, which is the real enumeration, and against that
+# the conflicts list is not complete. Which alternatives a metapackage should forbid is a
+# decision with product consequences, so the run says what it sees and test/meta pins the
+# list by name.
 #
 # render-meta-depends.sh takes the release from release-manifest.toml's [release].version
 # rather than from a VERSION file, takes the ShedOS packages from the manifest's entries
@@ -64,7 +70,7 @@
 content packages/installer-only.txt a6b6f4897f939e7d577d81f33aa68f517a5f0052..39905c33f0b0da0584fdda2c07cc83b228527041 — calamares added; the manifest names it and the monolith's inputs never did
 content packages/.meta-closure.txt 3fc9a61dd783fdd102b4fda042e05144e87019f3..071ce565019be26cb05308ee49a43a8658816804 — the same package set with the replaced marker and a new header
 content tools/render-meta-depends.sh 4faa458d829bb6b10517f59f5ca5be0a96aaf5d9..bf3193882c513b45718f21ee065405a8c59a333e — manifest-driven pkgver and package set with exact pins
-content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..f23c20b4e2061c171f3a27f05ac26e30c89899b2 — the conflicts come from a file and the closure records what the channel replaces
+content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..6c783a9e96368c74c2df24850d497c732c4fd311 — the conflicts come from a file and the closure records what the channel replaces
 
 # --- (b2) the 72 files with no monolith counterpart --------------------------------
 #

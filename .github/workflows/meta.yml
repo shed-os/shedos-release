@@ -42,7 +42,7 @@ jobs:
         run: mv .shedos-ci /opt/shedos-ci
 
       - name: Install the resolver's dependencies
-        run: bash /opt/shedos-ci/scripts/install-packages.sh git python
+        run: bash /opt/shedos-ci/scripts/install-packages.sh git python expac
 
       # The image ships multilib commented out, and lib32 packages are roots.
       # Without this the resolve fails on names that do exist.
@@ -56,9 +56,10 @@ jobs:
       - name: Trust workspace for git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      # This is also the gate on the metapackage's conflicts list: the resolver
-      # fails when a virtual in the closure has a provider nobody listed, which
-      # is how pacstrap ends up rolling jack2 in ahead of pipewire-jack.
+      # The run also prints the virtual-provider landscape the closure sits in,
+      # which is a report and not a gate — what the metapackage should forbid
+      # is a decision somebody takes, not one this job can infer. The conflicts
+      # list itself is pinned by test/meta, which runs on every push.
       - name: Resolve the closure
         run: bash tools/resolve-meta-closure.sh
 

@@ -99,6 +99,12 @@ Include = /etc/pacman.d/mirrorlist
 Include = /etc/pacman.d/mirrorlist
 EOF
 
+# expac takes a config and no --dbpath, so the isolated database has to be
+# named in the file rather than on the command line. It belongs in [options];
+# appended to the end it lands inside the last repository section and pacman
+# says so. pacman is given both and they say the same thing.
+sed -i "/^\[options\]/a DBPath = $TMPDIR/db" "$TMPDIR/pacman.conf"
+
 echo "Syncing pacman databases into $TMPDIR/db ..."
 pacman -Sy --noconfirm \
     --dbpath "$TMPDIR/db" \
@@ -151,95 +157,85 @@ if [ -n "${SUDO_USER:-}" ]; then
     echo "Restored ownership to user: $SUDO_USER"
 fi
 
-# Cross-check that every virtual provide in the closure has its
-# alternative providers covered by packages/meta-conflicts.txt. Without
-# this, pacstrap's noninteractive default (alphabetical first) silently
-# picks a provider that conflicts with an explicit dep (e.g. jack2 over
-# pipewire-jack) and aborts the transaction with an unresolvable conflict.
+# Report the virtual-provider landscape the closure sits in: for every virtual
+# something in the closure depends on, which packages in the repositories
+# provide it, and which of those are neither shipped nor named in
+# packages/meta-conflicts.txt. That list is what pacstrap could pick from when
+# it has a choice — the trap that broke the live-ISO build twice (jack → jack2,
+# pipewire-session-manager → pipewire-media-session).
+#
+# This reports and does not fail, and the reason is worth writing down. What
+# stood here before asked pacman to resolve each virtual name and treated the
+# answer as the provider set. It is not: `pacman -Sp jack` prints the install
+# chain of the one provider pacman picked — alsa-lib, opus, db5.3 and the rest
+# — so the "providers" came back as a dependency list, several of them already
+# in the closure, and the gate below it never fired. It passed with jack2
+# deleted from the conflicts file whose own header names jack2 as its reason
+# for existing.
+#
+# Inverting what every package declares it provides is the honest enumeration,
+# and against it the current conflicts list does not pass: sixteen virtuals
+# have an alternative nobody has spoken for, and most are alternatives pacman
+# would never reach for because the closure already names the provider by
+# name — ffmpeg beside ffmpeg4.4, zlib beside zlib-ng-compat. Which of them a
+# metapackage should actually forbid changes what installs, and for
+# opengl-driver it runs straight into the NVIDIA gate. So this says what it
+# sees and the threshold is somebody's decision, not this script's. The
+# conflicts file's own contents are pinned by test/meta instead.
 echo ""
-echo "Cross-checking virtual-provider disambiguation..."
+echo "The virtual-provider landscape..."
 
-declare -A in_conflicts=()
-while IFS= read -r entry; do
-    [[ -n "$entry" ]] && in_conflicts[$entry]=1
-done < <(list_names "$META_CONFLICTS")
-(( ${#in_conflicts[@]} > 0 )) \
+[[ -n "$(list_names "$META_CONFLICTS")" ]] \
     || { echo "ERROR: $META_CONFLICTS names nothing." >&2; exit 1; }
 
-declare -A in_closure=()
-while IFS= read -r p; do
-    [[ -n "$p" ]] && in_closure[$p]=1
-done < "$TMPDIR/closure.txt"
+# "<package> <name> <name> ..." for every package in core/extra/multilib, once
+# for what each provides and once for what each depends on.
+expac --sync --config "$TMPDIR/pacman.conf" '%n %P' > "$TMPDIR/provides.txt" \
+    || { echo "ERROR: could not read what the repositories provide." >&2; exit 1; }
+expac --sync --config "$TMPDIR/pacman.conf" '%n %D' > "$TMPDIR/depends.txt" \
+    || { echo "ERROR: could not read what the repositories depend on." >&2; exit 1; }
 
-# For every closure package, collect its `provides=` virtuals via
-# pacman -Si and find sibling providers. We only flag when (a) the
-# virtual has multiple concrete providers in available repos AND (b)
-# none of the alternative providers are already in the conflicts list.
-violations=0
-checked_virtuals=0
-declare -A reported=()
+# Only the names something in the closure depends on. A virtual nothing we
+# install asks for is not a choice anybody makes on our behalf.
+awk 'NR == FNR { closure[$1] = 1; next }
+     $1 in closure {
+         for (i = 2; i <= NF; i++) {
+             v = $i; sub(/[=<>].*/, "", v)
+             if (v != "") print v
+         }
+     }' "$TMPDIR/closure.txt" "$TMPDIR/depends.txt" | sort -u > "$TMPDIR/wanted.txt"
 
-while IFS= read -r line; do
-    [[ -n "$line" ]] || continue
-    case "$line" in
-        "Provides "*)
-            virtuals=${line#Provides }
-            virtuals=${virtuals#: }
-            [[ "$virtuals" == "None" ]] && continue
-            for v in $virtuals; do
-                # Strip versioned-provides suffix (libfoo.so=12-64 → libfoo.so).
-                vname=${v%%=*}
-                vname=${vname%%>=*}
-                vname=${vname%%<=*}
-                [[ -z "$vname" ]] && continue
-                [[ -n ${reported[$vname]:-} ]] && continue
-                reported[$vname]=1
-                checked_virtuals=$((checked_virtuals + 1))
+# Inverted: "<name>\t<provider>", every provider the repositories have.
+awk 'NR == FNR { want[$1] = 1; next }
+     {
+         for (i = 2; i <= NF; i++) {
+             v = $i; sub(/[=<>].*/, "", v)
+             if (v in want) print v "\t" $1
+         }
+     }' "$TMPDIR/wanted.txt" "$TMPDIR/provides.txt" | LC_ALL=C sort -u \
+     > "$TMPDIR/inversion.tsv"
 
-                # Find every concrete provider of this virtual reachable
-                # from core/extra/multilib. -Ssq doesn't expand provides;
-                # -Sp on the bare name does.
-                mapfile -t providers < <(
-                    pacman -Sp --noconfirm --print-format '%n' \
-                        --dbpath "$TMPDIR/db" \
-                        --config "$TMPDIR/pacman.conf" \
-                        "$vname" 2>/dev/null | sort -u
-                )
-                (( ${#providers[@]} <= 1 )) && continue
-
-                in_closure_count=0
-                missing_conflicts=()
-                for p in "${providers[@]}"; do
-                    if [[ -n ${in_closure[$p]:-} ]]; then
-                        in_closure_count=$((in_closure_count + 1))
-                    elif [[ -z ${in_conflicts[$p]:-} ]]; then
-                        missing_conflicts+=("$p")
-                    fi
-                done
-
-                # If exactly one provider is in the closure (the one we
-                # picked) but other providers exist that are NOT listed
-                # in the conflicts file, the renderer needs to add them.
-                if (( in_closure_count == 1 )) && (( ${#missing_conflicts[@]} > 0 )); then
-                    echo "  WARN virtual '$vname': closure has 1 of ${#providers[@]} providers; missing from meta-conflicts.txt: ${missing_conflicts[*]}"
-                    violations=$((violations + 1))
-                fi
-            done
-            ;;
-    esac
-done < <(
-    pacman -Si --dbpath "$TMPDIR/db" --config "$TMPDIR/pacman.conf" \
-        $(grep -v '^#' "$TMPDIR/closure.txt" | tr '\n' ' ') 2>/dev/null \
-        | awk '/^Provides /'
-)
-
-echo "  checked $checked_virtuals distinct virtuals; $violations need meta-conflicts.txt updates"
-if (( violations > 0 )); then
-    echo ""
-    echo "ERROR: packages/meta-conflicts.txt is out of sync with"
-    echo "       upstream's virtual-provider landscape. Add the packages"
-    echo "       listed above to it, then re-run this script to verify."
-    exit 1
-fi
+awk -F'\t' '
+    FILENAME == ARGV[1] { closure[$1] = 1; next }
+    FILENAME == ARGV[2] { if ($0 ~ /^[[:space:]]*(#|$)/) next; forbidden[$1] = 1; next }
+    { providers[$1] = providers[$1] " " $2 }
+    END {
+        multi = 0; unspoken = 0
+        for (v in providers) {
+            n = split(providers[v], p, " ")
+            if (n < 2) continue
+            multi++
+            shipped = 0; loose = ""
+            for (i = 1; i <= n; i++) {
+                if (p[i] in closure) shipped++
+                else if (!(p[i] in forbidden)) loose = loose " " p[i]
+            }
+            if (shipped >= 1 && loose != "") {
+                unspoken++
+                printf "  note %s: %d provider(s), %d shipped, not spoken for:%s\n", v, n, shipped, loose
+            }
+        }
+        printf "  %d virtual(s) with more than one provider; %d carry an alternative nobody has named\n", multi, unspoken
+    }' "$TMPDIR/closure.txt" "$META_CONFLICTS" "$TMPDIR/inversion.tsv" | sort
 
 echo "=========================================="

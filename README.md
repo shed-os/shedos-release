@@ -221,8 +221,21 @@ resolved by pacstrap non-interactively, which means alphabetically, and the
 answer it picks conflicts with a package we do ship. So every transitive
 dependency is written out explicitly and the concrete providers we do not want
 go into `conflicts=()`, out of `packages/meta-conflicts.txt`. Both generators
-read that file: the resolver checks it against the providers the Arch
-repositories actually have and fails naming any it does not cover.
+read that file, and its contents are pinned by the test suite, so a name
+leaving it is a change somebody made on purpose.
+
+The resolver reports the landscape around it rather than gating on it, and
+that is a deliberate limit. It inverts what every package in the repositories
+declares it provides — the honest enumeration, which the check that stood here
+before did not do: asking pacman to resolve a virtual name returns the install
+chain of the provider it picked, not the providers, so the old gate passed with
+`jack2` deleted from the file whose header names `jack2` as its reason for
+existing. Against a real enumeration the list does not come out complete, and
+most of what is missing are alternatives pacman would never reach for because
+the closure already names the provider — `ffmpeg` beside `ffmpeg4.4`, `zlib`
+beside `zlib-ng-compat`. Deciding which of them a metapackage should actually
+forbid changes what installs, and for `opengl-driver` it runs into the NVIDIA
+gate, so the run says what it sees and leaves the threshold to a person.
 
 The ShedOS half of `depends=` is the manifest's entries, each pinned to the
 exact release the channel serves. That is what makes a release internally
