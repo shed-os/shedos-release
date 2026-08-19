@@ -223,6 +223,70 @@ for hook in "$PROFILE"/airootfs/etc/pacman.d/hooks/*.hook; do
 done
 check 'all of them carry the marker' test "$missing" -eq 0
 
+# --- case 4c: a variable read before the line that sets it ------------------
+#
+# The port moved a block that reads the ISO repository above the line that
+# names it, and `set -u` killed the build there — forty minutes in, after the
+# AUR stage had built all of them. shellcheck sees the assignment and asks
+# nothing about where it sits; `bash -n` never evaluates anything. This is the
+# check that would have caught it in a second.
+
+section 'case 4c — no script reads a variable it has not set yet'
+ORDER=$ROOT/tools/check-script-order.sh
+
+mkdir -p "$WORK/order"
+cat > "$WORK/order/bad.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "$LATER"
+LATER=here
+EOF
+bash "$ORDER" "$WORK/order/bad.sh" > "$WORK/last.out" 2>&1
+rc=$?
+check 'it fails on a read before the set'  test "$rc" -eq 1
+check 'and names both lines'               said 'LATER is read here and set at line 4'
+
+cat > "$WORK/order/guarded.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "${LATER:-nothing}"
+LATER=here
+EOF
+bash "$ORDER" "$WORK/order/guarded.sh" > "$WORK/last.out" 2>&1
+check 'a read that carries its own default is not one' test $? -eq 0
+
+cat > "$WORK/order/heredoc.sh" <<'OUTER'
+#!/usr/bin/env bash
+set -euo pipefail
+cat <<'EOF'
+$pkgver is a literal here
+EOF
+pkgver=1
+OUTER
+bash "$ORDER" "$WORK/order/heredoc.sh" > "$WORK/last.out" 2>&1
+check 'a quoted heredoc is data and not script' test $? -eq 0
+
+cat > "$WORK/order/read.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+while IFS= read -r line || [[ -n $line ]]; do
+    printf '%s\n' "$line"
+done < /dev/null
+for line in a b; do echo "$line"; done
+EOF
+bash "$ORDER" "$WORK/order/read.sh" > "$WORK/last.out" 2>&1
+check 'a read that sets the variable on the same line is a set' test $? -eq 0
+
+# The live gate. Every script this repository runs, including the ported ones.
+shopt -s nullglob
+scripts=("$ROOT"/tools/*.sh "$ROOT"/scripts/*.sh "$ROOT"/scripts/lib/*.sh "$ROOT"/publisher/*.sh)
+shopt -u nullglob
+check 'there are scripts to check' test "${#scripts[@]}" -gt 20
+bash "$ORDER" "${scripts[@]}" > "$WORK/last.out" 2>&1
+rc=$?
+[[ $rc -eq 0 ]] || sed 's/^/       /' "$WORK/last.out"
+check 'every script in this repository passes' test "$rc" -eq 0
+
 # --- case 5: what the profile no longer ships ------------------------------
 
 section 'case 5 — the dead pam file is not in the profile'

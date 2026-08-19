@@ -22,6 +22,10 @@ source "$SCRIPT_DIR/lib-manifest.sh"
 # resolve transitive deps from there.
 CACHE_DIR="/var/cache/pacman/pkg"
 RELEASE_MANIFEST="${SHEDOS_MANIFEST:-$PROJECT_ROOT/release-manifest.toml}"
+# Where the AUR builds and the fetched release both sit. Beside the other paths
+# rather than beside its first user: two steps read it now, and the earlier of
+# them is the one that reads the fetched packages' dependencies.
+AUR_REPO_DIR="${SHEDOS_ISO_REPO:-$PROJECT_ROOT/out/shedos-repo}"
 
 echo "=================================="
 echo "Pre-downloading packages for ShedOS"
@@ -144,7 +148,6 @@ echo "Starting package download..."
 # `openssl-1.1`, `libfprint-tod`, …). Without [shedos-repo] in scope the
 # resolver errors `target not found` on any AUR pkg whose runtime depends
 # resolve to other AUR pkgs we ship.
-AUR_REPO_DIR="${SHEDOS_ISO_REPO:-$PROJECT_ROOT/out/shedos-repo}"
 DOWNLOAD_PACMAN_CONF="$TEMP_DIR/pacman-download.conf"
 cat > "$DOWNLOAD_PACMAN_CONF" << 'EOF'
 [options]
