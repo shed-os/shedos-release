@@ -1,0 +1,128 @@
+# What separates the part of shed-os/shedos-release that came out of the monolith from
+# the monolith it came out of. Nothing here is a free pass: each path was opened and read
+# before it was written down, and an entry that stops matching fails the run.
+#
+# This is a tree-form enumeration: every path is written the way this repository holds it
+# and every `content` line is pinned <monolith blob>..<carved blob>. What it governs is
+# the source. This repository builds one package, shedos-meta, and that package is
+# generated rather than carved — the comparison for it is the diff against the monolith's
+# own generated metapackage, kept at the end of this file.
+
+# --- (a) where the content came from ----------------------------------------------
+#
+# Carve map: tools/carve-maps/shedos-release.paths. It takes packages/ whole, leaves the
+# npm cache behind, and moves the two metapackage generators from scripts/ to tools/:
+#
+#   path packages/
+#   except packages/npm-cache
+#   rename scripts/resolve-meta-closure.sh:tools/resolve-meta-closure.sh
+#   rename scripts/render-meta-depends.sh:tools/render-meta-depends.sh
+#
+# 105 commits and 58 paths, carved from the monolith at 8ce1763e and merged into this
+# repository's own history rather than starting one — this repository existed first. The
+# npm cache is three tarballs a Neovim plugin build once needed; the monolith's tree no
+# longer has them and no input here ever did.
+#
+# The relationship between the two copies until the cutover: the monolith is still the
+# fleet's producer and its packages/ is still its own build input. A list change lands
+# there first and propagates here. After the cutover these are the originals and the
+# monolith's are gone with it.
+
+# --- (b) the 4 transformed files --------------------------------------------------
+#
+# The two generators are rewritten rather than edited, and the two files they read are
+# their output or their input. Everything else came across byte-identical.
+#
+# resolve-meta-closure.sh keeps its method — an isolated pacman database in a tempdir, a
+# broad-root -Sp, and the virtual-provider cross-check afterwards — and changes what it
+# reads and what it writes. It used to run awk over the renderer's source to find the
+# shedos_conflicts array the renderer would emit; both read packages/meta-conflicts.txt
+# now. And it writes a marker beside any closure name the release manifest also names,
+# which today is cage and nothing else.
+#
+# render-meta-depends.sh takes the release from release-manifest.toml's [release].version
+# rather than from a VERSION file, takes the ShedOS packages from the manifest's entries
+# rather than from a nine-name array written inside it, pins each of them to the exact
+# release the channel serves, and refuses a closure and a manifest that disagree about a
+# replaced name in either direction. Its heredocs name the org.
+#
+# .meta-closure.txt is the same 1268 Arch packages the monolith's copy holds — regenerated
+# against core/extra/multilib and compared name for name, no drift — carrying the new
+# header and the one marker.
+#
+# installer-only.txt gains calamares, which is the one place these two copies disagree on
+# content. The monolith's renderer learns which ShedOS packages to install from a list
+# written inside itself and calamares was never on it, so nothing there ever had to say
+# calamares is installer-only. This one reads the manifest, which names every package the
+# channel serves, so without the line the installer would be a dependency of shedos-meta
+# and would land on every machine that installs it. The monolith's copy gains the line
+# when the monolith is next open for edits.
+content packages/installer-only.txt a6b6f4897f939e7d577d81f33aa68f517a5f0052..39905c33f0b0da0584fdda2c07cc83b228527041 — calamares added; the manifest names it and the monolith's inputs never did
+content packages/.meta-closure.txt 3fc9a61dd783fdd102b4fda042e05144e87019f3..071ce565019be26cb05308ee49a43a8658816804 — the same package set with the replaced marker and a new header
+content tools/render-meta-depends.sh 4faa458d829bb6b10517f59f5ca5be0a96aaf5d9..0bcc5334ddf7d0be3cb0e5f67e99f471c81d3177 — manifest-driven pkgver and package set with exact pins
+content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..f23c20b4e2061c171f3a27f05ac26e30c89899b2 — the conflicts come from a file and the closure records what the channel replaces
+
+# --- (b2) the 72 files with no monolith counterpart --------------------------------
+#
+# This repository is mostly not a carve. The publisher, the manifest tools, the carve and
+# comparison tools, the enumerations, the suites, the workflows and the README were all
+# written here. Four are this task's: packages/meta-conflicts.txt, this file,
+# .github/workflows/meta.yml and packaging/shedos-meta/PKGBUILD.
+#
+# That last one does have a monolith counterpart at the same path, and the carve map
+# still does not claim it. Both are generated files, so a blob pin would move on every
+# render and say nothing; the honest comparison between them is the one below.
+
+# --- (c) the rest of the tree is byte-identical -------------------------------------
+#
+# Measured over the carved paths at HEAD against the monolith at 8ce1763e:
+#
+#   package tree: 24 identical, 4 transformed
+#   test tree:    the monolith has no out-of-tree suite for any of this and neither
+#                 does this repository — test/meta covers the generators
+#   no monolith counterpart: 72                                       (see (b2))
+#
+# The 24 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
+# aur-pkgbuild-hashes.txt and iso-only-official.txt.
+
+# --- the two metapackages, compared -------------------------------------------------
+#
+# Both generators were run and their output compared array by array, at manifest release
+# 2026.08.09 against the monolith at 8ce1763e.
+#
+# conflicts: 18 entries, the same eighteen in the same order. optdepends: 10 entries,
+# identical. depends: 1309 in the monolith and 1315 here, and every difference is a
+# ShedOS package:
+#
+#   cage                            → cage=0.3.0-4
+#   shedos-branding                 → shedos-branding=2026.07.03-1
+#   shedos-greeter                  → shedos-greeter=2026.08.09-4
+#   shedos-hyprland                 → shedos-hyprland=2026.07.03-4
+#   shedos-keyring                  → shedos-keyring=2026.08.09-2
+#   shedos-migrate-to-packaged      → shedos-migrate-to-packaged=2026.08.09-2
+#   shedos-nvim                     → shedos-nvim=2026.07.03-6
+#   shedos-power                    → shedos-power=2026.08.09-4
+#   shedos-screensaver              → shedos-screensaver=2026.08.09-5
+#   shedos-system                   → shedos-system=2026.08.09-7
+#
+# and six names the monolith's metapackage does not carry at all:
+#
+#   shedman=2026.08.13.1-2
+#   shedos-hyprland-plugin-hyprspace=2026.07.03-2
+#   shedos-switcher=2026.08.09-4
+#   shedos-theme-catppuccin=2026.08.09-1
+#   shedos-theme-engine=2026.08.09-1
+#   shedos-tour=2026.08.09-4
+#
+# Three of those six reached a monolith install through shedos-hyprland's depends —
+# shedos-tour, shedos-switcher and shedos-hyprland-plugin-hyprspace — and the carved
+# shedos-hyprland dropped all three, which is spec §6's direct entries. shedos-power took
+# the same route and the carved shedos-hyprland kept it, so it is direct here and was
+# already named in the monolith's array. shedman and the two theme packages exist because
+# Wave 3 split them out of shedos-system and shedos-hyprland; nothing in the monolith's
+# inputs names them, and the manifest does.
+#
+# Every one of the 1299 Arch and AUR names is the same on both sides, which is the check
+# that says the closure port did not change what a fresh install gets from Arch. The
+# metapackage builds: makepkg --nodeps in an archlinux container produced
+# shedos-meta-2026.08.09-1-any.pkg.tar.zst.
