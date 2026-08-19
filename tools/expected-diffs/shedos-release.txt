@@ -161,8 +161,8 @@ content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..
 # that used to reach the ISO only through the metapackage's depends and are named now,
 # and two Arch names that appeared and one that was renamed between the two runs.
 content archiso/packages.x86_64 a896ddbf20f3d4aafba48e8bb9902d90631ff4ea..9b3fbbc7f1e4cb2275fb5d5fad2385f1135ffe4a — regenerated: the release's names come from the manifest
-content tools/build-aur-packages.sh f37baf4ea857de0b9e5ba63256446069233f03ff..77e4cb03b0b75c27a8e062063e2f60c9243eb57d — the sweep keeps what the manifest names, and builds no calamares
-content tools/download-packages.sh 26773f0ab30612f4b094ddfdc5419d985b2f1966..e26b64c7642e17251c1ac1fda966f6580ee9a2cb — the release comes off the channel and its Arch deps off its .PKGINFO
+content tools/build-aur-packages.sh f37baf4ea857de0b9e5ba63256446069233f03ff..7a24ab47f4ffa87a18ab5d03cb03411244807ce1 — the sweep keeps what the manifest names, and builds no calamares
+content tools/download-packages.sh 26773f0ab30612f4b094ddfdc5419d985b2f1966..721eb77f2f343805c7a575a66e5e6481af7b5d90 — the release comes off the channel and its Arch deps off its .PKGINFO
 content tools/generate-package-list.sh a2b1680d55784b08b7d0bbe3b736d10c110e1e60..b33b82fdb4bc780c4ad7dfe1ed9fbe510b9dcdfc — the ShedOS half of the list is the manifest
 content tools/pacman-offline-download.sh 5352790e01d999cacfce922c23cc1b37760ad3b7..9a221bc1d6a45b1589b2184648d50a74802defc8 — the repository path is substituted in rather than derived
 content tools/verify-cache.sh 78c67194b060ad29e1bea61bc1fbb4ca08b2b542..ee5c613d001cfe781bdb88a1fd845accb57223e0 — the release's packages are looked for where they were fetched

@@ -194,10 +194,19 @@ for p in "${AUR_PACKAGES[@]}"; do
 done
 # The release's packages live in this repo dir without being in aur.txt, and
 # they arrived by fetch: sweeping one turns the ISO's copy of it into a 404
-# that no rebuild would notice, because nothing here rebuilds them.
+# that no rebuild would notice, because nothing here rebuilds them. A manifest
+# this cannot read would leave every one of them unclaimed and the sweep would
+# delete the whole release, so an empty answer stops the run.
+release_names=0
 while read -r name; do
-    [[ -n $name ]] && keep_aur[$name]=1
+    [[ -n $name ]] || continue
+    keep_aur[$name]=1
+    release_names=$((release_names + 1))
 done < <(manifest_read "$RELEASE_MANIFEST" | awk -F'\t' '$1 == "package" { print $2 }')
+if (( release_names == 0 )); then
+    echo "ERROR: could not read any package name out of $RELEASE_MANIFEST" >&2
+    exit 1
+fi
 phantom_count=0
 shopt -s nullglob
 for f in "$REPO_DIR"/*.pkg.tar.zst; do

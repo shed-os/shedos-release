@@ -83,6 +83,10 @@ done
 manifest_read "$RELEASE_MANIFEST" \
     | awk -F'\t' '$1 == "package" { print $2 }' \
     | LC_ALL=C sort -u > "$TEMP_DIR/release.txt"
+if [ ! -s "$TEMP_DIR/release.txt" ]; then
+    echo "ERROR: could not read any package name out of $RELEASE_MANIFEST" >&2
+    exit 1
+fi
 LC_ALL=C sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
 LC_ALL=C comm -23 "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/release.txt" \
     > "$TEMP_DIR/pkglist.arch" && mv "$TEMP_DIR/pkglist.arch" "$TEMP_DIR/pkglist.txt"
