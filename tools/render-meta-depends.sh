@@ -42,7 +42,6 @@ set -euo pipefail
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=tools/lib-meta.sh
 source "$here/lib-meta.sh"
-root=$META_ROOT
 out=$META_PKGBUILD
 
 if [[ ! -f $META_CLOSURE ]]; then
@@ -50,24 +49,31 @@ if [[ ! -f $META_CLOSURE ]]; then
     echo "       Run: sudo tools/resolve-meta-closure.sh" >&2
     exit 1
 fi
-mapfile -t official < <(closure_names "$META_CLOSURE" | sort -u)
-mapfile -t replaced < <(closure_replaced "$META_CLOSURE" | sort -u)
-mapfile -t aur < <(list_names "$root/packages/aur.txt" | sort -u)
-mapfile -t conflicts < <(list_names "$META_CONFLICTS")
-(( ${#conflicts[@]} > 0 )) || { echo "ERROR: $META_CONFLICTS names nothing." >&2; exit 1; }
+# Each list is read into a variable before it is used, because a list read
+# through a process substitution takes its failure with it: a missing
+# aur-norepublish.txt would come back as no names at all and quietly turn ten
+# packages we may not redistribute into hard dependencies.
+closure_raw=$(list_names "$META_CLOSURE") || exit 1
+aur_raw=$(list_names "$META_PACKAGES/aur.txt") || exit 1
+norepublish_raw=$(list_names "$META_PACKAGES/aur-norepublish.txt") || exit 1
+installer_raw=$(list_names "$META_PACKAGES/installer-only.txt") || exit 1
+conflicts_raw=$(list_names "$META_CONFLICTS") || exit 1
 
-# Build an associative set of norepublish package names for O(1) lookup.
+mapfile -t official < <(cut -f1 <<<"$closure_raw" | sort -u)
+mapfile -t replaced < <(awk -F'\t' '$2 == "replaced" { print $1 }' <<<"$closure_raw" | sort -u)
+mapfile -t aur < <(sort -u <<<"$aur_raw")
+[[ -n $conflicts_raw ]] \
+    || { echo "ERROR: $META_CONFLICTS names nothing." >&2; exit 1; }
+mapfile -t conflicts <<<"$conflicts_raw"
+
+# Associative sets of the two exclusion lists, for O(1) lookup.
 declare -A norepublish=()
-while read -r p; do
-    [[ -n $p ]] && norepublish[$p]=1
-done < <(list_names "$root/packages/aur-norepublish.txt")
+for p in $norepublish_raw; do norepublish[$p]=1; done
 
 # Installer-only packages; bundled into the ISO but excluded from
 # shedos-meta entirely (neither depends nor optdepends).
 declare -A installer_only=()
-while read -r p; do
-    [[ -n $p ]] && installer_only[$p]=1
-done < <(list_names "$root/packages/installer-only.txt")
+for p in $installer_raw; do installer_only[$p]=1; done
 
 # The ShedOS packages, from the release manifest, pinned to the exact release
 # the channel serves. This is what makes a ShedOS install internally

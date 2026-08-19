@@ -15,18 +15,23 @@ META_ROOT=${SHEDOS_META_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 META_PACKAGES=$META_ROOT/packages
 META_CLOSURE=$META_PACKAGES/.meta-closure.txt
 META_CONFLICTS=$META_PACKAGES/meta-conflicts.txt
-META_MANIFEST=${SHEDOS_META_MANIFEST:-$META_ROOT/release-manifest.toml}
+META_MANIFEST=$META_ROOT/release-manifest.toml
 META_PKGBUILD=$META_ROOT/packaging/shedos-meta/PKGBUILD
 
 # shellcheck source=tools/lib-manifest.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib-manifest.sh"
 
-# The names a package list holds, one per line, comments and blanks gone.
-# Missing is empty rather than fatal: the caller decides which of its lists it
-# cannot do without.
+# The names a package list holds, one per line, comments and blanks gone. A
+# list that is not there is a refusal rather than an empty answer: every one of
+# these decides what does not go into the metapackage, and a missing
+# aur-norepublish.txt read as "nothing" would make ten packages we may not
+# redistribute into hard dependencies of it.
+# A list holding no names is a fine answer and grep says 1 to it, so the two
+# are told apart here rather than at every call site.
 list_names() {
-    [[ -f $1 ]] || return 0
-    grep -hEv '^\s*(#|$)' "$1"
+    [[ -f $1 ]] || { echo "ERROR: $1 is missing." >&2; return 1; }
+    grep -Ev '^\s*(#|$)' "$1"
+    (( $? <= 1 ))
 }
 
 # The closure is one package per line, and a line may carry a second

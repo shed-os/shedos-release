@@ -194,6 +194,13 @@ printf '[release]\nversion = "2026.09.01"\n' > "$FIX/release-manifest.toml"
 check 'the render fails' not render
 check 'and the schema said why' grep -q 'names no packages' "$WORK/last.err"
 
+section 'case 6c — a list that is not there is a refusal and not an empty list'
+fixture
+rm -f "$FIX/packages/aur-norepublish.txt"
+check 'the render fails' not render
+check 'and names the file' grep -q 'aur-norepublish.txt is missing' "$WORK/last.err"
+check 'nothing was written' not test -e "$(PKGBUILD)"
+
 section 'case 6b — a missing closure names the script that writes it'
 fixture
 rm -f "$FIX/packages/.meta-closure.txt"
