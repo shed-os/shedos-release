@@ -1,0 +1,211 @@
+name: ISO
+
+# Asked for rather than scheduled, the way the metapackage is. This builds a
+# whole operating system out of a release: it pacstraps ~1300 Arch packages
+# around the nineteen the manifest names, squashes them, and then boots the
+# result twice under QEMU. Nothing here should happen because somebody pushed.
+#
+# It publishes nothing. The ISO and its checksum are this run's artifacts and
+# the release machinery owns every path under /iso.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: The channel installs from this ISO will read
+        type: choice
+        options: [test, stable]
+        default: test
+      iso_tag:
+        description: Version stamped into the ISO filename (default the manifest's release)
+        type: string
+        default: ''
+      upload_iso:
+        description: Attach the ISO itself, not only its checksum
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    container:
+      image: archlinux:latest
+      # Privileged: mkarchiso wants loop devices and mount, and the boot
+      # asserts want /dev/kvm. The two host volumes are where the runner's
+      # own toolchains sit, which is the space the squashfs needs.
+      options: --privileged
+      volumes:
+        - /usr:/host/usr
+        - /opt:/host/opt
+        - /mnt:/mnt
+
+    steps:
+      # A CDN node can hand out a package database for hours after the pool
+      # behind it dropped what the database names, and this job installs more
+      # of Arch than anything else in the org. The recovery lives in shedos-ci,
+      # taken at a commit this repository names rather than at its main.
+      # Before the install, because the install is one of these scripts and
+      # with no git in the image the action falls back to a REST tarball.
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      # actions/checkout empties a directory it cannot recognise as a checkout
+      # of what it was asked for, so the scripts leave the workspace before
+      # this repository's own checkout runs.
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
+      - name: Free the host's disk
+        # The squashfs and the work tree together are larger than the runner's
+        # workspace volume. These are the toolchains a ShedOS build never uses.
+        run: |
+          df -h /__w /mnt || true
+          rm -rf \
+              /host/usr/share/dotnet \
+              /host/usr/local/lib/android \
+              /host/opt/ghc \
+              /host/opt/hostedtoolcache \
+              /host/usr/local/share/boost \
+              /host/usr/local/share/powershell \
+              /host/usr/share/swift \
+              /host/opt/microsoft \
+              /host/usr/lib/jvm \
+              2>/dev/null || true
+          df -h /__w /mnt || true
+
+      - name: Install the build toolchain
+        run: |
+          bash /opt/shedos-ci/scripts/install-packages.sh \
+              archiso base-devel git sudo rsync grub scdoc python curl gnupg \
+              arch-install-scripts
+          # archlinux:latest ships an empty keyring; makepkg --syncdeps needs
+          # the trust chain to build the AUR packages.
+          pacman-key --init
+          pacman-key --populate archlinux
+          sed -i 's/^BUILDENV=.*/BUILDENV=(!distcc color !check !sign)/' /etc/makepkg.conf
+          sed -i 's/^#\?MAKEFLAGS=.*/MAKEFLAGS="-j$(nproc)"/' /etc/makepkg.conf
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Trust workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The build is offline from the point pacstrap starts, so everything the
+      # ISO installs is fetched, built and frozen first. The work tree goes on
+      # /mnt (~74G) rather than the workspace volume (~43G, already holding the
+      # fetched release and the pacman cache).
+      - name: Build the ISO
+        env:
+          SHEDOS_CHANNEL: ${{ inputs.channel }}
+          SHEDOS_ISO_TAG: ${{ inputs.iso_tag }}
+          SHEDOS_AUR_STRICT_PGP: '1'
+        run: |
+          mkdir -p /mnt/archiso-work
+          SHEDOS_WORK_DIR=/mnt/archiso-work bash tools/build-iso.sh
+          ls -la out/
+          echo "ISO_NAME=$(cd out && ls shedos-*.iso | head -1)" >> "$GITHUB_ENV"
+
+      # --- the two gates a release does not ship without --------------------
+
+      - name: Boot-assert the ISO
+        run: |
+          pacman -S --needed --noconfirm qemu-base libarchive util-linux
+          scripts/boot-assert.sh "out/$ISO_NAME"
+
+      - name: Boot-assert the ISO on BIOS firmware
+        run: scripts/bios-boot-assert.sh "out/$ISO_NAME"
+
+      # --- the verb contract, where every dependency is installed -----------
+
+      - name: Ask every verb on the airootfs
+        # test/integration asks the same of an unpacked tree and four verbs
+        # cannot answer there. This is the same sweep on a real install.
+        run: |
+          root=/mnt/archiso-work/x86_64/airootfs
+          if [ ! -d "$root" ]; then
+              echo "::error::mkarchiso left no airootfs at $root"
+              find /mnt/archiso-work -maxdepth 3 -type d | head -20
+              exit 1
+          fi
+          bash tools/verb-sweep.sh "$root"
+
+      # --- the advisory tier ------------------------------------------------
+
+      - name: Build the base install image
+        # non-blocking: these prove more than the gates do and are also the
+        # ones a runner can be unable to run at all.
+        continue-on-error: true
+        run: |
+          # linux: supermin builds guestfish's boot appliance out of the
+          # container's kernel and modules, and the archlinux image ships
+          # neither — without it every guestfish call dies at appliance build.
+          pacman -S --needed --noconfirm edk2-ovmf libguestfs squashfs-tools \
+            socat libisoburn btrfs-progs dosfstools gptfdisk limine \
+            qemu-img binutils linux
+          modprobe loop || true
+          # The archiso work tree is spent once the ISO is in out/, and the
+          # 16G scratch image needs the space it was using.
+          rm -rf /mnt/archiso-work
+          TMPDIR=/mnt SHEDOS_ISO="out/$ISO_NAME" SHEDOS_BASE_IMAGE_OUT=/mnt/base.qcow2 \
+            scripts/build-base-image.sh
+
+      - name: Emergency-recovery gate
+        continue-on-error: true
+        run: |
+          # Exit 77 is a SKIP — a prerequisite is missing, not a failure — so
+          # it is mapped to success rather than red-annotating an advisory gate.
+          SHEDOS_EMERGENCY_TEST_IMAGE=/mnt/base.qcow2 scripts/emergency-boot-assert.sh \
+            || { rc=$?; [ "$rc" -eq 77 ] && exit 0 || exit "$rc"; }
+
+      - name: Live and installed lock gate
+        continue-on-error: true
+        run: |
+          # Arch splits qemu's display backends: -display egl-headless lives in
+          # qemu-ui-egl-headless, the virtio-gpu-gl-pci device in its own
+          # modules (the -pci-gl leaf needs the -pci base), and
+          # virglrenderer/mesa back the GL. A GPU-less runner still skips at
+          # the render-node guard, which is by design.
+          pacman -S --needed --noconfirm qemu-ui-egl-headless virglrenderer mesa \
+            libglvnd qemu-hw-display-virtio-gpu-pci-gl qemu-hw-display-virtio-gpu-pci
+          SHEDOS_LIVE_ISO="out/$ISO_NAME" SHEDOS_INSTALLED_IMAGE=/mnt/base.qcow2 \
+            scripts/live-iso-lock-assert.sh \
+            || { rc=$?; [ "$rc" -eq 77 ] && exit 0 || exit "$rc"; }
+
+      # --- what the run leaves behind ---------------------------------------
+
+      - name: What went into it
+        if: always()
+        run: |
+          mkdir -p out/evidence
+          cp release-manifest.toml archiso/packages.x86_64 out/evidence/ 2>/dev/null || true
+          ( cd out/shedos-repo 2>/dev/null && sha256sum -- *.pkg.tar.zst ) \
+            > out/evidence/packages.sha256 2>/dev/null || true
+
+      - name: Upload the checksum and the evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: iso-evidence-${{ github.run_id }}
+          path: |
+            out/*.sha256
+            out/evidence/*
+            out/lock-artifacts/*
+          if-no-files-found: warn
+
+      - name: Upload the ISO
+        # Off by default: it is several gigabytes and the checksum plus the
+        # package list is what a person reads. Nothing here publishes it —
+        # the release machinery owns every path under /iso.
+        if: inputs.upload_iso
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: iso-${{ github.run_id }}
+          path: out/*.iso
+          if-no-files-found: error
