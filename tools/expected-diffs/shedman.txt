@@ -49,7 +49,7 @@
 # their man pages, the /usr/bin/shedos-* back-compat shims, shedos-dock.5 and
 # shedos-review-exclude.5, and everything under /usr/lib/shedos except apply_core.py.
 
-# --- (b) the 6 transformed package files -------------------------------------------
+# --- (b) the 9 transformed package files -------------------------------------------
 #
 # §5.1, the config layer. tree/etc/shedman/shedman.toml is new and in backup=(). It
 # carries the libexec path, the package `shedman version` reports, and the directory verb
@@ -70,6 +70,21 @@ content tree/usr/share/bash-completion/completions/shedman c66b525356255856d0cce
 content tree/usr/share/zsh/site-functions/_shedman d7f34a482d2588266b2b37819f834517222c877b..b7da18c706250fa364a98c65428b47fa2e19f67d — §5.1: the same, and its `version` description no longer names shedos-system
 content tree/usr/share/fish/vendor_completions.d/shedman.fish ac6310124db7bddbf5e03e288fb26dd86d49738b..b3676b97fe5803a2975c55017b973441a1fefb4e — §5.1: the same, and its hardcoded list of completable subcommands is now the declarations
 content tree/usr/libexec/shedman/doctor 57229488e6d81501178bb7a1e125d04b16e6caaf..d8525777c3a9b6be163fae46de6eb258f1090ccb — §5.1: gains the audit that names an executable no declaration claims
+#
+# The verb contract, from the answering side. Every other verb replies to --help with
+# something naming shedman and health replied with its header block, which named neither
+# the command nor a synopsis. Nothing had ever asked: the smoke suite ran a list of two
+# and health was not on it. The list is the roster on disk now, so the ISO sweep that
+# found this has a counterpart in the repository that ships the verb.
+content tree/usr/libexec/shedman/health 20b8285839928692a075bb0b372e5de731990900..3e4690e82485118e4a37300e1b43d44a395c11a4 — prints a usage line above the header block, and the header names the verb rather than the shim it shipped as
+#
+# The manual's cross-package half. The dispatcher's page sent readers to shedos-tour(1),
+# and shedos-tour ships that page as shedman-tour.1 now — the name its declaration points
+# at and the one shedos-screensaver's page already used. A reference that leaves this
+# package is a question only the release can be asked, and test/release-checks in
+# shed-os/shedos-release is what asked it; the man suite here sees the pages this
+# repository ships and nothing else.
+content man/shedman.1.scd d30b04c34953e8c4165fbe2a4414c8dba9c98e75..0662c2e448d3459851cae23ba8744b3d06b20bee — the tour entry names shedman-tour(1), which is where that page ships
 #
 # §5.6, the single fence-writer, from this side of it. `shedman apply` no longer renders a
 # managed block in /etc/pacman.conf. shedos-system ships the one writer,
@@ -174,7 +189,7 @@ content man/shedman-apply.1.scd 99b27806bbadd514ae67bde35cd4d4813253e101..10c0a4
 # monolith's. Measured by comparing `git rev-parse` on each carved path against the
 # monolith blob at 7b7223a3, over the whole carved tree at HEAD:
 #
-#   package tree (tree/ + man/): 35 identical, 7 transformed
+#   package tree (tree/ + man/): 33 identical, 9 transformed
 #   test tree:                   698 identical, 39 transformed  (see (d))
 #   no monolith counterpart:     51                             (see (b2))
 #
@@ -230,7 +245,7 @@ content test/review-configs/run.sh 2cc46e1544ca1a3ef7e95de41eb9f1d67f6b8cac..13f
 content test/review-vscode/run.sh 05186b1983274e8d4ae6f3fbff11b6f36d3e3d26..438d1a3683e843811bcd6d98a5cfbecda937ecff — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
 content test/rollback/run.sh 22edd85b545b75e789d2b207bb02bfb2fb291f62..c2b1fc5cd3084e7384321e650749c5c403c415e0 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else
 content test/shedman/run.sh 6d58b7f661dd9b0201217cc46850edd4fd99dc4c..7c06420d787c8077c7df4782cac2120b56a33eb6 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the T7/T8 shim checks stay with the /usr/bin/shedos-* shims in shedos-system, T10-T13 cover the config defaults, an undeclared executable and a name collision, and T14 holds the four channel keys against the defaults compiled into the fence library
-content test/smoke/run.sh cf48cbed44d25abca91a091c22b40eb0780b4851..aab2702ca347939d0f33c8fcb00da611fc269ee4 — re-rooted off the packaging/shedos-system/ prefix the carve removed; split to the two verbs that carved here (datetime, db), the desktop and tour cases staying in the monolith copy, and SHEDOS_LIB_ROOT left at its default because shedos_palette ships elsewhere
+content test/smoke/run.sh cf48cbed44d25abca91a091c22b40eb0780b4851..ef0e1cf89de66e6851bb6906a5e50175dbb9ccc8 — re-rooted off the packaging/shedos-system/ prefix the carve removed, and it takes its roster off disk instead of naming verbs: the split left it running two of the nineteen this package ships, which is how health's --help went unasked. SHEDOS_LIB_ROOT is left at its default because shedos_palette ships elsewhere
 content test/status/run.sh edfc9531038c8e6534dec4aa0d29679c088d0217..db041f338739f2819309d997cece8c54ff404424 — re-rooted off the packaging/shedos-system/ prefix the carve removed; the library root no longer points at this repository, which does not ship the palette module, so the watch cases stop taking the import-failed path
 content test/status/watch_pilot.py 0d62a2283b3e777b2550c48ee70c9b1d6970a28c..2cc8c6e03d9540351ae089123eda802184628495 — re-rooted off the packaging/shedos-system/ prefix the carve removed
 content test/sync-configs/run.sh 3c746a3d03944461105d343f6b33f147c2481e26..c5fdf5640dcbe100ccc475d9094a6dd45709b188 — grafted with its history and re-rooted off the packaging/shedos-system/ prefix; it reads a shedman verb and nothing else

@@ -58,14 +58,6 @@ failed=()
 ok()  { printf '  ok   %s\n' "$1"; pass=$((pass + 1)); }
 bad() { printf '  FAIL %s — %s\n' "$1" "$2"; fail=$((fail + 1)); failed+=("$1"); }
 
-# The two answers that are wrong today, in two other repositories, and are
-# reported rather than checked less strictly. The same list test/integration
-# carries, and it runs in both directions there.
-declare -A KNOWN=(
-    ['health --help']=1
-    ['migrate --complete-fish']=1
-)
-
 for tool in "$libexec"/*; do
     verb=$(basename "$tool")
     [[ $verb == _* ]] && continue
@@ -84,26 +76,14 @@ for tool in "$libexec"/*; do
     rc=$?
     good=0
     (( rc == 0 )) && grep -qiE 'usage|shedman' <<<"$out" && good=1
-    if [[ -n ${KNOWN["$verb --help"]:-} ]]; then
-        if (( good )); then
-            bad "$verb --help is still the reported gap" 'it answers correctly now'
-        else
-            ok "$verb --help is still the reported gap"
-        fi
-    elif (( good )); then ok "$verb --help"
+    if (( good )); then ok "$verb --help"
     else bad "$verb --help" "rc=$rc out=${out:0:80} err=$(head -1 "$WORK/err")"
     fi
 
     for mode in --complete-bash --complete-zsh --complete-fish; do
         timeout 60 "$CHROOT" "$root" "/usr/libexec/shedman/$verb" "$mode" > /dev/null 2>&1
         good=$(( $? == 0 ? 1 : 0 ))
-        if [[ -n ${KNOWN["$verb $mode"]:-} ]]; then
-            if (( good )); then
-                bad "$verb $mode is still the reported gap" 'it answers correctly now'
-            else
-                ok "$verb $mode is still the reported gap"
-            fi
-        elif (( good )); then ok "$verb $mode"
+        if (( good )); then ok "$verb $mode"
         else bad "$verb $mode" 'non-zero'
         fi
     done

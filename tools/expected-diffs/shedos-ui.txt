@@ -27,12 +27,13 @@
 # directory of its own, the crate paths between them still resolve, and each PKGBUILD
 # stays beside the crate it builds.
 #
-# The map selects 198 monolith files. 185 of them are here, and the thirteen section (e)
-# accounts for went to the workspace root when the crates were assembled into one tree.
+# The map selects 198 monolith files. 184 of them are here, and the fourteen section (e)
+# accounts for went to the workspace root when the crates were assembled into one tree, or
+# were renamed in place.
 # The carve took the six directories as the monolith held them at 9141eca7, and the
 # comparison below is against 8ce1763e, which is where the monolith stands now.
 
-# --- (b) the 11 transformed package files ------------------------------------------
+# --- (b) the 13 transformed package files ------------------------------------------
 #
 # All five member manifests differ, and two changes account for them. Four dropped their
 # own [profile.release]: a cargo workspace takes the release profile from the root and
@@ -64,11 +65,11 @@ content shedos-prompt-ui/Cargo.toml 63ef5d5e23fd3b2c6366716ec7a2ca7abcda12a9..c0
 # shedos-screensaver's has one more change: it builds `-p 'shedos-screensaver-*'` where
 # it used to build --workspace, because --workspace in the shared tree would drag in the
 # other four members.
-content shedos-greeter/PKGBUILD 289825f7a0558b385065ca14c52530a3d366f4d0..b41ff8303c760c0c9cb83a96073b91dae3f14cb0 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-power/PKGBUILD af067d88bfda0041a0b34923c7849bb7683a9e1f..685756acd0b8ba0b54fcd20abaec7df69ce8d0dd — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-switcher/PKGBUILD 55bc16744f96d3553c785e2940c66134456cee25..2ba0b412c27937a2b0efecdd31fa81b44f428f10 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-tour/PKGBUILD abd96dea72e8b11d63329726a88e7d448af02838..64abdaeb663b0bdc9f040815238fa86de387092d — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
-content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..c098b8cda68bf453adb1ccee2fec3d4e34713490 — builds from this repository's tag inside the workspace, selects its own eight crates rather than the whole workspace, and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-greeter/PKGBUILD 289825f7a0558b385065ca14c52530a3d366f4d0..8b14f6fb1a825b45884e0ad2584a7c541165a31b — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-power/PKGBUILD af067d88bfda0041a0b34923c7849bb7683a9e1f..54b2fff5d1d5827553921527bada970348b0a63b — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-switcher/PKGBUILD 55bc16744f96d3553c785e2940c66134456cee25..756bdb67bf91ac8d14b7c2f8c9a2683b62c0e911 — builds from this repository's tag inside the workspace and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-tour/PKGBUILD abd96dea72e8b11d63329726a88e7d448af02838..9d542f53b657e3e1ee678ca23b253bca28757a21 — builds from this repository's tag inside the workspace, installs the verb declaration and the page under the name that declaration points at, depends on the dispatcher it extends, and carries the pkgrel the pipeline's guard moved past what staging held
+content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..e6485ae073fefbe980fadb535e066d05ac80ae39 — builds from this repository's tag inside the workspace, selects its own eight crates rather than the whole workspace, installs the verb declaration, depends on the dispatcher it extends, and carries the pkgrel the pipeline's guard moved past what staging held
 #
 # The eleventh is a test inside the screensaver's core crate. It checked the vendored ASCII
 # art against the branding package's copy by reaching out of the packaging directory —
@@ -77,8 +78,24 @@ content shedos-screensaver/PKGBUILD 6abc8fec3e741e0530b64117f30869d561a626e8..c0
 # installed file at DEFAULT_LOGO_PATH now, which is where shedos-branding puts it, so the
 # check still compares the vendored copy against the package rather than against itself.
 content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832bfca6203755f34549048ecf80e17302..6fafca22828c8195bbef447ae08a9346490c2873 — the vendored art is checked against the installed branding file, because the monolith-relative path it reached for is not in this repository
+#
+# The last two are the verb contract, from the two packages that shipped a verb without
+# ever declaring one. The screensaver's shim passed --complete-bash straight to the
+# binary, and what the binary answers there is a whole shell completion script — the file
+# the package installs under /usr/share/bash-completion — where shedman's completers read
+# a word list off stdout. It also cannot answer at all where the binary is not installed,
+# which is the tree the build-time contract check reads. The shim answers the three
+# completion modes itself now and execs for everything else, and test/screensaver holds
+# its list against clap's so a flag added to one and not the other is a red.
+#
+# prompt-ui's bundled fallback disagreed with the theme engine's on both accents, green
+# and teal there against blue and mauve here, while shedos_palette.py's own comment said
+# the two match. The engine is the palette's home, so this side moved; a release check in
+# shed-os/shedos-release reads both copies and holds them together from here on.
+content shedos-screensaver/tree/usr/libexec/shedman/screensaver ddc8ccf3fcf95efe8a090f4dfcd45071642e8826..f1e9f76cafd441993c21b66f4f8b3e26ba60e620 — answers the completion contract itself, because the dispatcher wants a word list where the binary emits a completion script
+content shedos-prompt-ui/src/theme.rs 166df0e5f84b9e480fb66cbffc8151ce7904072a..e3abcb63b0a6ba8aacc2ed59a49a647d50f50597 — the fallback accent pair is the theme engine's, which is what the engine's comment always claimed
 
-# --- (b2) the 7 files with no monolith counterpart ---------------------------------
+# --- (b2) the 10 files with no monolith counterpart --------------------------------
 #
 # The workspace itself: Cargo.toml, which declares the thirteen members, the shared
 # dependency versions, the release profile the members gave up and the [workspace.package]
@@ -91,6 +108,16 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 # which drives the built shedos-screensaver binary through its read-only modes. Neither
 # existed in the monolith, where each crate was built on its own.
 #
+# The verb contract, which the monolith never held these two packages to. The dispatcher
+# runs anything under /usr/libexec/shedman and both shipped a verb with nothing describing
+# it, so `shedman help` listed two names with no line beside them:
+#
+#   shedos-screensaver/tree/usr/share/shedman/verbs.d/screensaver.toml
+#   shedos-tour/tree/usr/share/shedman/verbs.d/tour.toml — with completes = false, because
+#     the verb takes no options of its own and silence has to be declared
+#   shedos-tour/man/shedman-tour.1.scd — the page the declaration points at, which is
+#     shedos-tour/man/shedos-tour.1.scd renamed; section (e) holds the old name
+#
 # Repository scaffolding the carve could not bring and no package ships: README.md,
 # .gitignore — which must not ignore `src/`, because in this repository `src/` is the
 # Rust code rather than makepkg's extraction directory — and .github/workflows/ci.yml,
@@ -100,14 +127,14 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 #
 # Measured over the whole carved tree at HEAD against the monolith at 8ce1763e:
 #
-#   package tree: 174 identical, 11 transformed
+#   package tree: 171 identical, 13 transformed
 #   test tree:    the two suites are this repository's own                (see (b2))
-#   no monolith counterpart: 7                                            (see (b2))
+#   no monolith counterpart: 10                                           (see (b2))
 #
-# 174 of 185 carved files are the monolith's bytes exactly — every source file of every
+# 171 of 184 carved files are the monolith's bytes exactly — every source file of every
 # crate, the man pages, the i18n catalogues, the install scriptlets and the shipped tree.
 
-# --- (e) the 13 files the map selects and this tree does not hold -------------------
+# --- (e) the 14 files the map selects and this tree does not hold -------------------
 #
 # The consolidation into one workspace. Six .gitignore files, six Cargo.lock files and
 # shedos-screensaver/Cargo.toml left their packaging directories for the repository root,
@@ -117,7 +144,11 @@ content shedos-screensaver/crates/shedos-screensaver-core/src/logo.rs a5d610832b
 #   <member>/Cargo.lock    ×6   one lock resolves the whole workspace
 #   shedos-screensaver/Cargo.toml   its crates are workspace members, listed at the root
 #
-# Nothing was lost — the walk names all thirteen and this file names them back, and the
+# The fourteenth is a rename rather than a move: shedos-tour/man/shedos-tour.1.scd is
+# shedos-tour/man/shedman-tour.1.scd here, the name the tour's verb declaration points at
+# and the one shedos-screensaver's page already carried. (b2) holds the new name.
+#
+# Nothing was lost — the walk names all fourteen and this file names them back, and the
 # root Cargo.toml and Cargo.lock in (b2) are where they went. The walk still exits 1 on
 # them, because the model has `content` and nothing else: a file that moved to a place no
 # carve map describes has no directive to be written as. Until it has one, this section

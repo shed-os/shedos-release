@@ -47,7 +47,15 @@ namespace at all rather than each package's own directory."""
 
 [[path]]
 glob = "/usr/share/shedman/verbs.d/*"
-owners = ["shedman", "shedos-hyprland", "shedos-system", "shedos-theme-engine"]
+owners = [
+    "shedman",
+    "shedos-hyprland",
+    "shedos-migrate-to-packaged",
+    "shedos-screensaver",
+    "shedos-system",
+    "shedos-theme-engine",
+    "shedos-tour",
+]
 note = """
 The declarations the dispatcher lists from. A declaration names the verb it is
 about rather than taking its name from the file, so two packages declaring one

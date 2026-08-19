@@ -190,30 +190,16 @@ if curl -fsSL --max-time 60 -A 'shedos-release (+https://shedos.org)' \
     "$UI_RAW/shedos-prompt-ui/src/theme.rs" \
     -o "$promptui" 2> /dev/null && [[ -s $promptui ]]
 then
-    # Two of the ten disagree, and the engine's own comment says they cannot:
-    # it claims to match prompt-ui so the TUIs and the GUIs fall back to the
-    # same colours. The accent pair is green/teal in the engine and blue/mauve
-    # in prompt-ui, which is the drift this check was written to find. Fixing
-    # it is a release act in another repository, so it is written down here in
-    # both directions — an entry that starts agreeing fails too.
-    declare -A DRIFTED=(
-        [accent]='the engine says green and prompt-ui says blue'
-        [accent_secondary]='the engine says teal and prompt-ui says mauve'
-    )
+    # The accent pair used to be the exception here — green/teal in the engine
+    # and blue/mauve in prompt-ui, while the engine's own comment said the two
+    # match. They match now, so the whole set is asked the same question and
+    # nothing is written down as allowed to differ.
     mismatch=0
     while read -r field value; do
         want=$(awk -F'\t' -v f="$field" '$1 == f { print toupper(substr($2, 2)) }' "$WORK/canonical.tsv")
         if [[ -z $want ]]; then
             bad "prompt-ui names $field" 'the engine has no such colour'
             mismatch=1
-            continue
-        fi
-        if [[ -n ${DRIFTED[$field]:-} ]]; then
-            if [[ $value == "FF$want" ]]; then
-                bad "prompt-ui $field still differs" 'it agrees now — take the line out'
-            else
-                ok "prompt-ui $field still differs (${DRIFTED[$field]})"
-            fi
             continue
         fi
         if [[ $value == "FF$want" ]]; then
@@ -274,34 +260,19 @@ fi
 
 # --- 5. verb completeness ---------------------------------------------------
 #
-# Every verb the release publishes should be declared and documented. Three are
-# not declared, and the three are the packages the split gave verbs to without
-# giving them the dispatcher's package as a dependency. They are written down
-# here in both directions, so a fourth fails the run and a fix forces the line
-# out.
+# Every verb the release publishes is declared and documented. Three were not —
+# migrate, screensaver and tour, the packages the split gave verbs to without
+# giving them the dispatcher's package as a dependency — and they were written
+# down here until each grew its declaration, its man page and the dependency.
+# Nothing is written down now, so a fourth simply fails.
 
 section 'every published verb is declared and man-paged'
-declare -A UNDECLARED=(
-    [migrate]=shedos-migrate-to-packaged
-    [screensaver]=shedos-screensaver
-    [tour]=shedos-tour
-)
 LIBEXEC=$MERGED/usr/libexec/shedman
 VERBSD=$MERGED/usr/share/shedman/verbs.d
 for tool in "$LIBEXEC"/*; do
     verb=$(basename "$tool")
     [[ $verb == _* ]] && continue
     owner=$(owns "/usr/libexec/shedman/$verb")
-    if [[ -n ${UNDECLARED[$verb]:-} ]]; then
-        if [[ -f $VERBSD/$verb.toml ]]; then
-            bad "$verb is still undeclared" 'it has a declaration now — take the line out'
-        elif [[ $owner != "${UNDECLARED[$verb]}" ]]; then
-            bad "$verb is still undeclared" "it moved to $owner"
-        else
-            ok "$verb is still undeclared ($owner ships no declaration)"
-        fi
-        continue
-    fi
     check "$verb is declared (by $owner)" test -f "$VERBSD/$verb.toml"
 done
 

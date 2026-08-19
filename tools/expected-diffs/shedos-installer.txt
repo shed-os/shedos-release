@@ -187,12 +187,15 @@ content tests/test_calamares_modules.py 234021691cf76525f60bdf1b0428bea2ed5955e8
 # was pkgver 2026.08.09 — the current stable date — with pkgrel 1, the same scheme shedman,
 # shedos-theme-engine and shedos-theme-catppuccin took.
 #
-# What the channel carries is 2026.08.09.1-1. The first release had published when a review
-# found the module loop naming files, and a published tag does not move: the fourth component
-# is the house form for a second cut of a date-versioned package, established when shedman
-# took 2026.08.13.1. `vercmp 2026.08.09.1 2026.08.09` is 1, so the new release supersedes the
-# old one rather than sitting under it, and the publisher replaced the entry rather than
-# adding one.
+# What the channel carries is 2026.08.09.2-1. A published tag does not move, so each time
+# this package changes after a release it takes the next fourth component — the house form
+# for a further cut of a date-versioned package, established when shedman took
+# 2026.08.13.1. `.1` came when a review found the module loop naming files; `.2` came when
+# the branding descriptor entered backup=, because the ISO build rewrites its version
+# fields during pacstrap and pacman was replacing the stamped copy on every upgrade with
+# no .pacnew to notice by. `vercmp` orders each above the last, so a new release supersedes
+# the old one rather than sitting under it, and the publisher replaces the entry rather
+# than adding one.
 #
 # There is no version floor on shedos-system, and the reason is worth writing down: what this
 # package needs from it is a FILE, and the monolith's shedos-system and the carved one carry

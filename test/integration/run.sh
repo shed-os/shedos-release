@@ -99,37 +99,13 @@ export SHEDOS_LIB_ROOT=$MERGED/usr/lib/shedos
 # release knows its own roster, so this asks every verb rather than a list
 # somebody has to remember to extend.
 
-# Two of the answers are wrong today, in two other repositories, and both are
-# written down here rather than checked less strictly. The list runs in both
-# directions: an entry that starts answering correctly fails the run too, so
-# fixing one of these forces the line out instead of leaving it to rot.
-#
-#   health --help        prints neither a usage line nor the program name. The
-#                        monolith's smoke suite named nine verbs and health was
-#                        not one of them, so nothing ever asked. shedman's.
-#   migrate --complete-fish  exits 2 on an option the other two shells get.
-#                        shedos-migrate-to-packaged's.
-#
-# Both are release acts to fix — a new build, a new publish, a new pin — so
-# they are reported and not taken here.
-declare -A KNOWN=(
-    ['health --help']='prints no usage line'
-    ['migrate --complete-fish']='the verb rejects the option'
-)
-known_seen=()
-
-# A check whose subject is on that list is inverted: it has to keep failing.
+# Two answers used to be wrong here and were written down rather than checked
+# less strictly: health --help printed neither a usage line nor the program
+# name, and migrate --complete-fish exited 2 on an option the other two shells
+# got. Both were fixed in the repositories that own them and published, and the
+# entries came out with them. Nothing is exempt now.
 contract() {
     local label=$1 outcome=$2 detail=${3:-}
-    if [[ -n ${KNOWN[$label]:-} ]]; then
-        known_seen+=("$label")
-        if (( outcome )); then
-            bad "$label is still ${KNOWN[$label]}" 'it answers correctly now — take the line out'
-        else
-            ok "$label is still ${KNOWN[$label]} (reported, owned elsewhere)"
-        fi
-        return
-    fi
     if (( outcome )); then ok "$label"; else bad "$label" "$detail"; fi
 }
 
@@ -193,24 +169,6 @@ for verb in "${verbs[@]}"; do
 done
 printf '       %d of %d verbs answered; %d could not be asked in this container\n' \
     "$(( ${#verbs[@]} - notaskable ))" "${#verbs[@]}" "$notaskable"
-
-section 'the reported contract gaps are the ones written down'
-# Only meaningful where the verb could be asked at all; a container that cannot
-# load it has not shown the gap is gone.
-for label in "${!KNOWN[@]}"; do
-    verb=${label%% *}
-    if [[ ! -x $LIBEXEC/$verb ]]; then
-        bad "$label was asked" 'the release ships no such verb'
-        continue
-    fi
-    if printf '%s\n' "${known_seen[@]}" | grep -qxF "$label"; then
-        ok "$label was asked"
-    elif (( notaskable )); then
-        printf '  skip %s (not askable in this container)\n' "$label"
-    else
-        bad "$label was asked" 'the check never ran'
-    fi
-done
 
 # --- the dispatcher, over the roster several packages built -----------------
 

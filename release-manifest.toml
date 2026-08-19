@@ -37,10 +37,10 @@ sha256 = "4f8061eab111e2e8109abcb1d45934e8782858825fb021d5692ae209619a18c3"
 [[package]]
 name = "shedman"
 repo = "shedman"
-ref = "2026.08.13.1"
-pkgver = "2026.08.13.1"
-pkgrel = "2"
-sha256 = "0e14fe7ecdaad6e393913d7f7dbf70cb8cc9d0a614137a91ea419df1b9932a1a"
+ref = "2026.08.19.1"
+pkgver = "2026.08.19.1"
+pkgrel = "1"
+sha256 = "601bf31b73b334d9b6d33f0ac8c9f77c5a3f148f0eb31edfa7cdbbdccc74cc01"
 
 [[package]]
 name = "shedos-branding"
@@ -58,8 +58,8 @@ name = "shedos-greeter"
 repo = "shedos-ui"
 ref = "2026.08.09"
 pkgver = "2026.08.09"
-pkgrel = "4"
-sha256 = "ebe0ae63bb53621b966781af25cda63ae67aa14176ad9f7d305b7bc2db192216"
+pkgrel = "5"
+sha256 = "17ee591b12d4678a4bcf13764ef0489718187fcbaad5833de4ccaf4b7c730fd8"
 
 [[package]]
 name = "shedos-hyprland"
@@ -83,10 +83,10 @@ sha256 = "46440fb4ab58a695152f41869f30f263b9ddaad21b2a77d69baff30460224e40"
 [[package]]
 name = "shedos-installer"
 repo = "shedos-installer"
-ref = "2026.08.09.1"
-pkgver = "2026.08.09.1"
+ref = "2026.08.09.2"
+pkgver = "2026.08.09.2"
 pkgrel = "1"
-sha256 = "7c22d8826f295f65f70518a70529598a1ae061f7872dcac9f404b4a3abcd95ac"
+sha256 = "0fee0e0fd1d9686db30db42f185966dc710471e3b376b27a3599c98969a99cea"
 
 [[package]]
 name = "shedos-keyring"
@@ -115,13 +115,12 @@ sha256 = "e19407647e46986fd4ea4cf1ecca98f509fbee943c6ba229d5e81a9b795a82f8"
 [[package]]
 name = "shedos-migrate-to-packaged"
 repo = "shedos-migrate"
-ref = "d6cbe8d01f74cc5bfe5a64b0a361e6eeab12aae3"
-# derived: the one commit on shedos-migrate whose PKGBUILD says 2026.08.09-2
-# it builds from the checkout and declares no source
-# this release predates the publisher recording what it was asked
+ref = "3a9538a254d05f028449f58bcfcfe1b389f24326"
+# the tree the publisher recorded this package as built from
+# checked against 2026.08.09-3 rather than taken on trust
 pkgver = "2026.08.09"
-pkgrel = "2"
-sha256 = "9399af31002103ae51b65d98f63f81c9b54c9933c0f5ffa1130e080fc3d7bee7"
+pkgrel = "3"
+sha256 = "6bbad16d1a979800ff909d7caffb7a1096f9e08bfbf5cf5f1a88ecaa241a5823"
 
 [[package]]
 name = "shedos-nvim"
@@ -139,24 +138,24 @@ name = "shedos-power"
 repo = "shedos-ui"
 ref = "2026.08.09"
 pkgver = "2026.08.09"
-pkgrel = "4"
-sha256 = "73ab440ceda8cd409d47db7ddcd2b727c7a599b7b630f1bb1c11e0dacaaef6fb"
+pkgrel = "5"
+sha256 = "a7b2929b40a1877a690d339802bd3f9e190852470362df8f08728cabc83ee7b5"
 
 [[package]]
 name = "shedos-screensaver"
 repo = "shedos-ui"
 ref = "2026.08.09"
 pkgver = "2026.08.09"
-pkgrel = "5"
-sha256 = "13f296ec1306bfb0a35eafb88e47ecde7e7d0a8531169889d2340340c79459e3"
+pkgrel = "6"
+sha256 = "9d128bea1dfdecd01e2b05d9602bca984cb8a6c07794e6934240ee767e770359"
 
 [[package]]
 name = "shedos-switcher"
 repo = "shedos-ui"
 ref = "2026.08.09"
 pkgver = "2026.08.09"
-pkgrel = "4"
-sha256 = "738367ecd82cecd7fa637a7a5e9deeaf4be05f0c91097b4fcebecaef7bba82bc"
+pkgrel = "5"
+sha256 = "dde4a52e8641d117e9371fb8b284021a49fe97175b97dddfa4c6c08a1d7e24e9"
 
 [[package]]
 name = "shedos-system"
@@ -187,5 +186,5 @@ name = "shedos-tour"
 repo = "shedos-ui"
 ref = "2026.08.09"
 pkgver = "2026.08.09"
-pkgrel = "4"
-sha256 = "941ab0e1aa2de34aafb098be8704d6b8644d5c327f06d4b181192a0395b45178"
+pkgrel = "5"
+sha256 = "d6ffa395e4630ade0e43bee48c1e35ddc5149150ad0e89e214521cdb82993786"
