@@ -99,11 +99,17 @@ jobs:
     # can be displaced by the next request — which is the dropped publish the
     # reconcile exists to find, invited in for no reason.
     steps:
+      # A later commit than the other two workflows pin, and it has to be:
+      # request-publish.sh only learned to send the tree a package was built
+      # from in 0657cd6, and at the older pin it sends a request with no
+      # build_sha in it, so the channel records what triggered the run and not
+      # what it built. The others take only install-packages.sh and have no
+      # reason to move.
       - name: Check out the pipeline scripts
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: shed-os/shedos-ci
-          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          ref: 22f0b0d4cab3a845677bf6536ae9c4d83d9ef04f
           path: .shedos-ci
 
       - name: Move the pipeline scripts out of the workspace
