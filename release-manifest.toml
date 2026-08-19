@@ -100,6 +100,19 @@ pkgrel = "2"
 sha256 = "5fa826b308d7958d708b6461c4d11bd958212300e60700a1a298828ecddc1c60"
 
 [[package]]
+name = "shedos-meta"
+repo = "shedos-release"
+ref = "f30e2336f6bf2fb73a9d5338787767cb4400aa28"
+# the commit the publisher recorded the run at, checked against 2026.08.09-1
+# rather than taken on trust
+# not the tree it recorded the package as built from: the workflow that builds
+# this one took the pipeline at a commit before it sent that, and here the two
+# are the same commit anyway because nothing bumps pkgrel between them
+pkgver = "2026.08.09"
+pkgrel = "1"
+sha256 = "e19407647e46986fd4ea4cf1ecca98f509fbee943c6ba229d5e81a9b795a82f8"
+
+[[package]]
 name = "shedos-migrate-to-packaged"
 repo = "shedos-migrate"
 ref = "d6cbe8d01f74cc5bfe5a64b0a361e6eeab12aae3"
