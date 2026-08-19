@@ -27,6 +27,48 @@
 # fleet's producer and its packages/ is still its own build input. A list change lands
 # there first and propagates here. After the cutover these are the originals and the
 # monolith's are gone with it.
+#
+# The ISO pipeline came across in a second pass, 189 commits and 1523 paths, from the
+# monolith at the same 8ce1763e and merged the same way:
+#
+#   path archiso/
+#   except archiso/airootfs/etc/pam.d/hyprlock
+#   rename branding/issue:archiso/airootfs/etc/issue
+#   rename branding/motd:archiso/airootfs/etc/motd
+#   rename scripts/generate-package-list.sh:tools/generate-package-list.sh
+#   rename scripts/download-packages.sh:tools/download-packages.sh
+#   rename scripts/verify-cache.sh:tools/verify-cache.sh
+#   rename scripts/pacman-offline-download.sh:tools/pacman-offline-download.sh
+#   rename scripts/build-aur-packages.sh:tools/build-aur-packages.sh
+#   rename scripts/bake-claude-code.sh:tools/bake-claude-code.sh
+#   rename scripts/verify-shedos-deps.sh:tools/verify-shedos-deps.sh
+#   path scripts/boot-assert.sh
+#   path scripts/bios-boot-assert.sh
+#   path scripts/emergency-boot-assert.sh
+#   path scripts/encrypt-boot-assert.sh
+#   path scripts/encrypt-powercut-assert.sh
+#   path scripts/live-iso-lock-assert.sh
+#   path scripts/test-iso.sh
+#   path scripts/build-base-image.sh
+#   path scripts/lib/encrypt-harness.sh
+#
+# 70 paths at HEAD: the 54 of archiso/, the nine QEMU harnesses under scripts/ and the
+# seven build steps that became tools/. The map is the union of both passes, because the
+# walk reads one map per repository and has to be able to place every carved path.
+#
+# Three deliberate subtractions, and each is a thing the new-world build does not have:
+#
+#   archiso/shedos-repo/  never held a tracked file — the packages in it were built into
+#                         it by a step that is gone, and it is a fetch of the published
+#                         release now
+#   /etc/pam.d/hyprlock   a pam file for a program the ISO cannot install: shedos-hyprland
+#                         conflicts with hyprlock, so nothing on the ISO has ever read it
+#   branding/wallpapers   staged into the airootfs at /opt beside the installer sources;
+#                         shedos-branding ships them and the installer package reads them
+#                         from where that package puts them
+#
+# branding/issue and branding/motd came with the profile rather than with the branding
+# package, because the ISO build is their only reader — the package ships neither.
 
 # --- (b) the 4 transformed files --------------------------------------------------
 #
@@ -73,14 +115,16 @@
 content packages/installer-only.txt a6b6f4897f939e7d577d81f33aa68f517a5f0052..39905c33f0b0da0584fdda2c07cc83b228527041 — calamares added; the manifest names it and the monolith's inputs never did
 content packages/.meta-closure.txt 3fc9a61dd783fdd102b4fda042e05144e87019f3..071ce565019be26cb05308ee49a43a8658816804 — the same package set with the replaced marker and a new header
 content tools/render-meta-depends.sh 4faa458d829bb6b10517f59f5ca5be0a96aaf5d9..aac4f0ef4e521661d4439449340c18d1250776a9 — manifest-driven pkgver and package set with exact pins
-content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..dc33bd2f57119c4c13f77d9439b574fa328d98a6 — the conflicts come from a file and the closure records what the channel replaces
+content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..9559c64215fc7cfabea10508db9c74959f903756 — the conflicts come from a file and the closure records what the channel replaces
 
-# --- (b2) the 72 files with no monolith counterpart --------------------------------
+# --- (b2) the 76 files with no monolith counterpart --------------------------------
 #
 # This repository is mostly not a carve. The publisher, the manifest tools, the carve and
 # comparison tools, the enumerations, the suites, the workflows and the README were all
-# written here. Four are this task's: packages/meta-conflicts.txt, this file,
-# .github/workflows/meta.yml and packaging/shedos-meta/PKGBUILD.
+# written here. Four came in with the metapackage: packages/meta-conflicts.txt, this file,
+# .github/workflows/meta.yml and packaging/shedos-meta/PKGBUILD. Four came in with the
+# fetch stage: tools/lib-fetch.sh, tools/fetch-packages.sh, tools/extract-package.sh and
+# test/fetch/run.sh.
 #
 # That last one does have a monolith counterpart at the same path, and the carve map
 # still does not claim it. Both are generated files, so a blob pin would move on every
@@ -90,13 +134,13 @@ content tools/resolve-meta-closure.sh 28ec134ba3065caa48d6e062e0a8596ab083e95c..
 #
 # Measured over the carved paths at HEAD against the monolith at 8ce1763e:
 #
-#   package tree: 24 identical, 4 transformed
+#   package tree: 94 identical, 4 transformed
 #   test tree:    the monolith has no out-of-tree suite for any of this and neither
 #                 does this repository — test/meta covers the generators
-#   no monolith counterpart: 72                                       (see (b2))
+#   no monolith counterpart: 76                                       (see (b2))
 #
-# The 24 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
-# aur-pkgbuild-hashes.txt and iso-only-official.txt.
+# The 94 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
+# aur-pkgbuild-hashes.txt and iso-only-official.txt, and the 70 the ISO pipeline brought.
 
 # --- the two metapackages, compared -------------------------------------------------
 #
