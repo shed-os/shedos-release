@@ -1,8 +1,8 @@
 # ShedOS airootfs package list
 #
 # AUTO-GENERATED; DO NOT EDIT MANUALLY.
-# Source: packages/official/*.txt + packages/aur.txt
-# Regenerate: sudo scripts/generate-package-list.sh
+# Source: packages/official/*.txt + packages/aur.txt + release-manifest.toml
+# Regenerate: sudo tools/generate-package-list.sh
 #
 # Flat resolved closure. Every transitive dep is listed explicitly so
 # pacstrap has no virtual-provider rolls to do at build time.
@@ -35,9 +35,9 @@ arch-install-scripts
 archlinux-keyring
 aria2
 ast-grep
+at-spi2-core
 atkmm
 atool
-at-spi2-core
 attr
 audit
 autoconf
@@ -71,14 +71,13 @@ btop
 btrfs-progs
 bubblewrap
 bzip2
+c-ares
 ca-certificates
 ca-certificates-mozilla
 ca-certificates-utils
-cage
 cairo
 cairomm
 cairomm-1.16
-c-ares
 ccache
 cdparanoia
 cifs-utils
@@ -139,11 +138,11 @@ e2fsprogs
 edk2-shell
 efibootmgr
 efivar
-eglexternalplatform
 egl-gbm
 egl-wayland
 egl-wayland2
 egl-x11
+eglexternalplatform
 electron42
 electron43
 elfutils
@@ -175,15 +174,15 @@ firefox
 flac
 flex
 fmt
-fontconfig
 font-manager
+fontconfig
 fprintd
 freeglut
 freetype2
 fribidi
+fuse-common
 fuse2
 fuse3
-fuse-common
 fzf
 gawk
 gc
@@ -198,6 +197,7 @@ gdk-pixbuf2
 geocode-glib
 gettext
 gexiv2
+gexiv2-common
 ghc-libs
 ghostscript
 giflib
@@ -205,11 +205,11 @@ girara
 git
 git-delta
 git-lfs
+glib-networking
 glib2
 glibc
 glibmm
 glibmm-2.68
-glib-networking
 glslang
 glu
 glycin
@@ -258,13 +258,13 @@ gst-plugins-base-libs
 gst-plugins-good
 gstreamer
 gtest
+gtk-layer-shell
+gtk-update-icon-cache
 gtk3
 gtk4
-gtk-layer-shell
-gtkmm3
 gtkmm-4.0
-gtksourceview3
-gtk-update-icon-cache
+gtkmm3
+gtksourceview4
 guile
 gumbo-parser
 gupnp
@@ -387,8 +387,8 @@ jemalloc
 jp2a
 jq
 json-c
-jsoncpp
 json-glib
+jsoncpp
 karchive
 kbd
 kbookmarks
@@ -432,6 +432,7 @@ kwallet
 kwidgetsaddons
 kwindowsystem
 kxmlgui
+l-smash
 lame
 lazydocker
 lazygit
@@ -732,22 +733,21 @@ lld
 lld21
 lldb
 llhttp
-llvm21-libs
 llvm-libs
-lmdb
+llvm21-libs
 lm_sensors
+lmdb
 localsearch
 loupe
 lshw
-l-smash
 lsof
 ltrace
 lua
+lua-language-server
 lua51
 lua51-lpeg
 lua54
 luajit
-lua-language-server
 lv2
 lz4
 lzo
@@ -791,14 +791,14 @@ ncurses
 neovim
 nethogs
 nettle
-networkmanager
 network-manager-applet
+networkmanager
 networkmanager-openvpn
 networkmanager-vpn-plugin-openvpn
 nftables
 nload
-nmap
 nm-connection-editor
+nmap
 node-gyp
 nodejs
 nodejs-nopt
@@ -933,8 +933,8 @@ python-certifi
 python-cffi
 python-chardet
 python-charset-normalizer
-python-click
 python-cli_helpers
+python-click
 python-configobj
 python-cryptography
 python-dateutil
@@ -964,6 +964,7 @@ python-lsp-server
 python-magic
 python-markdown-it-py
 python-markupsafe
+python-mdit_py_plugins
 python-mdurl
 python-more-itertools
 python-mypy_extensions
@@ -1001,6 +1002,8 @@ python-soupsieve
 python-sphinx
 python-sphinx-alabaster-theme
 python-sphinx-basic-ng
+python-sphinx-furo
+python-sphinx_rtd_theme
 python-sphinxcontrib-applehelp
 python-sphinxcontrib-devhelp
 python-sphinxcontrib-htmlhelp
@@ -1008,16 +1011,14 @@ python-sphinxcontrib-jquery
 python-sphinxcontrib-jsmath
 python-sphinxcontrib-qthelp
 python-sphinxcontrib-serializinghtml
-python-sphinx-furo
-python-sphinx_rtd_theme
 python-sqlalchemy
 python-sqlparse
 python-tabulate
-python-textual
 python-text-unidecode
+python-textual
 python-tomlkit
-python-typing_extensions
 python-typing-inspection
+python-typing_extensions
 python-tzlocal
 python-uc-micro-py
 python-ujson
@@ -1061,8 +1062,8 @@ rofi
 rsync
 rubberband
 ruff
-runc
 run-parts
+runc
 rust-analyzer
 rustup
 s3cmd
@@ -1137,8 +1138,8 @@ tesseract-data-osd
 testdisk
 tevent
 texinfo
-thermald
 the_silver_searcher
+thermald
 tinysparql
 tinyxml2
 tlp
@@ -1211,16 +1212,16 @@ vlc-plugin-ogg
 vlc-plugin-opus
 vlc-plugin-png
 vlc-plugin-pulse
-vlc-plugins-base
 vlc-plugin-shout
 vlc-plugin-speex
-vlc-plugins-video-output
 vlc-plugin-tag
 vlc-plugin-theora
 vlc-plugin-twolame
 vlc-plugin-vorbis
 vlc-plugin-vpx
 vlc-plugin-xml
+vlc-plugins-base
+vlc-plugins-video-output
 vmaf
 volume_key
 vulkan-icd-loader
@@ -1272,7 +1273,6 @@ xdotool
 xfsprogs
 xkeyboard-config
 xorg-fonts-encodings
-xorgproto
 xorg-server-common
 xorg-setxkbmap
 xorg-xhost
@@ -1280,6 +1280,7 @@ xorg-xkbcomp
 xorg-xprop
 xorg-xset
 xorg-xwayland
+xorgproto
 xvidcore
 xxhash
 xz
@@ -1309,7 +1310,7 @@ zsh-completions
 zsh-syntax-highlighting
 zstd
 
-# --- AUR (built into archiso/shedos-repo by build-aur-packages.sh) ---
+# --- AUR (built by tools/build-aur-packages.sh) ---
 ananicy-cpp-git
 blesh-git
 catppuccin-gtk-theme-mocha
@@ -1349,8 +1350,23 @@ visual-studio-code-bin
 walker
 yay
 
-# --- shedos-* + calamares (built into archiso/shedos-repo) ---
+# --- the release (fetched by tools/fetch-packages.sh) ---
+cage
 calamares
+shedman
 shedos-branding
+shedos-greeter
+shedos-hyprland
+shedos-hyprland-plugin-hyprspace
+shedos-installer
 shedos-keyring
 shedos-meta
+shedos-migrate-to-packaged
+shedos-nvim
+shedos-power
+shedos-screensaver
+shedos-switcher
+shedos-system
+shedos-theme-catppuccin
+shedos-theme-engine
+shedos-tour

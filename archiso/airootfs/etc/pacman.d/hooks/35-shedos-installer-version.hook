@@ -1,0 +1,22 @@
+# remove from airootfs!
+# The installer package ships branding.desc saying DEVELOPMENT, because the
+# package is built without knowing which release it will be put on and the two
+# cadences are not the same one. The ISO knows, so the ISO stamps it, here,
+# where the package has just landed in the airootfs and the squashfs has not
+# been made yet.
+#
+# The release is substituted into this file when the build copies the profile,
+# the same way profiledef.sh's iso_version is. zzzz99 strips this file from the
+# squashfs, so it never runs on an installed system.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = shedos-installer
+
+[Action]
+Description = Stamping the release into the Calamares branding...
+When = PostTransaction
+Depends = sed
+Exec = /bin/sh -c 'b=/etc/calamares/branding/shedos/branding.desc; [ -f "$b" ] || exit 0; sed -i -e "s/version: \"[^\"]*\"/version: \"@SHEDOS_VERSION@\"/" -e "s/shortVersion: \"[^\"]*\"/shortVersion: \"@SHEDOS_VERSION@\"/" -e "s/versionedName: \"[^\"]*\"/versionedName: \"ShedOS @SHEDOS_VERSION@\"/" -e "s/shortVersionedName: \"[^\"]*\"/shortVersionedName: \"ShedOS @SHEDOS_VERSION@\"/" "$b"'

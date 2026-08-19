@@ -1,13 +1,19 @@
 #!/bin/bash
-# Verify all packages needed for ISO build are in cache
+# Every package archiso/packages.x86_64 names is on this machine already:
+# the Arch ones in pacman's cache, the AUR ones and the release's own in the
+# ISO's local repository. mkarchiso runs with the network cut, so a name that
+# is not here is a pacstrap failure fifty minutes in.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=tools/lib-manifest.sh
+source "$SCRIPT_DIR/lib-manifest.sh"
 PACKAGES_FILE="$PROJECT_ROOT/archiso/packages.x86_64"
 OFFICIAL_CACHE="/var/cache/pacman/pkg"
-AUR_REPO="$PROJECT_ROOT/archiso/shedos-repo"
+AUR_REPO="${SHEDOS_ISO_REPO:-$PROJECT_ROOT/out/shedos-repo}"
+RELEASE_MANIFEST="${SHEDOS_MANIFEST:-$PROJECT_ROOT/release-manifest.toml}"
 
 # Read AUR packages from packages/aur.txt (single source of truth)
 AUR_FILE="$PROJECT_ROOT/packages/aur.txt"
@@ -16,6 +22,11 @@ if [ -f "$AUR_FILE" ]; then
 else
     AUR_PACKAGES=()
 fi
+
+RELEASE_LIST=$(mktemp)
+trap 'rm -f "$RELEASE_LIST"' EXIT
+manifest_read "$RELEASE_MANIFEST" | awk -F'\t' '$1 == "package" { print $2 }' \
+    | LC_ALL=C sort -u > "$RELEASE_LIST"
 
 echo "========================================"
 echo "Verifying package cache completeness..."
@@ -42,12 +53,13 @@ while IFS= read -r line; do
     done
     [ "$is_aur" = true ] && continue
 
-    # ShedOS-native packages live in archiso/shedos-repo/, not /var/cache/pacman.
-    # They're produced by scripts/build-shedos-packages.sh; check there instead.
-    if [[ "$pkg" == shedos-* ]]; then
+    # The release's own packages were fetched into the ISO repository, never
+    # into pacman's cache. A name the manifest carries is looked for there and
+    # nowhere else, so a missing one is reported as what it is.
+    if grep -qxF "$pkg" "$RELEASE_LIST"; then
         CHECKED=$((CHECKED + 1))
         if ! ls "$AUR_REPO/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
-            echo "❌ MISSING (shedos-repo): $pkg"
+            echo "MISSING (the release was not fetched): $pkg"
             MISSING=$((MISSING + 1))
         fi
         continue
@@ -55,12 +67,11 @@ while IFS= read -r line; do
 
     CHECKED=$((CHECKED + 1))
 
-    # Check pacman cache first, then archiso/shedos-repo/ as a fallback
-    # for packages we build locally without the shedos- prefix (e.g. our
-    # patched calamares).
+    # pacman's cache first, then the ISO repository, which is where the AUR
+    # builds land.
     if ! ls "$OFFICIAL_CACHE/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1 \
        && ! ls "$AUR_REPO/${pkg}"-*.pkg.tar.zst >/dev/null 2>&1; then
-        echo "❌ MISSING: $pkg"
+        echo "MISSING: $pkg"
         MISSING=$((MISSING + 1))
     fi
 done < "$PACKAGES_FILE"
@@ -73,16 +84,16 @@ echo "========================================"
 
 if [ $MISSING -gt 0 ]; then
     echo ""
-    echo "❌ ERROR: Some packages are missing from cache!"
-    echo "Run 'sudo make download-packages' to download them."
+    echo "ERROR: some packages are missing from the cache"
+    echo "Run tools/download-packages.sh (and tools/fetch-packages.sh) first."
     exit 1
 else
     echo ""
-    echo "✅ SUCCESS: All packages are in cache"
+    echo "SUCCESS: every package is here"
     echo ""
     echo "Cache statistics:"
-    echo "  Official: $(ls -1 $OFFICIAL_CACHE/*.pkg.tar.zst 2>/dev/null | wc -l) packages"
-    echo "  AUR:      $(ls -1 $AUR_REPO/*.pkg.tar.zst 2>/dev/null | wc -l) packages"
-    echo "  Database: $(ls -1 $PROJECT_ROOT/db-cache/*.db 2>/dev/null | wc -l) files"
+    echo "  Official: $(find "$OFFICIAL_CACHE" -maxdepth 1 -name '*.pkg.tar.zst' 2>/dev/null | wc -l) packages"
+    echo "  ISO repo: $(find "$AUR_REPO" -maxdepth 1 -name '*.pkg.tar.zst' 2>/dev/null | wc -l) packages"
+    echo "  Database: $(find "$PROJECT_ROOT/db-cache" -maxdepth 1 -name '*.db' 2>/dev/null | wc -l) files"
     exit 0
 fi

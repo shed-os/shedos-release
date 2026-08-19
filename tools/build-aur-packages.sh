@@ -1,18 +1,24 @@
 #!/bin/bash
 # Build AUR packages for ShedOS.
 #
-# Populates archiso/shedos-repo/ with .pkg.tar.zst files for every
-# package listed in packages/aur.txt.
+# Populates the ISO's local repository with .pkg.tar.zst files for every
+# package listed in packages/aur.txt. The release's own packages land in the
+# same directory, fetched from the channel rather than built.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=tools/lib-manifest.sh
+source "$SCRIPT_DIR/lib-manifest.sh"
 # Build on disk, not a RAM-backed /tmp: a full AUR pass (walker's GTK4 Rust
 # tree alone is multiple GB) overflows tmpfs. /var/tmp is disk-backed and, like
 # /tmp, world-traversable (1777) so the unprivileged builduser can reach it.
 AUR_BUILD_DIR="${SHEDOS_AUR_BUILD_DIR:-/var/tmp/shedos-aur-build}"
-REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
+REPO_DIR="${SHEDOS_ISO_REPO:-$PROJECT_ROOT/out/shedos-repo}"
+# The release's packages share the repository and are fetched, never built, so
+# the sweep below has to know their names or it prunes the whole release.
+RELEASE_MANIFEST="${SHEDOS_MANIFEST:-$PROJECT_ROOT/release-manifest.toml}"
 # Trust-on-first-use ledger of upstream PKGBUILD/.install hashes (pkgname=sha256);
 # the build refuses to compile + sign a package whose code changed vs its record.
 AUR_HASH_FILE="$PROJECT_ROOT/packages/aur-pkgbuild-hashes.txt"
@@ -186,18 +192,17 @@ declare -A keep_aur=()
 for p in "${AUR_PACKAGES[@]}"; do
     keep_aur[$p]=1
 done
-# Locally-patched packages (calamares, cage) are built from packaging/
-# by build-shedos-packages.sh and live in this repo dir without being
-# in aur.txt; sweeping them turns the just-built installer into a 404.
-for d in "$PROJECT_ROOT"/packaging/*/; do
-    [[ -f "$d/PKGBUILD" ]] && keep_aur[$(basename "$d")]=1
-done
+# The release's packages live in this repo dir without being in aur.txt, and
+# they arrived by fetch: sweeping one turns the ISO's copy of it into a 404
+# that no rebuild would notice, because nothing here rebuilds them.
+while read -r name; do
+    [[ -n $name ]] && keep_aur[$name]=1
+done < <(manifest_read "$RELEASE_MANIFEST" | awk -F'\t' '$1 == "package" { print $2 }')
 phantom_count=0
 shopt -s nullglob
 for f in "$REPO_DIR"/*.pkg.tar.zst; do
     base=$(basename "$f")
     pkgname=${base%-*-*-*.pkg.tar.zst}
-    [[ "$pkgname" == shedos-* ]] && continue
     parent=${pkgname%-debug}
     if [[ -z ${keep_aur[$parent]:-} ]]; then
         echo "  prune phantom AUR: $base"
@@ -383,29 +388,6 @@ build_one_package() {
     echo "----------------------------------------"
     echo "Checking $PACKAGE..."
 
-    # Cache-bust stock calamares before the version check so the
-    # post-clone PKGBUILD patch (further down) actually gets a chance
-    # to run. The patch enables packagechooser (which upstream's AUR
-    # PKGBUILD skips) and bumps epoch=1; the patched build's filename
-    # has a `1:` in it. If the cached pkg lacks the epoch prefix it's
-    # stock; wipe it so the pre-flight skip below doesn't keep us on
-    # the broken build forever.
-    if [ "$PACKAGE" = "calamares" ]; then
-        cached_pkg=$(find "$REPO_DIR" -maxdepth 1 \
-            -name 'calamares-[0-9]*.pkg.tar.zst' 2>/dev/null | head -1)
-        if [ -n "$cached_pkg" ]; then
-            cached_ver=$(pacman -Qpi "$cached_pkg" 2>/dev/null \
-                | awk '/^Version/ {print $3; exit}')
-            case "$cached_ver" in
-                1:*) ;;
-                *)
-                    echo "  cache-bust: stock calamares ($cached_ver) lacks packagechooser; forcing rebuild"
-                    rm -f "$REPO_DIR"/calamares*.pkg.tar.zst*
-                    ;;
-            esac
-        fi
-    fi
-
     # Get currently installed version in repo
     CURRENT_VERSION=$(get_package_version "$PACKAGE")
 
@@ -499,19 +481,6 @@ EOF
     # version read, so AUR_VERSION reflects the patched package and the
     # cached stock build is correctly seen as out-of-date.
     case "$PACKAGE" in
-        calamares)
-            # The upstream AUR PKGBUILD has _skip_modules=( ... packagechooser
-            # packagechooserq ... ), passed to CMake as -DSKIP_MODULES.
-            # ShedOS' settings.conf uses packagechooser for the optional-apps
-            # picker, so we need it built. Drop those two lines from the skip
-            # list and bump epoch=1 so this build supersedes any cached stock
-            # calamares-3.4.2-2 in archiso/shedos-repo.
-            sed -i '/^    packagechooser$/d; /^    packagechooserq$/d' \
-                "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD"
-            grep -q '^epoch=' "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD" || \
-                sed -i '/^pkgver=/i epoch=1' "$AUR_BUILD_DIR/$PACKAGE/PKGBUILD"
-            echo "  patched calamares PKGBUILD: enable packagechooser, epoch=1"
-            ;;
         ananicy-cpp-git)
             # gcc 16/libstdc++ no longer pulls the C-compat headers in
             # transitively, so sources using std::memset, std::int32_t,

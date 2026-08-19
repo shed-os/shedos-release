@@ -7,10 +7,15 @@ set -euo pipefail
 OUTPUT_FILE="$1"
 URL="$2"
 
-# Determine project root (script is in PROJECT_ROOT/build/scripts/)
+# The build copies this into <build>/scripts/ and pacman runs it from there,
+# so the frozen databases and the package caches are named relative to it.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
-DB_CACHE_DIR="$PROJECT_ROOT/db-cache"
+BUILD_DIR="$(dirname "$SCRIPT_DIR")"
+DB_CACHE_DIR="$BUILD_DIR/db-cache"
+# Substituted when the build copies this in, the same way pacman.conf.in's
+# Server line is. pacman runs this as its XferCommand and an environment
+# variable would have to survive mkarchiso, pacstrap and pacman to get here.
+ISO_REPO="@SHEDOS_REPO@"
 
 # If downloading a database file (.db, .db.sig, .files), use cached version
 if [[ "$URL" == *.db ]] || [[ "$URL" == *.db.sig ]] || [[ "$URL" == *.files ]]; then
@@ -52,8 +57,8 @@ if [[ "$URL" == *.db ]] || [[ "$URL" == *.db.sig ]] || [[ "$URL" == *.files ]]; 
         echo "Available databases:" >&2
         ls -1 "$DB_CACHE_DIR/" 2>/dev/null || echo "  (none)" >&2
         echo "" >&2
-        echo "This means the package state changed after running 'download-packages'." >&2
-        echo "Run 'sudo make download-packages' again to re-freeze package state." >&2
+        echo "The package state changed after the databases were frozen." >&2
+        echo "Run tools/download-packages.sh again to re-freeze it." >&2
         exit 1
     fi
 fi
@@ -62,14 +67,12 @@ fi
 if [[ "$URL" == *.pkg.tar.zst ]] || [[ "$URL" == *.pkg.tar.zst.sig ]]; then
     PACKAGE_NAME=$(basename "$URL")
 
-    # Determine project root (script is in PROJECT_ROOT/build/scripts/)
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
-
-    # Check in all cache directories (shedos-repo first for AUR packages!)
+    # The ISO repository first: it holds the release's fetched packages and the
+    # AUR builds, and a name it answers for must not be served by a stale copy
+    # sitting in one of the caches behind it.
     CACHE_DIRS=(
-        "$PROJECT_ROOT/archiso/shedos-repo"
-        "$PROJECT_ROOT/build/pkg-cache"
+        "$ISO_REPO"
+        "$BUILD_DIR/pkg-cache"
         "/var/cache/pacman/pkg"
     )
 
@@ -93,7 +96,7 @@ if [[ "$URL" == *.pkg.tar.zst ]] || [[ "$URL" == *.pkg.tar.zst.sig ]]; then
     for CACHE_DIR in "${CACHE_DIRS[@]}"; do
         echo "  - $CACHE_DIR" >&2
     done
-    echo "Run 'sudo make download-packages' to update cached packages" >&2
+    echo "Run tools/download-packages.sh to update the cached packages" >&2
     exit 1
 fi
 

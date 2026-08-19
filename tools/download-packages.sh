@@ -1,11 +1,19 @@
 #!/bin/bash
-# Download all packages for ShedOS ISO build
-# This pre-downloads packages to avoid network issues during mkarchiso
+# Download every Arch package the ISO build will install, and freeze the
+# databases the versions were chosen from, so mkarchiso runs with no network at
+# all and a rebuild installs the same bytes as the run that froze them.
+#
+# The AUR packages are built here (step 1) and the release's own packages are
+# fetched before this runs; both already sit in the ISO's local repository, and
+# this covers the third set: the Arch packages those two need and the ones the
+# source lists name directly.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=tools/lib-manifest.sh
+source "$SCRIPT_DIR/lib-manifest.sh"
 # Source of truth for the package-prefetch list is packages/official/*.txt.
 # archiso/packages.x86_64 only names the ISO-boot packages + shedos-meta now
 # (shedos-meta's depends= pulls in the rest at pacstrap time). Driving the
@@ -13,6 +21,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # packages; so we read the per-group txts directly and let pacman -Syw
 # resolve transitive deps from there.
 CACHE_DIR="/var/cache/pacman/pkg"
+RELEASE_MANIFEST="${SHEDOS_MANIFEST:-$PROJECT_ROOT/release-manifest.toml}"
 
 echo "=================================="
 echo "Pre-downloading packages for ShedOS"
@@ -26,14 +35,14 @@ fi
 
 # Step 1: Build AUR packages first (reuse existing script)
 echo ""
-echo "Step 1/2: Building AUR packages..."
+echo "Step 1/3: Building AUR packages..."
 echo "=================================="
 "$SCRIPT_DIR/build-aur-packages.sh"
 echo "AUR packages built successfully"
 echo ""
 
 # Step 2: Download official repository packages
-echo "Step 2/2: Downloading official repository packages..."
+echo "Step 2/3: Downloading official repository packages..."
 echo "=================================="
 
 # Read AUR packages from packages/aur.txt (single source of truth)
@@ -68,32 +77,39 @@ for pkg in "${AUR_PACKAGES[@]}"; do
     sed -i "/^${pkg}$/d" "$TEMP_DIR/pkglist.txt"
 done
 
-# Filter out ShedOS native packages; they're built locally by
-# scripts/build-shedos-packages.sh into archiso/shedos-repo/, not fetched
-# from official mirrors.
-sed -i '/^shedos-/d' "$TEMP_DIR/pkglist.txt"
+# The release's own packages come off the channel, not off a mirror, so a
+# request for one is a "target not found" rather than a download. Every name
+# the manifest carries is dropped from the list for that reason.
+manifest_read "$RELEASE_MANIFEST" \
+    | awk -F'\t' '$1 == "package" { print $2 }' \
+    | LC_ALL=C sort -u > "$TEMP_DIR/release.txt"
+LC_ALL=C sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
+LC_ALL=C comm -23 "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/release.txt" \
+    > "$TEMP_DIR/pkglist.arch" && mv "$TEMP_DIR/pkglist.arch" "$TEMP_DIR/pkglist.txt"
 
-LOCAL_DEPS=()
-while IFS= read -r dir; do
-    name=$(basename "$dir")
-    [[ "$name" == shedos-* ]] && continue
-    [[ -f "$dir/PKGBUILD" ]] || continue
-    deps=$(bash -c "
-        cd '$dir' && source PKGBUILD 2>/dev/null
-        printf '%s\n' \"\${depends[@]}\" 2>/dev/null
-    " 2>/dev/null)
-    [[ -n "$deps" ]] || continue
-    while IFS= read -r dep; do
-        [[ -n "$dep" ]] || continue
+# What the release's packages need from Arch. The metapackage closure covers
+# what an installed system pulls, and this covers the rest — the installer's
+# dependencies are deliberately outside that closure and still have to be on
+# the ISO. Read from the fetched packages themselves, which is the only copy
+# of their depends this repository has.
+RELEASE_DEPS=()
+shopt -s nullglob
+for pkg in "$AUR_REPO_DIR"/*.pkg.tar.zst; do
+    name=$(bsdtar -xOf "$pkg" .PKGINFO 2>/dev/null \
+        | awk -F' = ' '/^pkgname/ { print $2; exit }')
+    grep -qxF "$name" "$TEMP_DIR/release.txt" || continue
+    while read -r dep; do
         bare="${dep%%[<>=]*}"
-        [[ "$bare" == shedos-* ]] && continue
-        LOCAL_DEPS+=("$bare")
-    done <<< "$deps"
-done < <(find "$PROJECT_ROOT/packaging" -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' | sort)
-if (( ${#LOCAL_DEPS[@]} > 0 )); then
-    printf '%s\n' "${LOCAL_DEPS[@]}" >> "$TEMP_DIR/pkglist.txt"
-    sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
-    echo "Local-built non-shedos pkg deps added for prefetch: ${LOCAL_DEPS[*]}"
+        [[ -n "$bare" ]] || continue
+        grep -qxF "$bare" "$TEMP_DIR/release.txt" && continue
+        RELEASE_DEPS+=("$bare")
+    done < <(bsdtar -xOf "$pkg" .PKGINFO 2>/dev/null | awk -F' = ' '/^depend/ { print $2 }')
+done
+shopt -u nullglob
+if (( ${#RELEASE_DEPS[@]} > 0 )); then
+    printf '%s\n' "${RELEASE_DEPS[@]}" >> "$TEMP_DIR/pkglist.txt"
+    LC_ALL=C sort -u -o "$TEMP_DIR/pkglist.txt" "$TEMP_DIR/pkglist.txt"
+    echo "Release-package deps added for prefetch: ${#RELEASE_DEPS[@]} name(s)"
 fi
 
 TOTAL_PACKAGES=$(wc -l < "$TEMP_DIR/all_packages.txt")
@@ -119,12 +135,12 @@ echo "Starting package download..."
 
 # Create a download-specific pacman.conf based on archiso/pacman.conf.
 # It registers [core]/[extra]/[multilib] for official Arch mirrors plus the
-# local archiso/shedos-repo so pacman's dependency resolver can satisfy
+# ISO-local repository so pacman's dependency resolver can satisfy
 # AUR-only entries surfaced by step 2 below (`libcrypto.so=1.1` →
 # `openssl-1.1`, `libfprint-tod`, …). Without [shedos-repo] in scope the
 # resolver errors `target not found` on any AUR pkg whose runtime depends
 # resolve to other AUR pkgs we ship.
-AUR_REPO_DIR="$PROJECT_ROOT/archiso/shedos-repo"
+AUR_REPO_DIR="${SHEDOS_ISO_REPO:-$PROJECT_ROOT/out/shedos-repo}"
 DOWNLOAD_PACMAN_CONF="$TEMP_DIR/pacman-download.conf"
 cat > "$DOWNLOAD_PACMAN_CONF" << 'EOF'
 [options]
@@ -180,19 +196,17 @@ if [ -d "$AUR_REPO_DIR" ]; then
     # Create a list of all dependencies required by our built AUR packages
     # We use pacman -Qpi to query the built package files directly for detailed info
     echo "Extracting dependencies from local packages..."
-    # Drop shedos-* deps: those are built locally by `make shedos-packages`
-    # (which runs after this step), never downloaded. A leftover shedos pkg in
-    # the repo — dev machines accumulate them across builds — otherwise pulls
-    # its shedos-* runtime deps into the download and fails `target not found`.
+    # Drop the release's own names: those come off the channel, and asking a
+    # mirror for one fails the whole download with `target not found`.
     find "$AUR_REPO_DIR" -name "*.pkg.tar.zst" -exec pacman -Qpi {} + | \
         grep "^Depends On" | \
         cut -d':' -f2 | \
         tr ' ' '\n' | \
         sed 's/^[ \t]*//' | \
         grep -v "None" | \
-        grep -v '^shedos-' | \
-        sort -u | \
-        grep -v "^$" > "$TEMP_DIR/aur_deps.txt" || true
+        LC_ALL=C sort -u | \
+        grep -v "^$" | \
+        LC_ALL=C comm -23 - "$TEMP_DIR/release.txt" > "$TEMP_DIR/aur_deps.txt" || true
     
     DEPS_COUNT=$(wc -l < "$TEMP_DIR/aur_deps.txt")
     echo "Found $DEPS_COUNT unique dependencies for AUR packages."
@@ -236,7 +250,7 @@ echo "=================================="
 echo "Package download complete!"
 echo "=================================="
 echo "Official packages cached in: $CACHE_DIR"
-echo "AUR packages in: $PROJECT_ROOT/archiso/shedos-repo/"
+echo "AUR + release packages in: $AUR_REPO_DIR"
 echo "Package databases frozen in: $DB_CACHE_DIR"
 echo ""
-echo "Now you can run 'make iso' and it will use EXACTLY these package versions"
+echo "tools/build-iso.sh now installs EXACTLY these package versions"

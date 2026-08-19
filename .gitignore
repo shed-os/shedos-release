@@ -2,3 +2,12 @@
 *.pkg.tar.zst
 pkg/
 src/
+
+# The ISO build's working directories: the profile mkarchiso is handed, the
+# ISO repository the release is fetched into, the frozen Arch databases, and
+# the ISO itself.
+build/
+out/
+db-cache/
+*.iso
+*.sha256
