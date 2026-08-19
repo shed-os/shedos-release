@@ -17,3 +17,4 @@ shed-os/shedos-installer
 shed-os/calamares
 shed-os/hyprspace
 shed-os/cage
+shed-os/shedos-release

@@ -411,6 +411,28 @@ check 'the other workflow is never mistaken for a build with a lost artifact' \
     not grep -q 'succeeded on main and its artifact is gone' "$WORK/last.out"
 check 'and nothing was asked for' test -z "$(dispatches)"
 
+section 'case 5g — a repository that builds somewhere other than ci.yml is found there'
+# shedos-release is on the allowlist because it publishes the metapackage, and
+# its ci.yml is the harness for the publisher and the release tools rather than
+# a build. Its build has to be looked for where it is, or the one repository
+# that cannot be reconciled is the one holding the publisher.
+reset_channel
+reset_github
+printf 'shed-os/shedos-release\n' > "$WORK/allowlist.txt"
+add_run shed-os/shedos-release 200 "$SHA_B" ci.yml
+add_run shed-os/shedos-release 300 "$SHA_C" meta.yml
+built shed-os/shedos-release 300 shedos-meta-2026.08.09-1-any.pkg.tar.zst
+serve shedos-meta 2026.08.09-1
+seal_channel
+reconcile --dispatch
+rc=$?
+check 'the reconcile passes' test "$rc" -eq 0
+[[ $rc -eq 0 ]] || cat "$WORK/last.out"
+check 'and it read the metapackage build rather than the harness run' \
+    grep -qx 'shed-os/shedos-release: the channel has everything run 300 built' \
+        "$WORK/last.out"
+check 'nothing was asked for' test -z "$(dispatches)"
+
 # --- case 6: the lists the publisher would refuse on -------------------------
 
 section 'case 6 — a package the publisher may not republish is not asked for'

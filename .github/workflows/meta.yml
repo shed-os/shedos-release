@@ -1,0 +1,160 @@
+name: Metapackage
+
+# Resolving the Arch closure wants root and a synced pacman database, which is
+# why it lives here rather than in a package repository — a repository that
+# builds one package has no business computing what a whole install needs.
+#
+# Both jobs are asked for rather than scheduled. The closure is authored state
+# like the manifest is: this regenerates it and shows what moved, and a person
+# decides whether that goes in. The Arch repositories move every day and a job
+# that failed on that would only teach people to ignore it.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Build the committed metapackage and ask the publisher for it
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  closure:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      # A CDN node can hand out a package database for hours after the pool
+      # behind it dropped what the database names, and this job resolves a
+      # thousand-odd packages out of exactly that database. The recovery lives
+      # in shedos-ci, taken at a commit this repository names rather than at
+      # its main. Before the install, because the install is one of these
+      # scripts and with no git in the image the action falls back to REST.
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
+      - name: Install the resolver's dependencies
+        run: bash /opt/shedos-ci/scripts/install-packages.sh git python
+
+      # The image ships multilib commented out, and lib32 packages are roots.
+      # Without this the resolve fails on names that do exist.
+      - name: Enable multilib
+        run: |
+          sed -i 's/^#\[multilib\]/[multilib]/' /etc/pacman.conf
+          sed -i '/^\[multilib\]/{n;s/^#Include/Include/}' /etc/pacman.conf
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Trust workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # This is also the gate on the metapackage's conflicts list: the resolver
+      # fails when a virtual in the closure has a provider nobody listed, which
+      # is how pacstrap ends up rolling jack2 in ahead of pipewire-jack.
+      - name: Resolve the closure
+        run: bash tools/resolve-meta-closure.sh
+
+      - name: Render the metapackage
+        run: bash tools/render-meta-depends.sh
+
+      # Not a failure. Arch moves daily and the committed closure is what the
+      # release was defined against; this says what a person would be
+      # committing if they took today's answer.
+      - name: What moved since the committed closure
+        run: |
+          if git diff --quiet; then
+              echo 'the committed closure and metapackage are today''s answer'
+          else
+              git diff --stat
+              git diff -- packages/.meta-closure.txt | head -200
+          fi
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: closure-${{ github.sha }}
+          path: |
+            packages/.meta-closure.txt
+            packaging/shedos-meta/PKGBUILD
+          if-no-files-found: error
+
+  publish:
+    needs: [closure]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    # The App credentials the dispatch is signed with live in this
+    # environment, beside the signing key the publisher then uses.
+    environment: SHEDOS_ENV
+    container:
+      image: archlinux:latest
+    # Deliberately not in the publisher's concurrency group. This job asks for
+    # a publish and never writes the channel, and a job queued in that group
+    # can be displaced by the next request — which is the dropped publish the
+    # reconcile exists to find, invited in for no reason.
+    steps:
+      - name: Check out the pipeline scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: shed-os/shedos-ci
+          ref: cac588be60434596f12b482924f5265fa6ced3f4
+          path: .shedos-ci
+
+      - name: Move the pipeline scripts out of the workspace
+        run: mv .shedos-ci /opt/shedos-ci
+
+      - name: Install the build toolchain
+        run: |
+          bash /opt/shedos-ci/scripts/install-packages.sh \
+              base-devel git jq github-cli
+          useradd -m builder
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      # The shared pipeline's build is not used here and the reason is the
+      # package: it runs makepkg --syncdeps, and syncing the dependencies of a
+      # metapackage means installing the whole of ShedOS into the container to
+      # build a package that ships no files. The monolith's own build takes
+      # the same --nodeps branch for the same reason.
+      - name: Build the metapackage
+        run: |
+          mkdir -p dist
+          chown -R builder:builder packaging/shedos-meta dist
+          sudo -u builder env "PKGDEST=$PWD/dist" bash -c \
+              'cd packaging/shedos-meta && makepkg --nodeps --noconfirm --force'
+          (cd dist && sha256sum -- *.pkg.tar.zst > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      # The tree this package was built from, in the shape request-publish.sh
+      # reads. There is no pkgrel guard here to move the commit on, so the
+      # build tree is the checkout and the two answers are the same one.
+      - name: Record the tree it was built from
+        run: printf 'shedos-meta\t%s\n' "$GITHUB_SHA" > dist/BUILD_COMMITS
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pkg-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+
+      # The publisher downloads the artifact on its own App token, and this
+      # dispatch has to be one that starts a workflow — a request signed with
+      # the job's own GITHUB_TOKEN would be recorded and would trigger nothing.
+      - name: Mint a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHEDOS_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SHEDOS_CI_APP_PRIVATE_KEY }}
+          owner: shed-os
+
+      - name: Ask the publisher for it
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: bash /opt/shedos-ci/scripts/request-publish.sh

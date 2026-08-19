@@ -79,6 +79,15 @@ would write a database holding only its own packages over a live one.
 
 ## Staging and production
 
+The two `installer-only` lists are not one list, and that is deliberate.
+`packages/installer-only.txt` came from the monolith with its history and is a
+build input: it is what keeps Calamares and `shedos-installer` out of the
+metapackage. `publisher/installer-only.txt` is what this publisher refuses on,
+and it names nothing, because the channel it writes still has to serve the
+installer for the ISO build to install Calamares from. They converge when this
+repository becomes the public producer and what the public channel does about
+the installer is decided; until then the publisher suite holds them apart.
+
 `publisher/lib-channel.sh` is the only place the channel path is spelled out.
 `CHANNEL_ROOT` defaults to `staging/`, so today the packages and database land
 under `staging/test/x86_64/`, the keyring lands at `staging/shedos.gpg`, and
@@ -192,6 +201,50 @@ packages from the run, so a build whose artifact has aged out cannot be
 republished from by anything. The reconcile names every such run it steps over,
 because falling back quietly to an older build that *is* in the channel is how
 a dropped publish would disappear for good.
+
+## What a fresh install is
+
+`shedos-meta` is a package with no files that depends on everything a default
+ShedOS install has, and it is generated here out of two things: the release
+manifest, which says which ShedOS packages the release is made of and at what
+version, and `packages/.meta-closure.txt`, which is every Arch package those
+and the broad lists under `packages/official/` transitively need.
+
+```
+sudo tools/resolve-meta-closure.sh    # root; syncs a pacman db of its own
+tools/render-meta-depends.sh          # writes packaging/shedos-meta/PKGBUILD
+```
+
+The closure is resolved rather than trusted to pacman at install time. A
+dependency named only by a virtual — `jack`, `pipewire-session-manager` — is
+resolved by pacstrap non-interactively, which means alphabetically, and the
+answer it picks conflicts with a package we do ship. So every transitive
+dependency is written out explicitly and the concrete providers we do not want
+go into `conflicts=()`, out of `packages/meta-conflicts.txt`. Both generators
+read that file: the resolver checks it against the providers the Arch
+repositories actually have and fails naming any it does not cover.
+
+The ShedOS half of `depends=` is the manifest's entries, each pinned to the
+exact release the channel serves. That is what makes a release internally
+consistent by construction — a metapackage naming bare names installs whatever
+mixture the channel holds at that moment, and every package in the org moves at
+its own cadence now. Anything on `packages/installer-only.txt` is dropped
+before the split: those exist for the live ISO and must not follow a user home.
+
+One name is in both halves. `cage` is declared as an Arch root and the package
+a ShedOS box installs is our own repackage of it, and which of the two arrived
+used to come down to which repository pacman read first. The closure writes
+that name down as `replaced`, the metapackage names the channel's cage at its
+exact version, and a closure and a manifest that disagree about a replaced name
+— in either direction — stop the render rather than quietly naming one of them.
+
+`.github/workflows/meta.yml` is where the closure is resolved in CI, because it
+needs root and a synced pacman database and a package repository has no reason
+to have either. It is asked for rather than scheduled: the closure is authored
+state like the manifest, the job says what moved and uploads what it got, and a
+person decides whether that goes in. Its other job builds the committed
+PKGBUILD and asks the publisher for it on the ordinary dispatch path, which is
+why `shed-os/shedos-release` is on the publisher's allowlist.
 
 ## Is it the same package?
 
@@ -382,6 +435,7 @@ bash test/version-parity/run.sh
 bash test/build-reference/run.sh
 bash test/manifest/run.sh
 bash test/reconcile/run.sh
+bash test/meta/run.sh
 ```
 
 The first four take no root, no network and no R2. The bucket is a temporary
@@ -397,6 +451,12 @@ against fixtures of its own and stops short of the container; its end-to-end
 case rebuilds a published package and checks it against the sha its expectation
 pins, which needs docker and a monolith clone, and it names whichever is
 missing when it skips.
+
+The metapackage suite hands each generator a world of its own — its own lists,
+its own closure, its own manifest — under `SHEDOS_META_ROOT`, so what it holds
+is the rule rather than the release this repository happens to be at. Resolving
+a closure wants root and a pacman database, so the half of that script which
+does not is what runs here and the rest is the workflow's job.
 
 The manifest and reconcile suites build a channel of their own — a directory of
 real files under a real signed database — and real git repositories with real

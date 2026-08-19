@@ -37,7 +37,16 @@ LOOKBACK=${SHEDOS_RECONCILE_LOOKBACK:-10}
 # would let a repository's other workflows fill the window above, so the build
 # this is looking for falls out of it and a complete channel reads as a
 # repository with no usable build at all.
+#
+# Every package repository builds in ci.yml. shedos-release is the exception
+# and has to be one: its ci.yml is the harness for the publisher and the
+# release tools and produces no package, and the metapackage it does build is
+# asked for rather than pushed. Looking for its build in ci.yml would report
+# the repository unreadable on every run.
 WORKFLOW=${SHEDOS_RECONCILE_WORKFLOW:-ci.yml}
+declare -A BUILD_WORKFLOW=([shed-os/shedos-release]=meta.yml)
+
+workflow_for() { printf '%s\n' "${BUILD_WORKFLOW[$1]:-$WORKFLOW}"; }
 
 dispatch=0
 case ${1:-} in
@@ -103,7 +112,7 @@ latest_build() {
         printf '%s\t%s\n' "$id" "$sha"
         return 0
     done < <(gh api \
-        "repos/$repo/actions/workflows/$WORKFLOW/runs?branch=main&status=success&per_page=$LOOKBACK" \
+        "repos/$repo/actions/workflows/$(workflow_for "$repo")/runs?branch=main&status=success&per_page=$LOOKBACK" \
         --jq '.workflow_runs[] | "\(.id)\t\(.head_sha)"' 2> /dev/null)
     return 1
 }
