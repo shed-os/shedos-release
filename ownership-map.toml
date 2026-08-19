@@ -1,0 +1,131 @@
+# Who may write where, and what the packages hand each other without a schema.
+#
+# Two directories are open namespaces: any package may drop a file into
+# /usr/libexec/shedman or /usr/lib/shedos and it will be picked up. That worked
+# by convention while one repository held every writer. It cannot now, so the
+# convention is written down here and a release whose packages disagree with it
+# fails rather than shipping a squat nobody noticed.
+#
+# This is authored state. A package that legitimately starts writing somewhere
+# is a line added here by a person, which is the point: the addition is the
+# review.
+
+# --- the open namespaces ---------------------------------------------------
+
+[[path]]
+glob = "/usr/libexec/shedman/*"
+owners = [
+    "shedman",
+    "shedos-hyprland",
+    "shedos-migrate-to-packaged",
+    "shedos-screensaver",
+    "shedos-system",
+    "shedos-theme-engine",
+    "shedos-tour",
+]
+note = """
+The verb namespace. The dispatcher execs whatever is here, so a name two
+packages both claim is a coin toss decided by install order. Seven packages
+write here; migrate, screensaver and tour are the three that ship a verb
+without shipping a declaration beside it, which the verb-completeness check
+reports separately."""
+
+[[path]]
+glob = "/usr/lib/shedos/*"
+owners = [
+    "shedman",
+    "shedos-hyprland",
+    "shedos-nvim",
+    "shedos-system",
+    "shedos-theme-engine",
+]
+note = """
+The shared library directory. Everything here is read by something in another
+package — the palette module by every themed tool, apply_core by the dispatcher's
+apply and doctor, the session launcher by the greeter — which is why it is a
+namespace at all rather than each package's own directory."""
+
+[[path]]
+glob = "/usr/share/shedman/verbs.d/*"
+owners = ["shedman", "shedos-hyprland", "shedos-system", "shedos-theme-engine"]
+note = """
+The declarations the dispatcher lists from. A declaration names the verb it is
+about rather than taking its name from the file, so two packages declaring one
+verb is a disagreement the dispatcher reports instead of resolving."""
+
+# --- the handoffs nothing describes ----------------------------------------
+#
+# Five places where one package writes a file another package reads, with no
+# schema, no shared code and nothing pacman can see. Each is one page: what the
+# file is, who writes it, who reads it, and what breaks when it is not there.
+# The assertion is that both ends are still in the release — a handoff whose
+# writer or reader has quietly gone is a feature that stops working with
+# nothing failing.
+
+[[handoff]]
+file = "/etc/shedos/login-user"
+writer = "shedos-installer"
+reader = "shedos-greeter"
+writer-evidence = "/usr/lib/calamares/modules/shedos_finalize/main.py"
+reader-evidence = "/usr/bin/shedos-greeter"
+note = """
+One line: the username the install created. The installer writes it at the end
+of the install and the greeter reads it to preselect that user on the first
+boot, so the first login is a password and not a username as well. Absent, the
+greeter simply starts with an empty username field — this is the one handoff
+whose failure is invisible rather than broken, which is exactly why nothing
+noticed it was undescribed."""
+
+[[handoff]]
+file = "/var/lib/shedos/encrypt/recovery-key"
+writer = "shedos-installer"
+reader = "shedos-tour"
+writer-evidence = "/usr/lib/calamares/modules/shedos_recovery_stash/main.py"
+reader-evidence = "/usr/bin/shedos-tour"
+note = """
+The LUKS recovery key, stashed by the installer for exactly one reader and one
+occasion: the tour's mandatory first slide, where the person writes it down.
+The tour shreds it afterwards. shedos-system's enrol path writes the same file
+when a box is encrypted after install rather than during it, so the file has
+two writers and one reader. Absent, a person who encrypts is never shown the
+key that recovers their disk."""
+
+[[handoff]]
+file = "/etc/shedos/secureboot/"
+writer = "shedos-installer"
+reader = "shedos-system"
+writer-evidence = "/usr/lib/shedos-installer/shedos_installer/core/secureboot.py"
+reader-evidence = "/usr/libexec/shedman/tpm2"
+note = """
+The directory the installer creates for the signed-PCR key pair, and where the
+key and tpm2 verbs then keep `containers` — the list of LUKS containers a
+passwordless unlock has been enrolled against. The installer owns the directory
+and the initial key; shedos-system owns everything written into it afterwards.
+Absent, `shedman tpm2` has no key to sign a policy with and passwordless unlock
+cannot be enrolled at all."""
+
+[[handoff]]
+file = "limine-extra-entries.conf"
+writer = "shedos-installer"
+reader = "shedos-system"
+writer-evidence = "/usr/lib/shedos-installer/shedos_installer/core/bootloader.py"
+reader-evidence = "/usr/lib/shedos/render-limine-config.sh"
+note = """
+Boot entries the installer wants kept that the renderer would not otherwise
+produce. The renderer rewrites the whole limine menu on every kernel change, so
+anything not in its model is lost unless it is in this file. Absent, an entry
+the installer added — the other operating system a dual-boot install found —
+disappears at the first kernel update."""
+
+[[handoff]]
+file = "/usr/lib/shedos/start-hyprland-session.sh"
+writer = "shedos-system"
+reader = "shedos-greeter"
+writer-evidence = "/usr/lib/shedos/start-hyprland-session.sh"
+reader-evidence = "/usr/bin/shedos-greeter"
+note = """
+The cycle. The greeter execs this script to start a session, and the greetd
+configuration shedos-system ships names the greeter binary as the greeter to
+run — so each package names the other and pacman sees neither, because neither
+dependency is declared in that direction. Absent either end, the machine boots
+to a greeter that cannot start a session, or to no greeter at all."""

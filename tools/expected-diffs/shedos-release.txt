@@ -192,7 +192,7 @@ content scripts/build-base-image.sh e87821c371343f71bd46b5693698dc22428c6745..47
 content scripts/emergency-boot-assert.sh 981a4cc34f9d63bd46080ddec0fee19a1ee48893..50845101cb744a2ef8d4cc4b8f3362781576a145 — the recovery tool is unpacked from the released shedos-system
 content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297..202cf32ac6bdb98a01648f6273bb183d262bdd0f — the injected reencryption code is the released shedos-system's
 
-# --- (b2) the 82 files with no monolith counterpart --------------------------------
+# --- (b2) the 84 files with no monolith counterpart --------------------------------
 #
 # This repository is mostly not a carve. The publisher, the manifest tools, the carve and
 # comparison tools, the enumerations, the suites, the workflows and the README were all
@@ -205,6 +205,9 @@ content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297.
 # of the version sed the monolith ran over staged sources. test/integration/run.sh is
 # the sixth: the release-level tier, which is new here because the question it asks —
 # do these packages work together — is one no single repository can be asked.
+# ownership-map.toml and test/release-checks/run.sh are the last two: who may write
+# into the shared namespaces, what the packages hand each other without a schema, and
+# the copies of one literal that have to agree.
 #
 # That last one does have a monolith counterpart at the same path, and the carve map
 # still does not claim it. Both are generated files, so a blob pin would move on every
@@ -217,7 +220,7 @@ content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297.
 #   package tree: 84 identical, 14 transformed
 #   test tree:    the monolith has no out-of-tree suite for any of this and neither
 #                 does this repository — test/meta covers the generators
-#   no monolith counterpart: 82                                       (see (b2))
+#   no monolith counterpart: 84                                       (see (b2))
 #
 # The 84 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
 # aur-pkgbuild-hashes.txt and iso-only-official.txt, and 60 of the 70 the ISO pipeline
