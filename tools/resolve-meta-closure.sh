@@ -236,6 +236,6 @@ awk -F'\t' '
             }
         }
         printf "  %d virtual(s) with more than one provider; %d carry an alternative nobody has named\n", multi, unspoken
-    }' "$TMPDIR/closure.txt" "$META_CONFLICTS" "$TMPDIR/inversion.tsv" | sort
+    }' "$TMPDIR/closure.txt" "$META_CONFLICTS" "$TMPDIR/inversion.tsv" | LC_ALL=C sort
 
 echo "=========================================="
