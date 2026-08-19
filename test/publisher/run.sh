@@ -548,6 +548,10 @@ check 'the no-republish list is one file for both readers' \
 check 'and the publisher refuses on its own list rather than the build input' \
     grep -qF 'INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$HERE/installer-only.txt}' \
         "$ROOT/publisher/publish.sh"
+# The allowlist is the one list a case may not swap out, so this is the only
+# place the metapackage's own publish can be checked before it is asked for.
+check 'the allowlist admits the repository that publishes the metapackage' \
+    lists "$ROOT/publisher/allowlist.txt" shed-os/shedos-release
 
 # --- result -----------------------------------------------------------------
 
