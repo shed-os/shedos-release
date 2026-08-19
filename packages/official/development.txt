@@ -1,0 +1,91 @@
+# ShedOS Development Tools Packages
+
+# Editor
+code
+# Shell Enhancement
+zsh-autosuggestions
+zsh-syntax-highlighting
+starship
+# Version Control
+lazygit
+# Terminal Multiplexer
+tmux
+# Search Tools
+ripgrep
+grep
+ast-grep
+fd
+fzf
+the_silver_searcher
+sd
+# Modern CLI
+bat
+eza
+zoxide
+bottom
+hyperfine
+# JSON/YAML
+jq
+yq
+# Process Management
+direnv
+watchexec
+# Documentation
+tealdeer
+# Text Processing
+sed
+gawk
+perl
+csvkit
+# Language Servers (system packages)
+lua-language-server
+bash-language-server
+python-lsp-server
+gopls
+rust-analyzer
+typescript-language-server
+pyright
+ruff
+yaml-language-server
+taplo-cli
+marksman
+zls
+# Formatters & Linters
+shellcheck
+shfmt
+stylua
+prettier
+eslint
+gofumpt
+golangci-lint
+# Debuggers
+delve
+lldb
+# Tree-sitter
+tree-sitter
+tree-sitter-cli
+# Neovim External Tools
+silicon
+# Node.js
+nodejs
+npm
+# Go
+go
+# Zig
+zig
+# Python
+python
+python-pip
+python-psutil
+python-pydantic
+python-pygments
+python-rich
+python-textual
+pyright
+# Code Stats
+tokei
+# JVM
+jdk-openjdk
+kotlin
+maven
+gradle

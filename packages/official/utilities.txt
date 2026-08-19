@@ -1,0 +1,31 @@
+# ShedOS System Utilities Packages
+
+# Disk Management
+gparted
+parted
+
+# Disk Usage
+baobab
+
+# Backup
+snapper
+
+# Archive
+xarchiver
+atool
+libcdio
+
+# System Info
+fastfetch
+jp2a
+
+# Hardware Info
+hwinfo
+dmidecode
+inxi
+
+# System Cleaner
+bleachbit
+
+# Font Manager
+font-manager

@@ -1,0 +1,7 @@
+# ShedOS Music & Media Player Packages
+
+# Media Players
+vlc
+
+# Music Library
+rhythmbox

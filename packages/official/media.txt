@@ -1,0 +1,11 @@
+# ShedOS Media Packages
+
+# Image processing
+imagemagick
+
+# Video processing
+ffmpeg
+
+# Image viewers
+imv
+loupe

@@ -1,0 +1,161 @@
+# ShedOS Base System Packages
+
+# Core System
+base
+base-devel
+# Supplies BTF info for DKMS builds against the kernel headers.
+pahole
+
+# Primary kernel — Arch linux-zen (desktop-tuned scheduler/HZ). The
+# -headers package is an explicit root so DKMS modules can build against
+# it — nvidia's on the boxes that keep the stack, and any user-added ones.
+linux-zen
+linux-zen-headers
+
+# Fallback kernel — stock linux, so a worst-case linux-zen breakage still
+# leaves a bootable entry. linux-headers covers its own DKMS builds.
+linux
+linux-headers
+
+linux-firmware-amdgpu
+linux-firmware-atheros
+linux-firmware-broadcom
+linux-firmware-cirrus
+linux-firmware-intel
+linux-firmware-liquidio
+linux-firmware-marvell
+linux-firmware-mediatek
+linux-firmware-mellanox
+linux-firmware-nfp
+linux-firmware-other
+linux-firmware-qcom
+linux-firmware-qlogic
+linux-firmware-radeon
+linux-firmware-realtek
+
+# Security — AppArmor mandatory access control, on by default. The LSM is
+# switched on via the kernel lsm= cmdline (baked in by the installer, and
+# backfilled onto existing installs by shedos-system); apparmor.service
+# loads the /etc/apparmor.d profile set at boot. Pulls audit for logging.
+apparmor
+
+# Bootloader
+limine
+efibootmgr
+
+# Secure Boot + measured boot. sbctl manages the db/KEK/PK key set and
+# verifies signatures; tpm2-tools backs passphrase-free TPM2 unlock;
+# systemd-ukify is the single signer that sbsigns and PCR-11-signs the UKI;
+# sbsigntools provides the sbverify that gates each UKI onto the ESP;
+# libfido2 backs FIDO2 security-key unlock and the sd-encrypt initramfs bundle.
+sbctl
+tpm2-tools
+systemd-ukify
+sbsigntools
+libfido2
+
+# Filesystem
+btrfs-progs
+cryptsetup
+dosfstools
+e2fsprogs
+exfatprogs
+ntfs-3g
+xfsprogs
+
+# Network
+networkmanager
+networkmanager-openvpn
+wpa_supplicant
+iwd
+wireless-regdb
+openssh
+curl
+wget
+rsync
+
+# System Utilities
+sudo
+which
+less
+man-db
+man-pages
+texinfo
+htop
+tree
+unzip
+zip
+unrar
+lsof
+strace
+inotify-tools
+procps-ng
+inetutils
+usbutils
+pciutils
+lshw
+smartmontools
+lm_sensors
+hdparm
+
+# Memory / swap
+zram-generator
+
+# Python runtime libs for shedman tools
+python-dbus
+python-tomlkit
+
+# Text Editors (basic)
+nano
+vim
+neovim
+
+# Shell
+zsh
+zsh-completions
+
+# Git
+git
+git-lfs
+# Syntax-highlighting pager; the skel gitconfig sets core.pager = delta
+git-delta
+
+# Microcode
+intel-ucode
+amd-ucode
+
+# Compression
+gzip
+bzip2
+xz
+zstd
+lz4
+
+# Misc
+reflector
+pacman-contrib
+arch-install-scripts
+mkinitcpio
+bash-completion
+dialog
+pv
+tar
+
+# Boot Splash
+plymouth
+
+# Networking (additional)
+dhclient
+dhcpcd
+
+# ArchISO support lives in packages/iso-only-official.txt — those
+# packages ship on the ISO but stay out of the shedos-meta closure.
+
+# Disk Tools
+gptfdisk
+mdadm
+mtools
+nbd
+nvme-cli
+f2fs-tools
+testdisk

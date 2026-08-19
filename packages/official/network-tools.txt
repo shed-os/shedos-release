@@ -1,0 +1,34 @@
+# ShedOS Network Tools Packages
+
+# Analysis
+wireshark-cli
+tcpdump
+
+# Scanning
+nmap
+
+# Network Utilities
+socat
+iftop
+nethogs
+bmon
+nload
+openbsd-netcat
+
+# Diagnostics
+mtr
+traceroute
+whois
+bind
+ldns
+
+# DNS Tools
+dog
+iputils
+
+# WiFi
+wavemon
+iw
+
+# SSH
+sshfs

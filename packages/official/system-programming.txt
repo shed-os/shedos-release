@@ -1,0 +1,46 @@
+# ShedOS System Programming Packages
+
+# C/C++ Compilers
+gcc
+clang
+llvm-libs
+lld
+libc++
+
+# Build Systems
+cmake
+make
+
+# Debugging
+gdb
+lldb
+valgrind
+ltrace
+
+# Assembly
+nasm
+yasm
+
+# Rust
+rustup
+
+# Zig
+zig
+
+# System Libraries
+glibc
+
+# Development Libraries
+openssl
+zlib
+libffi
+readline
+
+# Static Analysis
+cppcheck
+
+# Build Optimization
+ccache
+
+# Documentation
+doxygen

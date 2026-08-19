@@ -1,0 +1,17 @@
+# ShedOS TUI Tools Packages
+
+# System Monitor
+btop
+
+# Disk Usage
+ncdu
+dust
+duf
+
+# Process Viewer
+procs
+
+# Network
+bandwhich
+gping
+

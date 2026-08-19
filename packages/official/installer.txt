@@ -1,0 +1,44 @@
+# ShedOS Installer Dependencies
+# Packages needed for Calamares installer
+
+# Pacman download accelerator — segmented downloads via aria2c
+# wired into airootfs/etc/pacman.conf.in's XferCommand.
+aria2
+
+# Core Calamares dependencies
+yaml-cpp
+icu
+
+# KDE Frameworks (required by Calamares)
+kconfig
+kcoreaddons
+kcrash
+kdbusaddons
+ki18n
+kirigami
+kpackage
+kparts
+kservice
+kwidgetsaddons
+
+# Plasma libraries
+libplasma
+libpwquality
+
+# Polkit Qt bindings
+polkit-qt6
+
+# Solid (hardware detection)
+solid
+
+# Qt dependencies
+qt6-base
+qt6-declarative
+qt6-multimedia-ffmpeg
+qt6-svg
+
+# OpenGL
+glu
+
+# Alternative bootloader (for BIOS/legacy)
+grub

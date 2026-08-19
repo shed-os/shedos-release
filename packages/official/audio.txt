@@ -1,0 +1,25 @@
+# ShedOS Audio Packages
+
+# PipeWire Stack
+pipewire
+pipewire-alsa
+pipewire-audio
+pipewire-jack
+pipewire-pulse
+wireplumber
+
+# Audio Control
+pamixer
+pavucontrol
+helvum
+
+# ALSA utilities
+alsa-lib
+alsa-utils
+alsa-plugins
+alsa-firmware
+sof-firmware
+
+# Bluetooth Audio
+bluez
+bluez-utils

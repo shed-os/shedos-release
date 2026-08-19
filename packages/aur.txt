@@ -1,0 +1,124 @@
+# ShedOS AUR Packages
+# These packages will be installed via yay after base installation
+
+# Package Manager
+yay
+
+# Language Version Manager
+mise-bin
+
+# Shell
+blesh-git
+
+# IDEs
+visual-studio-code-bin
+
+# Browsers
+google-chrome
+
+# Communication
+slack-desktop
+
+# DevOps
+lazydocker
+
+# Utilities
+# "Open in terminal" entry in the Nautilus right-click menu.
+nautilus-open-any-terminal
+
+# TUI
+impala
+bluetui
+
+# Bluetooth (GUI; no tray applet, opened from waybar)
+overskride
+
+# API Testing
+postman-bin
+
+# IDE managers
+jetbrains-toolbox
+
+# Fonts
+ttf-ms-fonts
+
+# Elephant (walker launcher backend)
+elephant
+elephant-bluetooth
+elephant-calc
+elephant-clipboard
+elephant-desktopapplications
+elephant-files
+elephant-menus
+elephant-providerlist
+elephant-runner
+elephant-symbols
+elephant-todo
+elephant-unicode
+elephant-websearch
+elephant-archlinuxpkgs
+
+# Walker (application launcher)
+walker
+
+# Hadolint (Dockerfile linter)
+hadolint-bin
+
+# Theming (AUR)
+catppuccin-gtk-theme-mocha
+
+# Database Tools (AUR)
+usql
+
+# Hyprland shutdown utility
+hyprshutdown
+
+# Hyprland screen shader runner; ships the idle-dim shader applied
+# uniformly across every monitor (brightnessctl only touches the
+# laptop backlight).
+hyprshade
+
+# Auto-renicer — keeps interactive apps responsive while heavy build
+# jobs (cargo, gcc, npm) are scheduled at lower priority.
+# Pinned to the -git variant: upstream v1.1.1 (the last tagged release
+# on AUR `ananicy-cpp`) fails to compile against glibc 2.41+ because
+# glibc now declares `sched_attr` / `sched_getattr` which collide with
+# `<linux/sched/types.h>`. The post-1.2.0 git snapshot guards the
+# include and builds cleanly. `ananicy-cpp-git` provides+conflicts
+# `ananicy-cpp`, so the depends string in shedos-system/PKGBUILD
+# stays as plain `ananicy-cpp` and resolves via `provides=`.
+ananicy-cpp-git
+
+# OpenSSL 1.1, needed by libfprint-2-tod1-elan. Lenovo's Ubuntu
+# binary blob is hard-linked against libcrypto.so=1.1; Arch dropped
+# openssl-1.1 from extra when 3.x became default, so we build it
+# from AUR. Republished under the ShedOS key; OpenSSL 1.1 is in
+# deep maintenance upstream so churn is minimal.
+openssl-1.1
+
+# Fingerprint stack — vendor closed-source bits + the TOD-enabled
+# libfprint variant they require. All listed in aur-norepublish.txt
+# because the closed-source blobs forbid us hosting them on
+# repo.shedos.org. Bundled into the airootfs squashfs at ISO-build
+# time so first-boot fingerprint unlock works without a manual AUR
+# step.
+#
+# Why libfprint-tod and not stock libfprint: Arch's stock libfprint
+# is built with tod=disabled, so TOD plugins (libfprint-2-tod1-*)
+# can't load against it. libfprint-tod is the same upstream sources
+# rebuilt with tod=enabled; it provides+conflicts libfprint, so
+# pacman swaps stock for the TOD-enabled build at install time and
+# fprintd's libfprint dep resolves cleanly.
+#
+# Each plugin binds to a specific USB ID via udev; the others stay
+# inert. libfprint-* forks (e.g. libfprint-goodix-521d) which
+# REPLACE libfprint with sources patches are NOT bundled — they
+# conflict with each other and with libfprint-tod, so we'd have to
+# pick one. `shedman fingerprint detect` points users at the right
+# fork when their sensor isn't in the bundle.
+libfprint-tod
+libfprint-2-tod1-broadcom
+libfprint-2-tod1-broadcom-cv3plus
+libfprint-2-tod1-elan
+libfprint-2-tod1-goodix
+libfprint-2-tod1-synatudor-git

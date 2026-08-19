@@ -1,0 +1,9 @@
+# ShedOS Virtualization Guest-Side Helpers
+# Host-side virt tools (qemu-full, libvirt, virtualbox, etc.) are
+# install-on-demand. virtualbox-guest-utils transitively pulls
+# virtualbox-guest-modules-arch via VIRTUALBOX-GUEST-MODULES; that
+# module package is redundant (linux-zen already provides the virtual)
+# and is conflicted in shedos-meta, so it's left out here.
+
+qemu-guest-agent
+spice-vdagent

@@ -1,0 +1,4 @@
+# ShedOS Browser Packages
+
+# Firefox
+firefox

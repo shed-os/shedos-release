@@ -1,0 +1,32 @@
+# Official-repo packages that exist only for the live ISO environment.
+#
+# Counterpart of installer-only.txt for official packages: these are
+# appended to archiso/packages.x86_64 by generate-package-list.sh so
+# the live ISO has them, but they are NOT roots for
+# resolve-meta-closure.sh — `pacman -Syu shedos-meta` on an installed
+# system neither pulls nor retains them. They ride onto /target with
+# the squashfs and become orphans (pacman -Qdtq) removable at will.
+#
+# mkinitcpio-archiso  live initramfs hooks; meaningless off the ISO
+# memtest86+ / -efi   ISO boot-menu extras
+# edk2-shell          ISO boot-menu extra (UEFI shell)
+# syslinux            ISO BIOS boot; installed systems boot Limine
+# squashfs-tools      airootfs tooling; nothing installed uses it
+#
+# One package per line. Comments with '#' are ignored.
+mkinitcpio-archiso
+memtest86+
+memtest86+-efi
+edk2-shell
+syslinux
+squashfs-tools
+# nvidia stack: the live ISO must drive nvidia hardware, but only boxes
+# with the hardware keep it — the installer removes it otherwise, and
+# shedos-nvidia-reap heals boxes installed before the gate existed.
+nvidia-open-dkms
+nvidia-utils
+nvidia-settings
+nvidia-prime
+libva-nvidia-driver
+nvidia-container-toolkit
+linux-firmware-nvidia

@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# render-meta-depends.sh; regenerate packaging/shedos-meta/PKGBUILD.
+#
+# Source of truth:
+#   packages/.meta-closure.txt    → fully-resolved Arch transitive closure
+#                                   (from sudo scripts/resolve-meta-closure.sh).
+#                                   Every transitive Arch dep is listed
+#                                   explicitly so install-time pacstrap has
+#                                   no virtual-provider rolls left to make.
+#   packages/aur.txt              → AUR deps the ISO pacstrap installs
+#   packages/aur-norepublish.txt  → subset of aur.txt we are not allowed to
+#                                   redistribute under the ShedOS key (EULA).
+#                                   Moved from depends= to optdepends= so
+#                                   they stay visible on the metapackage.
+#                                   They ship with the ISO unsigned; users
+#                                   reinstall via `shedman install` (yay).
+#   packages/installer-only.txt   → AUR packages bundled into the ISO for
+#                                   install-time use only. Excluded from
+#                                   both depends= and optdepends= so they
+#                                   never reach the installed system via
+#                                   shedos-meta (e.g. calamares).
+#
+# Output: packaging/shedos-meta/PKGBUILD with a fresh depends=() + optdepends=().
+#
+# Run this whenever packages/.meta-closure.txt or packages/aur.txt changes,
+# or let CI do it. The generated PKGBUILD is committed so local makepkg
+# works without re-running the script first. Regenerate the closure first
+# whenever packages/official/*.txt changes.
+
+set -euo pipefail
+
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+root=$(cd -- "$here/.." && pwd)
+out=$root/packaging/shedos-meta/PKGBUILD
+
+closure_file=$root/packages/.meta-closure.txt
+if [[ ! -f $closure_file ]]; then
+    echo "ERROR: $closure_file missing." >&2
+    echo "       Run: sudo scripts/resolve-meta-closure.sh" >&2
+    exit 1
+fi
+mapfile -t official < <(
+    grep -hEv '^\s*(#|$)' "$closure_file" | sort -u
+)
+mapfile -t aur < <(
+    grep -hEv '^\s*(#|$)' "$root/packages/aur.txt" 2>/dev/null | sort -u
+)
+
+# Build an associative set of norepublish package names for O(1) lookup.
+declare -A norepublish=()
+if [[ -f "$root/packages/aur-norepublish.txt" ]]; then
+    while read -r p; do
+        [[ -z $p || $p == \#* ]] && continue
+        norepublish[$p]=1
+    done < <(grep -hEv '^\s*(#|$)' "$root/packages/aur-norepublish.txt")
+fi
+
+# Installer-only packages; bundled into the ISO but excluded from
+# shedos-meta entirely (neither depends nor optdepends).
+declare -A installer_only=()
+if [[ -f "$root/packages/installer-only.txt" ]]; then
+    while read -r p; do
+        [[ -z $p || $p == \#* ]] && continue
+        installer_only[$p]=1
+    done < <(grep -hEv '^\s*(#|$)' "$root/packages/installer-only.txt")
+fi
+
+# shedos-* packages shipped from the [shedos] repo. Listed explicitly so
+# a typo here fails loudly. The kernel (linux-zen + linux-zen-headers) is
+# Arch's, pulled in through the normal closure, not from this set.
+# (shedos-prompt-ui is absent on purpose: it's a Rust library crate
+# vendored into the greeter/power/screensaver builds, not a package.)
+shedos_pkgs=(
+    shedos-keyring
+    shedos-system
+    shedos-hyprland
+    shedos-nvim
+    shedos-branding
+    shedos-greeter
+    shedos-screensaver
+    shedos-power
+    shedos-migrate-to-packaged
+)
+
+# Concrete providers of virtual deps we deliberately don't ship.
+# Listed here as conflicts=() on shedos-meta so pacstrap's
+# noninteractive resolver can't auto-roll them ahead of the providers
+# we DO ship (e.g. jack2 alphabetically beating pipewire-jack).
+# resolve-meta-closure.sh asserts this list stays in sync with the
+# closure's actual virtual-provider landscape.
+shedos_conflicts=(
+    jack2
+    iptables-legacy
+    booster
+    dracut
+    jdk21-openjdk
+    jdk25-openjdk
+    qt6-multimedia-gstreamer
+    pipewire-media-session
+    gnu-free-fonts
+    ttf-bitstream-vera
+    ttf-croscore
+    ttf-droid
+    ttf-ibm-plex
+    ttf-input
+    ttf-input-nerd
+    ttf-roboto
+    # virtualbox's kernel modules pin to a specific kernel package; we
+    # ship neither, so keep pacman from auto-rolling them into a closure.
+    virtualbox-guest-modules-arch
+    virtualbox-host-modules-arch
+)
+
+# Installer-only entries are dropped before the depends/optdepends split.
+# Everything else: republishable → depends=, proprietary AUR → optdepends=.
+declare -A seen
+ordered=()
+optional=()
+for p in "${shedos_pkgs[@]}" "${official[@]}" "${aur[@]}"; do
+    [[ -z $p ]] && continue
+    [[ -n ${seen[$p]:-} ]] && continue
+    seen[$p]=1
+    [[ -n ${installer_only[$p]:-} ]] && continue
+    if [[ -n ${norepublish[$p]:-} ]]; then
+        optional+=("$p")
+    else
+        ordered+=("$p")
+    fi
+done
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+
+# Read release version from the single source of truth. CalVer (YYYY.MM.DD).
+# scripts/bump-version.sh owns writing this file; we just read it.
+version=$(cat "$root/VERSION")
+
+# Preserve the current pkgrel if shedos-meta already exists and pkgver
+# matches; that way re-running this script during a bump-version.sh pkgrel-
+# only bump doesn't reset pkgrel to 1.
+pkgrel=1
+if [[ -f "$out" ]]; then
+    existing_ver=$(awk -F= '/^pkgver=/ {print $2; exit}' "$out" 2>/dev/null || true)
+    existing_rel=$(awk -F= '/^pkgrel=/ {print $2; exit}' "$out" 2>/dev/null || true)
+    if [[ "$existing_ver" == "$version" && -n "$existing_rel" ]]; then
+        pkgrel=$existing_rel
+    fi
+fi
+
+{
+    cat <<EOF
+# Maintainer: ShedOS <https://github.com/Theshedman/shedos>
+#
+# AUTO-GENERATED by scripts/render-meta-depends.sh; do not edit by hand.
+# After editing packages/official/*.txt: sudo scripts/resolve-meta-closure.sh
+# (regenerates packages/.meta-closure.txt), then re-run this script.
+# Editing packages/aur.txt only: just re-run this script.
+# pkgver is read from the repo-root VERSION file; bump via bump-version.sh.
+#
+# Zero-file metapackage. Pulls in every ShedOS package plus every Arch / AUR
+# package a default ShedOS install needs. Replaces archiso/packages.x86_64
+# as the source of truth for "what's on a fresh install".
+
+pkgname=shedos-meta
+pkgver=$version
+pkgrel=$pkgrel
+pkgdesc='ShedOS meta-package — installs the full default ShedOS environment'
+arch=('any')
+url='https://github.com/Theshedman/shedos'
+license=('GPL-3.0-or-later')
+depends=(
+EOF
+    for p in "${ordered[@]}"; do
+        printf "    '%s'\n" "$p"
+    done
+    cat <<'EOF'
+)
+optdepends=(
+EOF
+    for p in "${optional[@]}"; do
+        printf "    '%s: proprietary AUR package; reinstall via shedman install'\n" "$p"
+    done
+    cat <<'EOF'
+)
+conflicts=(
+EOF
+    for p in "${shedos_conflicts[@]}"; do
+        printf "    '%s'\n" "$p"
+    done
+    cat <<'EOF'
+)
+
+package() {
+    # Intentionally empty; this is a metapackage.
+    :
+}
+EOF
+} > "$tmp"
+
+install -Dm644 "$tmp" "$out"
+
+echo "Wrote $out ($(wc -l < "$tmp") lines, ${#ordered[@]} deps, ${#optional[@]} optdeps, ${#shedos_conflicts[@]} conflicts)"

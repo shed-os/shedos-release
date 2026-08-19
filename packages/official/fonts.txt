@@ -1,0 +1,21 @@
+# ShedOS Font Packages
+
+# Nerd Fonts
+ttf-jetbrains-mono-nerd
+ttf-firacode-nerd
+ttf-meslo-nerd
+
+# UI font (set as GTK font-name by hyprland.conf)
+inter-font
+
+# System fallbacks
+ttf-dejavu
+ttf-liberation
+
+# Unicode + emoji
+noto-fonts
+noto-fonts-emoji
+
+# Icon fonts
+otf-font-awesome
+ttf-nerd-fonts-symbols

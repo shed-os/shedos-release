@@ -1,0 +1,10 @@
+# ShedOS DevOps Tools Packages
+
+# Docker
+docker
+docker-compose
+
+# Kubernetes
+kubectl
+minikube
+helm

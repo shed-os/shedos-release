@@ -1,0 +1,111 @@
+# ShedOS Desktop Environment Packages
+
+# Hyprland & Wayland
+hyprland
+hypridle
+hyprsunset
+wayland
+libxkbcommon
+xdg-desktop-portal-hyprland
+xdg-utils
+xdg-user-dirs
+
+# Status Bar & Launcher
+waybar
+rofi
+
+# Application Dock
+nwg-dock-hyprland
+nwg-drawer
+
+# Terminal
+kitty
+
+# File Manager
+nautilus
+gvfs
+gvfs-mtp
+gvfs-nfs
+gvfs-smb
+file-roller
+
+# Notifications
+mako
+libnotify
+mesa
+mesa-utils
+vulkan-swrast
+
+# Authentication
+# libfprint-tod (TOD-enabled variant; AUR) replaces stock libfprint
+# via provides=. Listed in packages/aur.txt — TOD plugins like
+# libfprint-2-tod1-goodix only load against the TOD-enabled build.
+fprintd
+
+# Screenshots
+grim
+slurp
+swappy
+hyprpicker
+
+# Clipboard
+wl-clipboard
+cliphist
+
+# Wallpaper
+awww
+swaybg
+
+# Authentication
+polkit
+polkit-gnome
+gnome-keyring
+seahorse
+
+# Display Manager
+greetd
+cage
+seatd
+shedos-greeter
+uwsm
+
+# GTK/Qt Theming
+gtk3
+gtk4
+qt5-wayland
+qt6-wayland
+nwg-look
+
+# Icons & Cursors
+papirus-icon-theme
+
+# Network Applet
+network-manager-applet
+nm-connection-editor
+
+# Media Controls
+playerctl
+
+# Brightness
+brightnessctl
+
+# Screen Recording
+wf-recorder
+
+# Color Temperature
+
+
+# Input Method
+fcitx5
+fcitx5-configtool
+fcitx5-gtk
+fcitx5-qt
+
+# Misc Desktop
+wtype
+xdotool
+wmctrl
+xorg-xhost
+xorg-xset
+yad
+kdeconnect

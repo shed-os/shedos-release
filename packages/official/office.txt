@@ -1,0 +1,12 @@
+# ShedOS Productivity Packages
+
+# PDF
+evince
+zathura
+zathura-pdf-mupdf
+zathura-djvu
+poppler
+pdfjs
+
+# Notes
+obsidian

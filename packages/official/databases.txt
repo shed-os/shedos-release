@@ -1,0 +1,6 @@
+# ShedOS Database Packages
+
+# PostgreSQL
+postgresql
+postgresql-libs
+pgcli

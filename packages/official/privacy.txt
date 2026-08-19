@@ -1,0 +1,14 @@
+# ShedOS Privacy & Security Packages
+
+# VPN
+openvpn
+
+# Firewall
+ufw
+
+# Encryption
+gnupg
+age
+
+# Tor
+tor
