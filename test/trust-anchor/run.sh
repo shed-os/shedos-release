@@ -53,7 +53,32 @@ migrate_fingerprints() {
 
 keyring_fingerprints() { fingerprints < "$1"; }
 
-fetch() { curl -sSfL --max-time 60 -A "$USER_AGENT" -o "$2" "$1"; }
+# Three reads of two hosts, on every push. A single 429 or 503 among them
+# would fail this check with nothing wrong with the trust anchor, and greening
+# it by running it again is how a real failure stops being read as one — the
+# two other places in this repository that read over the network already
+# answer it this way. A 404 is not retried: that is an answer.
+#
+# The channel read is cache-busted for the reason the whole repository is: a
+# CDN node held a database object here for the best part of a day, and this
+# check reads that same object to find out what the fleet trusts.
+fetch() {
+    local url=$1 out=$2
+    local attempts=${SHEDOS_FETCH_ATTEMPTS:-3} pause=${SHEDOS_FETCH_PAUSE:-2}
+    local attempt=1 code=''
+    while :; do
+        code=$(curl -sSL --max-time 60 -A "$USER_AGENT" -H 'Cache-Control: no-cache' \
+            -o "$out" -w '%{http_code}' "$url?cb=$(date +%s)-$RANDOM") || code=''
+        if [[ $code == 2?? ]]; then
+            return 0
+        elif [[ $code == 404 ]] || (( attempt >= attempts )); then
+            rm -f "$out"
+            return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep "$pause"
+    done
+}
 
 read_migrate() {
     local out=$1
@@ -209,6 +234,46 @@ check 'the check fails' test "$?" -eq 2
 check 'it says which side' grep -q 'could not read the migrate verb' "$WORK/last.out"
 
 # --- case 6: the anchors as they are shipped --------------------------------
+
+section 'case 6b — a read that does not answer is tried again'
+# Same stub shape the manifest suite uses on its own reads, because this is the
+# same defect: the fetch above had no retry at all and this suite went red on a
+# read that was fine two minutes later.
+CURL_STUB=$WORK/bin
+mkdir -p "$CURL_STUB"
+cat > "$CURL_STUB/curl" <<'STUBEOF'
+#!/usr/bin/env bash
+n=$(cat "$CURL_STUB_COUNT" 2> /dev/null || echo 0)
+n=$((n + 1))
+printf '%s' "$n" > "$CURL_STUB_COUNT"
+for ((i = 1; i <= $#; i++)); do
+    [[ ${!i} == -o ]] || continue
+    j=$((i + 1))
+    printf 'the body\n' > "${!j}"
+done
+read -r -a codes <<< "$CURL_STUB_CODES"
+printf '%s' "${codes[$((n - 1))]:-${codes[-1]}}"
+STUBEOF
+chmod +x "$CURL_STUB/curl"
+
+fetch_over_stub() {
+    (
+        export CURL_STUB_COUNT=$WORK/curl.count CURL_STUB_CODES=$1
+        export SHEDOS_FETCH_PAUSE=0
+        : > "$WORK/curl.count"
+        PATH=$CURL_STUB:$PATH
+        fetch https://example.invalid/thing "$WORK/fetched"
+    )
+}
+
+fetch_over_stub '503 200'
+check 'a read that answered 503 and then 200 succeeds' test "$?" -eq 0
+fetch_over_stub '404'
+check 'a 404 fails' test "$?" -ne 0
+check 'and is not retried, because it is an answer' test "$(cat "$WORK/curl.count")" = 1
+fetch_over_stub '503'
+check 'a host that keeps failing still fails' test "$?" -ne 0
+check 'after the attempts it is allowed' test "$(cat "$WORK/curl.count")" = 3
 
 section 'case 6 — the shipped migrate verb and the published keyring agree'
 run_check
