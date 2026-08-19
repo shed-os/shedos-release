@@ -117,9 +117,14 @@ write_manifest() {
     } > "$out"
 }
 
+# The cache defaults to a shared directory under TMPDIR, which is right for a
+# run that fetches the release twice and wrong for a suite whose fixture
+# packages are called alpha-1.0-1: a case would read the previous case's bytes.
+# Each call gets a cache of its own unless the case is about the cache.
 with_fixture() {
     SHEDOS_MANIFEST_CHANNEL=$PKGS \
     SHEDOS_MANIFEST_CHANNEL_ROOT=$CHANNEL \
+    SHEDOS_PACKAGE_CACHE=${SHEDOS_PACKAGE_CACHE:-$WORK/nocache} \
     "$@" > "$WORK/last.out" 2>&1
 }
 
@@ -138,7 +143,7 @@ reset_fixture() {
         "alpha,1.0,1,$(served_sum alpha)" \
         "beta,2.0,2,$(served_sum beta)" \
         "gamma,2.0,1,$(served_sum gamma)"
-    rm -rf "$DEST" "$WORK/cache"
+    rm -rf "$DEST" "$WORK/cache" "$WORK/nocache"
 }
 
 # --- case 1: the whole release comes down -----------------------------------

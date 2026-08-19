@@ -9,10 +9,12 @@
 # consulted: the database says the filename and the manifest says the bytes,
 # and a disagreement between them is a refusal rather than a preference.
 #
-# SHEDOS_PACKAGE_CACHE names a directory kept across calls. A cached file is
-# reused only when it hashes to the sha the manifest names, so a truncated
-# download or a stale file from an earlier release is refetched rather than
-# trusted.
+# SHEDOS_PACKAGE_CACHE names a directory kept across calls, and defaults to one
+# under the temporary directory so that two tools in the same run share it —
+# the release is 143MB and a CI push asks for it more than once. A cached file
+# is reused only when it hashes to the sha the manifest names, so a truncated
+# download, or a file left over from an earlier release, is fetched again
+# rather than trusted; there is nothing a stale cache can make this answer.
 
 _LIB_FETCH_HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=tools/lib-manifest.sh
@@ -66,7 +68,8 @@ manifest_serving() {
 # and from the channel otherwise. The sha is checked after every path into the
 # file, including the cached one: a cache is a place bytes sit unattended.
 fetch_package_file() {
-    local file=$1 sum=$2 dest=$3 cache=${SHEDOS_PACKAGE_CACHE:-} got=''
+    local file=$1 sum=$2 dest=$3 got=''
+    local cache=${SHEDOS_PACKAGE_CACHE:-${TMPDIR:-/tmp}/shedos-package-cache}
 
     if [[ -n $cache && -f $cache/$file ]]; then
         got=$(sha256sum "$cache/$file" | cut -d' ' -f1)

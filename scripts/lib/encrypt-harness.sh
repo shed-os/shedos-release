@@ -8,7 +8,12 @@
 SKIP=77
 _eh_here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd -- "$_eh_here/../.." && pwd)
-tree=$repo/packaging/shedos-system/tree
+# The reencryption code is injected out of the published shedos-system, at the
+# release the manifest names, rather than out of a working tree: what these
+# proofs are about is whether the release encrypts a box in place, and a
+# working tree is not the release. eh_setup unpacks it. SHEDOS_SYSTEM_TREE
+# points at an unpacked tree instead, for trying a change before publishing it.
+tree=${SHEDOS_SYSTEM_TREE:-}
 
 OVMF_CODE=${SHEDOS_OVMF_CODE:-/usr/share/edk2/x64/OVMF_CODE.4m.fd}
 OVMF_VARS=${SHEDOS_OVMF_VARS:-/usr/share/edk2/x64/OVMF_VARS.4m.fd}
@@ -54,6 +59,14 @@ eh_setup() {
     eh_set_timeouts
     work=$(mktemp -d -t encrypt-assert.XXXXXX)
     trap eh_cleanup EXIT
+    if [[ -z $tree ]]; then
+        tree=$work/shedos-system
+        bash "$repo/tools/extract-package.sh" "$repo/release-manifest.toml" \
+            shedos-system "$tree" > /dev/null \
+            || eh_skip "could not read shedos-system out of the channel"
+    fi
+    [[ -f $tree/usr/lib/shedos/reencrypt-driver.sh ]] \
+        || eh_skip "$tree holds no reencryption driver"
 }
 
 # A fresh plaintext overlay (+ writable OVMF vars). Re-callable: a cut disk can't be

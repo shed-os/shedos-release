@@ -168,7 +168,31 @@ content tools/pacman-offline-download.sh 5352790e01d999cacfce922c23cc1b37760ad3b
 content tools/verify-cache.sh 78c67194b060ad29e1bea61bc1fbb4ca08b2b542..ee5c613d001cfe781bdb88a1fd845accb57223e0 — the release's packages are looked for where they were fetched
 content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b91b506d252dce83613a1b76dbf7bc0f62943f5 — depends come from published packages and Arch counts as a provider
 
-# --- (b2) the 81 files with no monolith counterpart --------------------------------
+# --- (b3) the 3 transformed harnesses ---------------------------------------------
+#
+# Three of the nine QEMU harnesses read code out of the monolith's working tree, and
+# all three now read the released package instead. The distinction is the whole point
+# of the change: a harness that injects a working tree proves the working tree works,
+# and what runs beside it is an ISO built out of the release.
+#
+# emergency-boot-assert.sh and lib/encrypt-harness.sh unpack shedos-system at the
+# manifest's pin — the recovery tool for the first, the reencryption code and its units
+# for the second — into their own workdir, and skip with a reason when the channel will
+# not answer. SHEDOS_SYSTEM_TREE points either at an unpacked tree instead, which is
+# how a change gets tried before it is published.
+#
+# build-base-image.sh had two such reads and neither needed a package fetch: it is
+# building an image out of a rootfs that already holds the installer package, so the
+# unpackfs exclusion list and the bootloader code both come out of the rootfs it just
+# unpacked. That is a better answer than the one it replaces as well as a possible one
+# — the copy it reads is the copy Calamares would read on that machine. Its comment
+# about the login shell said zsh and the line beneath it has said bash since the shell
+# switch.
+content scripts/build-base-image.sh e87821c371343f71bd46b5693698dc22428c6745..471b87616ba2e4c2c4454d57bf53444935ee4cf6 — the exclusion list and the installer come out of the rootfs being built
+content scripts/emergency-boot-assert.sh 981a4cc34f9d63bd46080ddec0fee19a1ee48893..50845101cb744a2ef8d4cc4b8f3362781576a145 — the recovery tool is unpacked from the released shedos-system
+content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297..202cf32ac6bdb98a01648f6273bb183d262bdd0f — the injected reencryption code is the released shedos-system's
+
+# --- (b2) the 82 files with no monolith counterpart --------------------------------
 #
 # This repository is mostly not a carve. The publisher, the manifest tools, the carve and
 # comparison tools, the enumerations, the suites, the workflows and the README were all
@@ -178,7 +202,9 @@ content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b
 # test/fetch/run.sh. Five came with the ISO build: tools/prepare-iso.sh, tools/build-iso.sh,
 # tools/check-airootfs-overlaps.sh, test/iso/run.sh, and the one thing the profile gained —
 # the hook that stamps the release into the installer's branding, which is all that is left
-# of the version sed the monolith ran over staged sources.
+# of the version sed the monolith ran over staged sources. test/integration/run.sh is
+# the sixth: the release-level tier, which is new here because the question it asks —
+# do these packages work together — is one no single repository can be asked.
 #
 # That last one does have a monolith counterpart at the same path, and the carve map
 # still does not claim it. Both are generated files, so a blob pin would move on every
@@ -188,14 +214,14 @@ content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b
 #
 # Measured over the carved paths at HEAD against the monolith at 8ce1763e:
 #
-#   package tree: 87 identical, 11 transformed
+#   package tree: 84 identical, 14 transformed
 #   test tree:    the monolith has no out-of-tree suite for any of this and neither
 #                 does this repository — test/meta covers the generators
-#   no monolith counterpart: 81                                       (see (b2))
+#   no monolith counterpart: 82                                       (see (b2))
 #
-# The 87 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
-# aur-pkgbuild-hashes.txt and iso-only-official.txt, and 63 of the 70 the ISO pipeline
-# brought — the other 7 are (b1).
+# The 84 are the twenty lists under packages/official, aur.txt, aur-norepublish.txt,
+# aur-pkgbuild-hashes.txt and iso-only-official.txt, and 60 of the 70 the ISO pipeline
+# brought — the other 10 are (b1) and (b3).
 
 # --- the two metapackages, compared -------------------------------------------------
 #

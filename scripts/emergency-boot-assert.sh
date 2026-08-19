@@ -15,7 +15,6 @@ SKIP=77
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo=$(cd -- "$here/.." && pwd)
-lib=$repo/packaging/shedos-system/tree/usr/lib/shedos
 
 base=${SHEDOS_EMERGENCY_TEST_IMAGE:-}
 
@@ -24,6 +23,7 @@ _skip() { echo "emergency-boot-assert: SKIP — $1" >&2; exit "$SKIP"; }
 for t in qemu-system-x86_64 qemu-img guestfish objcopy; do
     command -v "$t" >/dev/null 2>&1 || _skip "$t not installed"
 done
+
 [[ -n $base && -f $base ]] || _skip "set SHEDOS_EMERGENCY_TEST_IMAGE to an installed-ShedOS qcow2"
 # qemu-img stores -b relative to the overlay's dir, not $PWD; the overlay lives
 # under a mktemp dir, so a relative $base would resolve to a path that isn't there.
@@ -40,6 +40,22 @@ cleanup() {
     rm -rf "$work"
 }
 trap cleanup EXIT
+
+# The recovery tool comes out of the published shedos-system, at the release the
+# manifest names. It used to be read out of a working tree, which proved that
+# the working tree recovers a box and said nothing about the release — and this
+# runs beside an ISO built out of that release. SHEDOS_SYSTEM_TREE points at an
+# unpacked tree instead, for the local flow where the point is to try a change
+# before it is published.
+tree=${SHEDOS_SYSTEM_TREE:-}
+if [[ -z $tree ]]; then
+    tree=$work/shedos-system
+    bash "$repo/tools/extract-package.sh" "$repo/release-manifest.toml" \
+        shedos-system "$tree" > /dev/null \
+        || _skip "could not read shedos-system out of the channel"
+fi
+lib=$tree/usr/lib/shedos
+[[ -f $lib/emergency-recovery-ui.py ]] || _skip "$lib holds no emergency-recovery-ui.py"
 
 overlay=$work/disk.qcow2
 qemu-img create -f qcow2 -F qcow2 -b "$base" "$overlay" >/dev/null

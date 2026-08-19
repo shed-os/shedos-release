@@ -115,13 +115,17 @@ fi
 
 # Strip the live-only artifacts Calamares' unpackfs excludes. The file is a
 # plain newline list of absolute paths; trailing-slash = directory, and a few
-# entries are globs (calamares-*).
+# entries are globs (calamares-*). It is read out of the rootfs just unpacked,
+# where the installer package put it — the same copy Calamares itself would
+# read on that machine, rather than a source tree that may say something else.
+exclude=$mnt/etc/calamares/modules/unpackfs-exclude.conf
+[[ -f $exclude ]] || _die "the rootfs holds no $exclude (is shedos-installer on the ISO?)"
 while IFS= read -r rel; do
     [[ -z $rel || ${rel:0:1} == "#" ]] && continue
     rel=${rel#/}
     [[ -z $rel ]] && continue              # never rm the mount root
     rm -rf "${mnt:?}/$rel"
-done < "$repo/installer/calamares/modules/unpackfs-exclude.conf"
+done < "$exclude"
 
 # --- fstab (root + home subvols + ESP with nofail) -------------------------
 root_uuid=$(blkid -s UUID -o value "$root_part")
@@ -158,11 +162,17 @@ done
 # HOOKS to the installed-system set, runs mkinitcpio -P, then builds, places, and
 # (off-box this stays keyless/unsigned) renders the efi_chainload menu over the
 # UKIs. Calling install() alone — the old behaviour — left no UKIs and no menu,
-# so the image no longer booted after the T3/T4 UKI switch. register_nvram=False
+# so the image no longer booted after the UKI switch. register_nvram=False
 # keeps _register_nvram_entry from running efibootmgr against the build HOST's
 # firmware; a QEMU image boots the default \EFI\BOOT path with no NVRAM entry.
+#
+# The installer is imported from the rootfs, which is where the installer
+# package put it: the image is supposed to be what this ISO installs, so the
+# code that lays down its bootloader has to be the code the ISO carries.
 echo "build-base-image: install bootloader + build UKIs"
-PYTHONPATH="$repo/installer" python3 - "$mnt" "$root_uuid" "$loop" <<'PY'
+installer_root=$mnt/usr/lib/shedos-installer
+[[ -d $installer_root ]] || _die "the rootfs holds no $installer_root"
+PYTHONPATH="$installer_root" python3 - "$mnt" "$root_uuid" "$loop" <<'PY'
 import sys
 from shedos_installer.core.bootloader import LimineInstaller
 mount, root_uuid, disk = sys.argv[1:4]
@@ -175,7 +185,7 @@ PY
 # --- a login user with a known (CI-internal) password ----------------------
 # The live airootfs already ships the `shedos` user, so a plain useradd would
 # collide and abort under set -e. Create only if absent, then always normalise:
-# ensure wheel + zsh and set the known test password.
+# ensure wheel + bash and set the known test password.
 if arch-chroot "$mnt" id -u "$user" >/dev/null 2>&1; then
     arch-chroot "$mnt" usermod -aG wheel -s /usr/bin/bash "$user"
 else
