@@ -26,8 +26,9 @@ source "$ROOT/tools/lib-carve-maps.sh"
 
 # Maps files that carve something other than a package, one name per line. A
 # maps file naming no packaging directory has to be listed here; the check
-# refuses to guess which it is. Empty today — every map carves a package.
-NOT_PACKAGES=''
+# refuses to guess which it is. The list lives beside derive_pairs so this and
+# the reference build cannot disagree about it.
+NOT_PACKAGES=$MAPS_NOT_PACKAGES
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT

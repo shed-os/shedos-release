@@ -1,0 +1,36 @@
+# Concrete providers of virtual dependencies ShedOS deliberately does not
+# ship. They go into shedos-meta's conflicts=() so pacstrap's noninteractive
+# resolver cannot roll one of them in ahead of the provider we do ship —
+# jack2 beats pipewire-jack on an alphabetical tie, and the transaction then
+# dies on a conflict nobody asked for.
+#
+# This list is data because two tools read it. render-meta-depends.sh writes
+# it into the metapackage and resolve-meta-closure.sh checks it against the
+# virtual-provider landscape the Arch repositories actually have, and the
+# check used to read the renderer's source with awk to find out what the
+# renderer would emit. One file both read is the same coupling without the
+# parsing.
+#
+# One package per line. Comments with '#' are ignored.
+
+jack2
+iptables-legacy
+booster
+dracut
+jdk21-openjdk
+jdk25-openjdk
+qt6-multimedia-gstreamer
+pipewire-media-session
+gnu-free-fonts
+ttf-bitstream-vera
+ttf-croscore
+ttf-droid
+ttf-ibm-plex
+ttf-input
+ttf-input-nerd
+ttf-roboto
+
+# virtualbox's kernel modules pin to a specific kernel package; we ship
+# neither, so keep pacman from rolling them into a closure.
+virtualbox-guest-modules-arch
+virtualbox-host-modules-arch

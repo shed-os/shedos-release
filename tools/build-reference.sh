@@ -86,7 +86,8 @@ builddir=$(meta BUILDINFO builddir | head -1)
 
 pairs=$work/pairs
 : > "$pairs"
-problem=$(derive_pairs "$pairs" "${SHEDOS_REFERENCE_MAPS_DIR:-$ROOT/tools/carve-maps}" '') \
+problem=$(derive_pairs "$pairs" "${SHEDOS_REFERENCE_MAPS_DIR:-$ROOT/tools/carve-maps}" \
+    "$MAPS_NOT_PACKAGES") \
     || die "$problem"
 
 package_dir='' carved_repo='' carved_subdir=''

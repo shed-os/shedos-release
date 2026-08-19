@@ -1,0 +1,4 @@
+path packages/
+except packages/npm-cache
+rename scripts/resolve-meta-closure.sh:tools/resolve-meta-closure.sh
+rename scripts/render-meta-depends.sh:tools/render-meta-depends.sh

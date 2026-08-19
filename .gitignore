@@ -1,0 +1,4 @@
+# Nothing built here is committed; the PKGBUILD is.
+*.pkg.tar.zst
+pkg/
+src/

@@ -162,7 +162,11 @@ rename_dest() {
 #
 # $3 is the maps that carve something other than a package, one name per line.
 # A maps file naming no packaging directory has to be listed there; this
-# refuses to guess which it is.
+# refuses to guess which it is. MAPS_NOT_PACKAGES is what the callers that
+# have no reason to differ pass: shedos-release's map carves the package
+# lists and the two generators that read them, and builds nothing.
+MAPS_NOT_PACKAGES='shedos-release'
+
 derive_pairs() {
     local out=$1 dir=$2 exempt=${3:-} file repo roots count root subdir taken new
 

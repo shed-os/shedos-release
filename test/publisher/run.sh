@@ -527,6 +527,28 @@ check 'says why' \
 check 'nothing was signed' not grep -q '^sign ' "$WORK/last.out"
 check 'nothing was uploaded' not grep -q '^up ' "$TRANSFER_LOG"
 
+# --- the shipped lists ------------------------------------------------------
+
+# Every refusal above runs against a fixture, so nothing so far says a word
+# about the lists this repository actually ships. These two disagree on
+# purpose and the disagreement is load-bearing in both directions: the
+# generator has to keep the installer out of the metapackage, and the channel
+# has to keep serving it until the ISO build has somewhere else to get it.
+# Converging them is a cutover decision, and this is what makes taking it
+# quietly impossible.
+section 'case 19 — the shipped lists keep the installer out of the metapackage and in the channel'
+names() { awk 'NF && $1 !~ /^#/' "$1"; }
+lists() { names "$1" | grep -qxF "$2"; }
+check 'the build input the generator reads names the installer' \
+    lists "$ROOT/packages/installer-only.txt" shedos-installer
+check 'and the list the publisher refuses on does not' \
+    not lists "$ROOT/publisher/installer-only.txt" shedos-installer
+check 'the no-republish list is one file for both readers' \
+    lists "$ROOT/packages/aur-norepublish.txt" google-chrome
+check 'and the publisher refuses on its own list rather than the build input' \
+    grep -qF 'INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$HERE/installer-only.txt}' \
+        "$ROOT/publisher/publish.sh"
+
 # --- result -----------------------------------------------------------------
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

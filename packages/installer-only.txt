@@ -28,5 +28,17 @@
 # aur-norepublish.txt (visible as optdepends but never republished).
 #
 # One package per line. Comments with '#' are ignored.
+#
+# calamares is here and not in the monolith's copy, which is a divergence
+# and a deliberate one. The monolith's generator learns which ShedOS
+# packages the metapackage installs from a list written inside the
+# generator, and calamares was never on it, so nothing there ever had to
+# say calamares is installer-only. This generator learns them from the
+# release manifest, which names every package the channel serves —
+# calamares among them — so the exclusion has to be written down or the
+# installer would land on every machine that installs shedos-meta. The
+# monolith's copy gains the line when the monolith is next open for
+# edits; until then this list is ahead of it by one name.
 
+calamares
 shedos-installer
