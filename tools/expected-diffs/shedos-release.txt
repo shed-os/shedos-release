@@ -192,7 +192,7 @@ content tools/verify-shedos-deps.sh 2b6b72782ebb807c51a6abbe46be8b98489c7113..2b
 # switch.
 content scripts/build-base-image.sh e87821c371343f71bd46b5693698dc22428c6745..471b87616ba2e4c2c4454d57bf53444935ee4cf6 — the exclusion list and the installer come out of the rootfs being built
 content scripts/emergency-boot-assert.sh 981a4cc34f9d63bd46080ddec0fee19a1ee48893..af0edffe6217668ac3a5646ece1b00f532d0fe61 — the recovery tool is unpacked from the released shedos-system
-content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297..202cf32ac6bdb98a01648f6273bb183d262bdd0f — the injected reencryption code is the released shedos-system's
+content scripts/lib/encrypt-harness.sh ae8bbe7c31e5777c42519b0609734ffe8fb21297..e63c85f7e735f4e8553d40ead8e67efd591df7c7 — the injected reencryption code is the released shedos-system's
 
 # --- (b2) the 87 files with no monolith counterpart --------------------------------
 #

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared machinery for the in-place-encryption QEMU proofs: the prerequisite gate,
-# overlay + OVMF setup, an nbd inject of the working-tree reencryption code with a
+# overlay + OVMF setup, an nbd inject of the release's reencryption code with a
 # first-boot auto-arm, a QEMU boot helper, and the offline "complete LUKS2" assert.
 # Sourced, not run — the caller sets EH_PROG (for messages) and orchestrates. The
 # eh_* helpers that hit a missing prerequisite exit 77 (SKIP); nothing else exits.
@@ -99,7 +99,7 @@ eh_disconnect_nbd() {
     nbd_dev=""
 }
 
-# Mount the overlay's root (@) + ESP, install the working-tree reencryption code and
+# Mount the overlay's root (@) + ESP, install the release's reencryption code and
 # units, enable enrol/finalize, drop a marker-gated first-boot auto-arm, then unmount,
 # disconnect, and hand the overlay back to this user (qemu opens it as the user).
 eh_inject() {
