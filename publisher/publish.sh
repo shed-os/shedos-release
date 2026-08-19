@@ -26,9 +26,15 @@ artifact=$2
 
 # The exclusion lists are overridable so a suite can exercise a refusal without
 # editing the shipped lists. The allowlist is not.
+#
+# The no-republish list is the monolith's, shared with the generator that
+# reads it for the metapackage, because what may never be signed under our
+# key is one answer wherever it is asked. The installer list is this
+# repository's own: packages/installer-only.txt is a build input naming
+# shedos-installer, and the channel this writes still has to serve it.
 ALLOWLIST=$HERE/allowlist.txt
 NOREPUBLISH=${SHEDOS_NOREPUBLISH_FILE:-$ROOT/packages/aur-norepublish.txt}
-INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$ROOT/packages/installer-only.txt}
+INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$HERE/installer-only.txt}
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT

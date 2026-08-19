@@ -1,0 +1,18 @@
+# Packages the publisher will not write into the channel because they exist
+# only for the live ISO and the installer. It sits here rather than in
+# packages/ because it is the publisher's own answer, and packages/ is the
+# monolith's build input for the metapackage generator, which needs a
+# different answer until the cutover.
+#
+# The monolith's copy names shedos-installer, and the metapackage generator
+# reads that copy so the installer never lands on an installed system. This
+# channel still has to serve it: the ISO build resolves the installer package
+# out of the channel, so refusing it here would leave the ISO with nothing to
+# install Calamares from. That is why this file names nothing today.
+#
+# The two converge when this repository becomes the public producer, and what
+# the public channel does about the installer is decided then, not here. Until
+# that decision the divergence is deliberate and the publisher suite holds it
+# in place.
+#
+# One package per line. Comments with '#' are ignored.

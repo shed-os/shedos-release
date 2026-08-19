@@ -27,7 +27,7 @@ source "$HERE/lib-manifest.sh"
 
 ALLOWLIST=${SHEDOS_RECONCILE_ALLOWLIST:-$ROOT/publisher/allowlist.txt}
 NOREPUBLISH=${SHEDOS_NOREPUBLISH_FILE:-$ROOT/packages/aur-norepublish.txt}
-INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$ROOT/packages/installer-only.txt}
+INSTALLER_ONLY=${SHEDOS_INSTALLER_ONLY_FILE:-$ROOT/publisher/installer-only.txt}
 RELEASE_REPO=${SHEDOS_RECONCILE_TARGET:-shed-os/shedos-release}
 # How far back to look for a build that still has its artifact. A run whose
 # artifact has expired cannot be republished from, and no number here changes
